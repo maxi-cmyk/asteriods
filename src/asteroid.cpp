@@ -2,228 +2,127 @@
 #include "config.h"
 #include "particle.h"
 #include "display.h"
-
-static Asteroid pool[ASTEROID_MAX];
-
-// ── Difficulty tier table ──────────────────────────────────────────────────────
-// { minAsteroids, speedMultiplier, spawnCooldownMs }
-struct DifficultyTier {
-  uint8_t  minAsteroids;
-  float    speedMult;
-  uint16_t spawnCooldownMs;
-};
-
-static const DifficultyTier tiers[DIFFICULTY_LEVELS] = {
-  { 3, 1.0f, 3000 },   // 0:00–1:00  Slow, grace period
-  { 4, 1.5f, 2500 },   // 1:00–2:00  Medium
-  { 5, 2.0f, 2000 },   // 2:00–3:00  Medium-Fast
-  { 6, 2.5f, 1500 },   // 3:00–4:00  Fast
-  { 8, 3.0f, 1000 },   // 4:00–5:00  Very fast (survival)
-};
-
-static unsigned long clearTimeMs = 0;  // when the screen first became empty (0 = not empty)
-#define WAVE_DELAY_MS 2000               // wait before spawning next wave
-
-// ── Internal spawn helper ─────────────────────────────────────────────────────
-
-static int currentJag = 0;  // cached for split children
-
-static void spawnAt(float x, float y, AsteroidSize size, float speedMult, int jag) {
-  for (int i = 0; i < ASTEROID_MAX; i++) {
-    if (pool[i].active) continue;
-    Asteroid& a = pool[i];
-
-    a.x    = x;
-    a.y    = y;
-    a.size = size;
-
-    switch (size) {
-      case AST_LARGE:  a.radius = ASTEROID_LARGE_R;  break;
-      case AST_MEDIUM: a.radius = ASTEROID_MEDIUM_R; break;
-      default:         a.radius = ASTEROID_SMALL_R;  break;
-    }
-
-    // Fall straight down with a small random horizontal drift
-    float spd = ASTEROID_SPEED_MIN
-              + (random(100) / 100.0f) * (ASTEROID_SPEED_MAX - ASTEROID_SPEED_MIN);
-    spd *= speedMult;  // scale by current difficulty
-    a.vx = (random(100) - 50) / 50.0f * spd * 0.4f;  // ±40% lateral drift
-    a.vy = spd;                                         // always downward
-
-    // Random rotation
-    a.angle    = random(628) / 100.0f;
-    a.rotSpeed = (random(201) - 100) / 100.0f * ASTEROID_ROT_MAX;
-
-    // Progressive shapes: jag 0 = rounder (±2), jag 4 = jagged (±6)
-    int offsetRange = 5 + jag * 2;  // 5, 7, 9, 11, 13
-    int offsetShift = 2 + jag;      // 2, 3, 4, 5, 6
-    a.numVerts = 6 + random(3);
-    for (int v = 0; v < 8; v++) {
-      a.offsets[v] = (int8_t)(random(offsetRange) - offsetShift);
-    }
-
+#include "sound.h"
+static Asteroid rocks[ASTEROID_MAX];
+static uint16_t wave;
+static uint8_t pending;
+static unsigned long nextSpawn;
+static unsigned long clearAt;
+static bool waiting;
+static float waveSpeed() { return 0.38f + min(int(wave - 1), 10) * 0.045f; }
+static int freeSlots() {
+  int count = 0;
+  for (const auto& a : rocks) if (!a.active) ++count;
+  return count;
+}
+static void spawn(float x, float y, AsteroidSize size, float vx, float vy) {
+  for (auto& a : rocks) {
+    if (a.active) continue;
+    a = {};
     a.active = true;
+    a.x = x; a.y = y; a.vx = vx; a.vy = vy; a.size = size;
+    a.radius = size == AST_LARGE ? ASTEROID_LARGE_R : size == AST_MEDIUM ? ASTEROID_MEDIUM_R : ASTEROID_SMALL_R;
+    a.angle = random(628) / 100.0f;
+    a.rotSpeed = (random(101) - 50) / 4000.0f;
+    // Keep the outline inside the collision circle, even for small rocks.
+    for (auto& offset : a.offsets) offset = -random(size == AST_SMALL ? 2 : 3);
     return;
   }
 }
-
-// Spawn an asteroid just above the visible screen (won't trigger Y-wrap)
-static void spawnFromTop(AsteroidSize size, float speedMult, int jag) {
-  float r = (size == AST_LARGE) ? ASTEROID_LARGE_R : 
-            (size == AST_MEDIUM) ? ASTEROID_MEDIUM_R : ASTEROID_SMALL_R;
-  float x = r + random((int)(SCREEN_W - 2 * r));
-  float y = -(r - 1);  // just above screen, y+r = 1 > 0, so no wrap
-  spawnAt(x, y, size, speedMult, jag);
-}
-
-// ── Public interface ──
-
 void asteroidsInit() {
-  memset(pool, 0, sizeof(pool));
-  clearTimeMs = 0;
-
-  for (int i = 0; i < ASTEROID_INITIAL; i++) {
-    spawnFromTop(AST_LARGE, 1.0f, 0);  // tier 0 = rounder
-  }
+  memset(rocks, 0, sizeof(rocks));
+  wave = 1; pending = 3; nextSpawn = 0; clearAt = 0; waiting = false;
 }
-
-void asteroidsUpdate(unsigned long elapsedMs) {
-  // ── Determine current difficulty tier ──
-  int tier = elapsedMs / DIFFICULTY_INTERVAL;
-  if (tier >= DIFFICULTY_LEVELS) tier = DIFFICULTY_LEVELS - 1;
-  const DifficultyTier& diff = tiers[tier];
-
-  // ── Wave spawning: when all asteroids destroyed, wait 2s then spawn fresh wave ──
-  int active = asteroidActiveCount();
-  unsigned long now = millis();
-
-  if (active == 0) {
-    if (clearTimeMs == 0) {
-      clearTimeMs = now;  // mark the moment the screen became empty
-    } else if (now - clearTimeMs >= WAVE_DELAY_MS) {
-      // Wipe the pool and spawn a fresh wave
-      memset(pool, 0, sizeof(pool));
-      currentJag = tier;  // cache for split children
-      for (int i = 0; i < diff.minAsteroids; i++) {
-        spawnFromTop(AST_LARGE, diff.speedMult, tier);
-      }
-      clearTimeMs = 0;
+int asteroidActiveCount() {
+  int n = 0;
+  for (const auto& a : rocks) if (a.active) ++n;
+  return n;
+}
+uint16_t asteroidWave() { return wave; }
+void asteroidsUpdate(unsigned long now) {
+  if (pending && now >= nextSpawn && freeSlots()) {
+    float y = random(HUD_HEIGHT + ASTEROID_LARGE_R + 1, SCREEN_H - ASTEROID_LARGE_R);
+    spawn(SCREEN_W + ASTEROID_LARGE_R, y, AST_LARGE, -waveSpeed(), (random(101) - 50) / 500.0f);
+    --pending;
+    nextSpawn = now + 1800;
+  }
+  for (auto& a : rocks) {
+    if (!a.active) continue;
+    a.x += a.vx; a.y += a.vy; a.angle += a.rotSpeed;
+    if (a.y < HUD_HEIGHT + a.radius + 1) {
+      a.y = HUD_HEIGHT + a.radius + 1; a.vy = fabsf(a.vy);
     }
-  } else {
-    clearTimeMs = 0;  // screen not empty, reset timer
+    if (a.y > SCREEN_H - a.radius - 1) {
+      a.y = SCREEN_H - a.radius - 1; a.vy = -fabsf(a.vy);
+    }
+    if (a.x + a.radius < 0) a.active = false;
   }
-
-  // ── Move all active asteroids ──
-  for (int i = 0; i < ASTEROID_MAX; i++) {
-    if (!pool[i].active) continue;
-    Asteroid& a = pool[i];
-
-    a.x     += a.vx;
-    a.y     += a.vy;
-    a.angle += a.rotSpeed;
-    if (a.angle >= TWO_PI) a.angle -= TWO_PI;
-    if (a.angle <  0)      a.angle += TWO_PI;
-
-    // Wrap with radius padding so asteroid fully exits before reappearing
-    float r = (float)a.radius;
-    if (a.x + r < 0)         a.x = SCREEN_W + r;
-    if (a.x - r > SCREEN_W)  a.x = -r;
-    if (a.y + r < 0)         a.y = SCREEN_H + r;
-    if (a.y - r > SCREEN_H)  a.y = -r;
-  }
-}
-
-void asteroidsDraw(Adafruit_SSD1306& display) {
-  for (int i = 0; i < ASTEROID_MAX; i++) {
-    if (!pool[i].active) continue;
-    const Asteroid& a = pool[i];
-
-    for (int v = 0; v < a.numVerts; v++) {
-      int  next = (v + 1) % a.numVerts;
-      float a1  = a.angle + TWO_PI * v    / a.numVerts;
-      float a2  = a.angle + TWO_PI * next / a.numVerts;
-      float r1  = a.radius + a.offsets[v];
-      float r2  = a.radius + a.offsets[next];
-
-      int x1 = (int)(a.x + cosf(a1) * r1);
-      int y1 = (int)(a.y + sinf(a1) * r1);
-      int x2 = (int)(a.x + cosf(a2) * r2);
-      int y2 = (int)(a.y + sinf(a2) * r2);
-
-      display.drawLine(x1, y1, x2, y2, SSD1306_WHITE);
+  if (!pending && !asteroidActiveCount()) {
+    if (!waiting) { waiting = true; clearAt = now; }
+    else if (now - clearAt >= 1500) {
+      if (wave < 65535) ++wave;
+      pending = min(3 + int(wave - 1) / 2, 6);
+      nextSpawn = now; waiting = false;
     }
   }
 }
-
-bool asteroidHitsShip(float sx, float sy) {
-  for (int i = 0; i < ASTEROID_MAX; i++) {
-    if (!pool[i].active) continue;
-    const Asteroid& a = pool[i];
-    float dx   = a.x - sx;
-    float dy   = a.y - sy;
-    float rSum = (float)(a.radius + SHIP_RADIUS);
-    if (dx * dx + dy * dy < rSum * rSum) return true;
+void asteroidsDraw(Adafruit_SSD1306& d) {
+  for (const auto& a : rocks) {
+    if (!a.active) continue;
+    for (int v = 0; v < 8; ++v) {
+      int n = (v + 1) % 8;
+      float t = a.angle + TWO_PI * v / 8, u = a.angle + TWO_PI * n / 8;
+      float r = a.radius + a.offsets[v], s = a.radius + a.offsets[n];
+      d.drawLine(a.x + cosf(t)*r, a.y + sinf(t)*r, a.x + cosf(u)*s, a.y + sinf(u)*s, SSD1306_WHITE);
+    }
+  }
+}
+bool asteroidHitsShip(float x, float y) {
+  for (const auto& a : rocks) {
+    float dx = a.x-x, dy = a.y-y, r = a.radius + SHIP_RADIUS;
+    if (a.active && dx*dx + dy*dy < r*r) return true;
   }
   return false;
 }
-
-uint32_t asteroidsHitBullet(float bx, float by) {
-  for (int i = 0; i < ASTEROID_MAX; i++) {
-    if (!pool[i].active) continue;
-    Asteroid& a = pool[i];
-    float dx = a.x - bx;
-    float dy = a.y - by;
-    float r  = (float)a.radius;
-    if (dx * dx + dy * dy >= r * r) continue;
-
-    // Hit — record spawn info before deactivating
-    uint32_t     pts      = 0;
-    AsteroidSize child    = AST_SMALL;
-    bool         splits   = true;
-    float        cx = a.x, cy = a.y;
-
-    switch (a.size) {
-      case AST_LARGE:  pts = SCORE_LARGE;  child = AST_MEDIUM; break;
-      case AST_MEDIUM: pts = SCORE_MEDIUM; child = AST_SMALL;  break;
-      case AST_SMALL:  pts = SCORE_SMALL;  splits = false;     break;
-    }
-
-    a.active = false;
-    particlesSpawn(cx, cy);
-    if (a.size == AST_LARGE) displayShake(4);  // shake on large destruction
-
-    if (splits) {
-      spawnAt(cx, cy, child, 1.0f, currentJag);
-      spawnAt(cx, cy, child, 1.0f, currentJag);
-    }
-
-    return pts;
+uint32_t asteroidsHitBullet(float fromX, float toX, float y) {
+  // Find the first intersected rock along this horizontal bullet segment.
+  int hit = -1;
+  float first = toX + 1;
+  for (int i = 0; i < ASTEROID_MAX; ++i) {
+    const auto& a = rocks[i];
+    if (!a.active) continue;
+    float dy = y - a.y, r = a.radius;
+    if (fabsf(dy) > r) continue;
+    float half = sqrtf(r*r - dy*dy);
+    float entry = max(fromX, a.x-half);
+    if (a.x+half >= fromX && entry <= toX && entry < first) { first = entry; hit = i; }
   }
-  return 0;
+  if (hit < 0) return 0;
+  Asteroid parent = rocks[hit];
+  // If the pool is full, leave the parent intact until both fragments fit.
+  if (parent.size != AST_SMALL && freeSlots() < 1) return 0;
+  rocks[hit].active = false;
+  particlesSpawn(parent.x, parent.y);
+  soundPlay(parent.size == AST_SMALL ? SFX_ASTEROID_SMALL : SFX_ASTEROID_LARGE);
+  if (parent.size == AST_LARGE) displayShake(2);
+  if (parent.size != AST_SMALL) {
+    AsteroidSize child = parent.size == AST_LARGE ? AST_MEDIUM : AST_SMALL;
+    float offset = child == AST_MEDIUM ? ASTEROID_MEDIUM_R : ASTEROID_SMALL_R;
+    spawn(parent.x, parent.y-offset, child, parent.vx*1.08f, -0.18f);
+    spawn(parent.x, parent.y+offset, child, parent.vx*1.08f, 0.18f);
+  }
+  return parent.size == AST_LARGE ? SCORE_LARGE : parent.size == AST_MEDIUM ? SCORE_MEDIUM : SCORE_SMALL;
 }
-
-int asteroidActiveCount() {
-  int n = 0;
-  for (int i = 0; i < ASTEROID_MAX; i++) {
-    if (pool[i].active) n++;
-  }
-  return n;
-}
-
-bool asteroidNearest(float sx, float sy, float& outX, float& outY) {
-  float bestDist = 1e9f;
-  bool found = false;
-  for (int i = 0; i < ASTEROID_MAX; i++) {
-    if (!pool[i].active) continue;
-    float dx = pool[i].x - sx;
-    float dy = pool[i].y - sy;
-    float d = dx * dx + dy * dy;
-    if (d < bestDist) {
-      bestDist = d;
-      outX = pool[i].x;
-      outY = pool[i].y;
-      found = true;
+float asteroidSafeRespawnY() {
+  float bestY = (HUD_HEIGHT + SCREEN_H)/2.0f, bestClearance = -1000;
+  for (int y = HUD_HEIGHT + SHIP_RADIUS + 2; y < SCREEN_H - SHIP_RADIUS - 2; ++y) {
+    float clearance = 1000;
+    for (const auto& a : rocks) {
+      if (!a.active) continue;
+      float dx = a.x-SHIP_X, dy = a.y-y;
+      clearance = min(clearance, sqrtf(dx*dx+dy*dy)-a.radius-SHIP_RADIUS);
     }
+    if (clearance > bestClearance) { bestClearance = clearance; bestY = y; }
   }
-  return found;
+  return bestY;
 }

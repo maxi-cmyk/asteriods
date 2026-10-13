@@ -1,75 +1,28 @@
 #include "bullet.h"
 #include "asteroid.h"
-#include "saucer.h"
 #include "config.h"
-
-static Bullet          pool[BULLET_MAX];
-static unsigned long   lastFireMs = 0;
-
-void bulletsInit() {
-  memset(pool, 0, sizeof(pool));
-  lastFireMs = 0;
-}
-
+static Bullet bullets[BULLET_MAX];
+void bulletsInit() { memset(bullets, 0, sizeof(bullets)); }
 bool bulletsFire(float x, float y) {
-  if (millis() - lastFireMs < BULLET_COOLDOWN) return false;
-
-  for (int i = 0; i < BULLET_MAX; i++) {
-    if (pool[i].active) continue;
-    pool[i].x          = x;
-    pool[i].y          = y;
-    pool[i].framesLeft = BULLET_LIFETIME;
-    pool[i].active     = true;
-    lastFireMs         = millis();
+  for (auto& b : bullets) if (!b.active) {
+    b = {x, x, y, true};
     return true;
   }
-  return false;  // all slots occupied
+  return false;
 }
-
 void bulletsUpdate() {
-  for (int i = 0; i < BULLET_MAX; i++) {
-    if (!pool[i].active) continue;
-
-    pool[i].y -= BULLET_SPEED;
-    pool[i].framesLeft--;
-
-    if (pool[i].framesLeft == 0 || pool[i].y < 0) {
-      pool[i].active = false;
-    }
-  }
+  for (auto& b : bullets) if (b.active) { b.previousX = b.x; b.x += BULLET_SPEED; }
 }
-
-void bulletsDraw(Adafruit_SSD1306& display) {
-  for (int i = 0; i < BULLET_MAX; i++) {
-    if (!pool[i].active) continue;
-    int x1 = (int)pool[i].x;
-    int y1 = (int)pool[i].y;
-    display.drawFastVLine(x1, y1 - 2, 3, SSD1306_WHITE);
-  }
-}
-
 uint32_t bulletsCheckAsteroids() {
-  uint32_t total = 0;
-  for (int i = 0; i < BULLET_MAX; i++) {
-    if (!pool[i].active) continue;
-    uint32_t pts = asteroidsHitBullet(pool[i].x, pool[i].y);
-    if (pts > 0) {
-      pool[i].active = false;  // bullet consumed on hit
-      total += pts;
-    }
+  uint32_t score = 0;
+  for (auto& b : bullets) {
+    if (!b.active) continue;
+    uint32_t points = asteroidsHitBullet(b.previousX, b.x, b.y);
+    if (points) { score += points; b.active = false; }
+    else if (b.x >= SCREEN_W) b.active = false;
   }
-  return total;
+  return score;
 }
-
-uint32_t bulletsCheckSaucer() {
-  uint32_t total = 0;
-  for (int i = 0; i < BULLET_MAX; i++) {
-    if (!pool[i].active) continue;
-    uint32_t pts = saucerHitByBullet(pool[i].x, pool[i].y);
-    if (pts > 0) {
-      pool[i].active = false;
-      total += pts;
-    }
-  }
-  return total;
+void bulletsDraw(Adafruit_SSD1306& d) {
+  for (const auto& b : bullets) if (b.active) d.drawFastHLine(b.x, b.y, 3, SSD1306_WHITE);
 }

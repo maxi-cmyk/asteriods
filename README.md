@@ -1,90 +1,63 @@
 # Asteroids
 
-A breadboard-based Asteroids arcade game built on an ESP32, rendered on a 128×64 SSD1306 OLED display. It features analog joystick controls, a fire button, and an active buzzer for retro sound effects. Powered via USB-C, the game boots instantly and includes persistent high scores, scaling difficulty, and a multiplier streak system.
-
-## Features
-
-- **X-Axis Snap Movement:** Optimized for horizontal-only gallery shooting with zero-drift physics.
-- **Improved Audio:** Custom PWM sound engine generating classic arcade blips, thrust noise, and UFO warbling on a passive buzzer.
-- **Progressive Difficulty:** Math-driven difficulty scaling over a 5-minute match. Asteroids get faster, split into smaller pieces, and their shapes become more jagged as time goes on.
-- **Multiplier Streaks:** Chain kills within 3 seconds to build up to a 5x score multiplier.
-- **UFO/Saucer:** Bonus enemies that spawn periodically. Large saucers fire randomly; small saucers directly target the player.
-- **"Juice":** Screen shake on large explosions, a particle system for debris, and an OLED burn-in prevention system.
-- **Attract Mode:** If left idle on the main menu, the game plays an AI-driven demo game.
-- **Persistent Storage:** Top 10 high scores with 3-letter initials are saved to the ESP32's non-volatile memory via the Preferences library.
-
-## Hardware Requirements
-
-| Qty | Component                 | Notes                                   |
-| --- | ------------------------- | --------------------------------------- |
-| 1   | ESP32 DevKit v1 (38-pin)  | Ensure enough GPIOs (avoid ESP32-C3).   |
-| 1   | SSD1306 OLED 128×64       | I²C, 4-pin (0.96″ or 1.3″).             |
-| 1   | Dual-axis analog joystick | KY-023 style (VRx, VRy + switch click). |
-| 1   | Tactile push button (6mm) | Used for the Fire button.               |
-| 1   | Passive buzzer            | Frequency controlled via PWM.           |
-| -   | Breadboard & jumper wires | Full-size recommended.                  |
-| 1   | USB-C cable               | For direct power to the ESP32.          |
-
-## Pin Assignments & Wiring
-
-```text
-ESP32 Pin       →  Component
-─────────────────────────────────────────
-GPIO 21 (SDA)   →  OLED SDA
-GPIO 22 (SCL)   →  OLED SCL
-3.3V            →  OLED VCC
-GND             →  OLED GND
-
-GPIO 34 (ADC)   →  Joystick VRx (analog, input-only pin)
-GPIO 35 (ADC)   →  Joystick VRy (analog, input-only pin)
-GPIO 32         →  Joystick SW (double-click to pause)
-3.3V            →  Joystick +5V
-GND             →  Joystick GND
-
-GPIO 25         →  Fire button (wire to GND, use INPUT_PULLUP)
-GPIO 27 (PWM)   →  Passive buzzer signal
-```
-
-_Note: The ESP32's onboard voltage regulator handles 5V USB → 3.3V. All peripherals draw from the 3.3V rail safely._
-
-## Building and Flashing
-
-This project is built using PlatformIO.
-
-1. Install [PlatformIO](https://platformio.org/).
-2. Clone this repository.
-3. Plug in your ESP32.
-4. Build and upload using the PlatformIO CLI:
-   ```bash
-   pio run --target upload
-   ```
+A simple side-scrolling Asteroids rendition for an ESP32 and a 128×64 SSD1306 OLED. The ship stays near the left edge, moves up and down, and shoots right at incoming rocks. One analog joystick and one fire button are all you need.
 
 ## Controls
 
-| Input                     | Action                                          |
-| ------------------------- | ----------------------------------------------- |
-| **Joystick X-axis**       | Move ship left/right (snappy 1D movement)       |
-| **Fire button**           | Shoot bullet upwards                            |
-| **Double-click Joystick** | Pause / Resume gameplay                         |
-| **Single-click Joystick** | Menu select (on menu screens only)              |
+| Input | Action |
+| --- | --- |
+| Joystick up/down | Move vertically; release to stop |
+| Fire button press | Shoot one bullet to the right |
+| Double-click joystick | Pause / resume |
+| Fire on title / game over | Start / retry |
 
-## Game Mechanics
+There is **no hold-to-fire and no shot cooldown**. Each debounced press fires once, including rapid repeated presses. A 20 ms debounce filters mechanical bouncing; both press and release must register. The 12-bullet pool bounds memory use. Joystick X is unused during play.
 
-1. **Scoring:** Large Asteroid (20 pts), Medium Asteroid (50 pts), Small Asteroid (100 pts). Large Saucer (200 pts), Small Saucer (1000 pts).
-2. **Streaks:** Getting kills within 3 seconds of each other builds a multiplier streak (up to 5x).
-3. **Lives & Time:** The player starts with 3 lives. The game runs for a maximum of 5 minutes.
-4. **Respawning:** Dying costs 1 life. The ship respawns with 2 seconds of blinking invincibility.
-5. **High Scores:** If the timer reaches 0:00 or lives reach 0, the game ends. If your score falls in the top 10, you can enter your 3-letter initials.
+## Rules
 
-## Architecture
+- Start with three lives. Only touching a rock costs a life; missed rocks can exit left without penalty.
+- Large rocks split into two medium rocks; medium rocks split into two small rocks.
+- Earn 20 / 50 / 100 points for large / medium / small rocks.
+- Wave one has three large rocks entering from the right, 1.8 seconds apart. After all rocks are destroyed or leave, there is a 1.5-second breather.
+- Add one large rock every two waves, up to six. Speed increases gradually through wave eleven, then stays capped.
+- Rocks drift slightly vertically and bounce inside the playfield; objects do not wrap.
+- Respawn at the clearest available vertical position with two seconds of blinking invincibility. The world freezes briefly during the death effect.
+- Pause freezes movement, wave scheduling, bullets, and invincibility.
+- Runs end when all three lives are lost. There is no time limit, multiplier, saucer, initials entry, or attract demo.
+- The best score is stored in ESP32 Preferences and updated only when a completed run beats it. The simplified game uses a separate `best-v2` key; previous leaderboard data remains untouched.
 
-The project is structured into functional modules:
+## Hardware and wiring
 
-- Core game state and loops (`game.cpp`, `main.cpp`).
-- Entities (`ship.cpp`, `asteroid.cpp`, `bullet.cpp`, `saucer.cpp`).
-- Hardware abstractions (`display.cpp` for OLED, `input.cpp` for smoothing/ADC, `sound.cpp` for frequency audio).
-- Storage and UI (`highscore.cpp`, `demo.cpp`).
+| Component / signal | ESP32 connection |
+| --- | --- |
+| SSD1306 SDA / SCL | GPIO 21 / 22 |
+| OLED power | 3.3V / GND |
+| Joystick VRx / VRy | GPIO 34 / 35 |
+| Joystick SW | GPIO 32 |
+| Joystick power | 3.3V / GND |
+| Fire button | GPIO 25 to GND, internal pull-up |
+| Passive buzzer signal | GPIO 27 |
 
-## Troubleshooting 
+Uses an ESP32 DevKit (`esp32dev`), an I²C SSD1306 at `0x3C`, a dual-axis joystick with a built-in click switch, a tactile fire button, and a passive buzzer. No wiring changes are needed from the previous version. Leave the joystick centered during power-up calibration.
 
-Refer to docs -> SETUP.md
+## Build and upload
+
+```sh
+pio run
+pio run --target upload
+pio device monitor --baud 115200
+```
+
+If `pio` is not on your PATH, use `~/.platformio/penv/bin/pio`.
+
+## Verification
+
+```sh
+sh tests/run_host.sh
+```
+
+The host checks compile production gameplay and input code with simulated hardware, UndefinedBehaviorSanitizer. They cover firing edges, swept collisions, splitting and pool capacity, wave progression, movement bounds, pause, respawn selection, retry handling, and best-score storage logic. They do not verify physical joystick feel, OLED output, buzzer sound, or ESP32 flash persistence; test those on the board after uploading.
+
+To additionally enable AddressSanitizer on a compatible host, run `SANITIZERS=address,undefined sh tests/run_host.sh`. AddressSanitizer currently hangs on the development Mac, so it has not passed here.
+
+See [setup](docs/SETUP.md) and [game specification](docs/PRD.md).

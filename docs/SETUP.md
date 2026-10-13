@@ -14,7 +14,7 @@
 
 - OLED: SSD1306 128×64 I2C at address `0x3C`
 - Joystick button and fire button: wired active-low (pulled up internally)
-- Buzzer: active buzzer driven by PWM on pin 27
+- Buzzer: passive buzzer driven with variable-frequency PWM on pin 27
 
 ## Build & Flash
 
@@ -34,6 +34,12 @@ pio device monitor --baud 115200
 
 **Joystick drifts** — hold the joystick centred on power-up; `inputInit()` reads centre calibration from 32 samples at boot.
 
-**No sound** — confirm the buzzer is an *active* type. Passive buzzers need a different drive frequency.
+**No sound** — confirm the buzzer is a *passive* type and shares ground with the ESP32. The firmware generates the tone frequency.
 
 **Double-click to pause not registering** — the detection window is 300 ms (`DBLCLICK_WINDOW` in `config.h`). Adjust if needed.
+
+## Controls and board checks
+
+Move up/down with the joystick; press fire once per shot. Holding does not repeat. Rapid presses have no shot cooldown; debounce is 20 ms. Double-click the joystick to pause/resume.
+
+After upload, check vertical direction, center drift, rapid presses, display readability, pause during blinking invincibility, and repeated retries. Set a best score, power-cycle the board, and confirm it remains. Adjust `SHIP_MAX_SPEED` in `include/config.h` if needed.

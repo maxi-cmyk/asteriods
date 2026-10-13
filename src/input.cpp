@@ -14,6 +14,7 @@ static bool fireStable = false;
 
 // Double-click detection
 static unsigned long lastClickTime = 0;
+static bool awaitingSecondClick = false;
 static bool lastClickRaw = false;
 static bool clickStable = false;
 static unsigned long lastClickChange = 0;
@@ -120,19 +121,6 @@ void inputUpdate() {
     state.joyY = 0;
   }
 
-  // Deflection for zone detection
-  state.joyXDeflect = abs(pctX);
-  state.joyYDeflect = abs(pctY);
-
-  // Determine zones
-  auto toZone = [](int deflect) -> JoyZone {
-    if (deflect < JOY_DEADZONE)      return ZONE_DEAD;
-    if (deflect >= JOY_THRUST_ZONE)  return ZONE_THRUST;
-    return ZONE_CRUISE;
-  };
-  state.xZone = toZone(state.joyXDeflect);
-  state.yZone = toZone(state.joyYDeflect);
-
   // ── Fire button ──
   bool fireRaw = !digitalRead(PIN_FIRE);  // active low
   bool prevFire = state.fireHeld;
@@ -152,11 +140,12 @@ void inputUpdate() {
     clickFreezeUntil = now + JOY_CLICK_FREEZE_MS;
 
     // Double-click detection
-    if (now - lastClickTime <= DBLCLICK_WINDOW) {
+    if (awaitingSecondClick && now - lastClickTime <= DBLCLICK_WINDOW) {
       state.pauseTriggered = true;
-      lastClickTime = 0;  // reset so triple-click doesn't re-trigger
+      awaitingSecondClick = false;
     } else {
       lastClickTime = now;
+      awaitingSecondClick = true;
     }
   }
 }

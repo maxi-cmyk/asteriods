@@ -9,6 +9,8 @@ struct Particle {
 
 static Particle pool[PARTICLE_MAX];
 
+void particlesInit() { memset(pool, 0, sizeof(pool)); }
+
 void particlesSpawn(float x, float y) {
   int count = 4 + random(3);  // 4-6 particles
   for (int n = 0; n < count; n++) {
@@ -47,7 +49,7 @@ void particlesDraw(Adafruit_SSD1306& display) {
     const Particle& p = pool[i];
     int px = (int)p.x;
     int py = (int)p.y;
-    if (px >= 0 && px < 128 && py >= 0 && py < 64) {
+    if (px >= 0 && px < 128 && py >= 10 && py < 64) {
       display.drawPixel(px, py, SSD1306_WHITE);
     }
   }

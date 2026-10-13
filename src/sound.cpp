@@ -32,20 +32,8 @@ static const SoundStep PAT_DEATH[] = {
   {0, 0}
 };
 
-static const SoundStep PAT_STREAK_UP[] = {
-  {440, 30}, {0, 10}, {554, 30}, {0, 10}, {659, 30}, // A4, C#5, E5
-  {0, 0}
-};
 
-static const SoundStep PAT_STREAK_LOST[] = {
-  {150, 80},
-  {0, 0}
-};
 
-static const SoundStep PAT_THRUST[] = {
-  {100, 15}, {150, 15},
-  {0, 0}
-};
 
 static const SoundStep PAT_MENU_SELECT[] = {
   {880, 15}, // A5
@@ -62,10 +50,6 @@ static const SoundStep PAT_GAMEOVER[] = {
   {0, 0}
 };
 
-static const SoundStep PAT_UFO[] = {
-  {1000, 200}, {500, 200},
-  {0, 0}
-};
 
 // ── State ──
 static SoundFX currentFX = SFX_NONE;
@@ -80,13 +64,9 @@ static const SoundStep* getPattern(SoundFX fx) {
     case SFX_ASTEROID_SMALL: return PAT_ASTEROID_SMALL;
     case SFX_ASTEROID_LARGE: return PAT_ASTEROID_LARGE;
     case SFX_DEATH:          return PAT_DEATH;
-    case SFX_STREAK_UP:      return PAT_STREAK_UP;
-    case SFX_STREAK_LOST:    return PAT_STREAK_LOST;
-    case SFX_THRUST:         return PAT_THRUST;
     case SFX_MENU_SELECT:    return PAT_MENU_SELECT;
     case SFX_HIGHSCORE:      return PAT_HIGHSCORE;
     case SFX_GAMEOVER:       return PAT_GAMEOVER;
-    case SFX_UFO:            return PAT_UFO;
     default:                 return nullptr;
   }
 }
