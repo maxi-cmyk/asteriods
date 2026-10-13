@@ -1,26 +1,55 @@
 #include "ship.h"
 #include "config.h"
-void shipRespawn(Ship& s, float y) {
-  s.x = SHIP_X;
-  s.y = y;
-  s.alive = true;
-  s.invincibleLeft = SHIP_INVINCIBLE_MS;
+
+void ship_respawn(Ship& ship, float position_y) {
+    ship.position_x = SHIP_X;
+    ship.position_y = position_y;
+    ship.alive = true;
+    ship.invincible_left = SHIP_INVINCIBLE_MS;
 }
-void shipInit(Ship& s) {
-  s.lives = LIVES_START;
-  shipRespawn(s, (HUD_HEIGHT + SCREEN_H) / 2.0f);
+
+void ship_init(Ship& ship) {
+    ship.lives = LIVES_START;
+    ship_respawn(ship, (HUD_HEIGHT + SCREEN_H) / 2.0f);
 }
-void shipUpdate(Ship& s, float joyY) {
-  if (!s.alive) return;
-  s.y = constrain(s.y + joyY * SHIP_MAX_SPEED,
-                  float(HUD_HEIGHT + SHIP_RADIUS + 1), float(SCREEN_H - SHIP_RADIUS - 2));
-  s.invincibleLeft = s.invincibleLeft > FRAME_TIME_MS ? s.invincibleLeft - FRAME_TIME_MS : 0;
+
+void ship_update(Ship& ship, float joystick_y) {
+    if (!ship.alive) {
+        return;
+    }
+
+    ship.position_y
+            = constrain(ship.position_y + joystick_y * SHIP_MAX_SPEED,
+                        float(HUD_HEIGHT + SHIP_RADIUS + SHIP_TOP_GAP),
+                        float(SCREEN_H - SHIP_RADIUS - SHIP_BOTTOM_GAP));
+
+    if (ship.invincible_left > FRAME_TIME_MS) {
+        ship.invincible_left -= FRAME_TIME_MS;
+    } else {
+        ship.invincible_left = 0;
+    }
 }
-void shipDraw(const Ship& s, Adafruit_SSD1306& d) {
-  if (!s.alive || (s.invincibleLeft && (s.invincibleLeft / 100) % 2 == 0)) return;
-  d.drawTriangle(s.x + 5, s.y, s.x - 3, s.y - 3, s.x - 3, s.y + 3, SSD1306_WHITE);
+
+void ship_draw(const Ship& ship, Adafruit_SSD1306& display) {
+    if (!ship.alive
+        || (ship.invincible_left
+            && (ship.invincible_left / SHIP_BLINK_MS) % 2 == 0)) {
+        return;
+    }
+
+    display.drawTriangle(ship.position_x + SHIP_NOSE_OFFSET,
+                         ship.position_y,
+                         ship.position_x - SHIP_TAIL_OFFSET,
+                         ship.position_y - SHIP_RADIUS,
+                         ship.position_x - SHIP_TAIL_OFFSET,
+                         ship.position_y + SHIP_RADIUS,
+                         SSD1306_WHITE);
 }
-void shipDie(Ship& s) {
-  s.alive = false;
-  if (s.lives) --s.lives;
+
+void ship_die(Ship& ship) {
+    ship.alive = false;
+
+    if (ship.lives) {
+        ship.lives--;
+    }
 }

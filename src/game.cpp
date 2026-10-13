@@ -8,88 +8,250 @@
 #include "sound.h"
 #include "highscore.h"
 #include "particle.h"
-static GameState state;
-static Ship ship;
-static unsigned long entered, gameMs;
-static uint32_t score;
-static bool newBest, retryReady;
-static void setState(GameState s) { state = s; entered = millis(); }
-static void beginGame() {
-  shipInit(ship); asteroidsInit(); bulletsInit(); particlesInit();
-  score = 0; gameMs = 0; newBest = false;
-  setState(STATE_COUNTDOWN);
+
+static const int COUNTDOWN_START = 3;
+static const unsigned long COUNTDOWN_STEP_MS = 500;
+static const unsigned long DEATH_ANIMATION_MS = 500;
+static const unsigned long RETRY_GUARD_MS = 400;
+static const int DEATH_SHAKE_FRAMES = 3;
+static const int NORMAL_TEXT_SIZE = 1;
+static const int TITLE_TEXT_SIZE = 2;
+static const int COUNTDOWN_TEXT_SIZE = 3;
+
+// Text positions are fixed for the 128x64 display.
+static const int TITLE_X = 10;
+static const int MENU_TITLE_Y = 5;
+static const int MENU_BEST_X = 25;
+static const int MENU_BEST_Y = 27;
+static const int MENU_HINT_X = 4;
+static const int MENU_MOVE_Y = 41;
+static const int MENU_START_Y = 52;
+static const int COUNTDOWN_X = 55;
+static const int COUNTDOWN_Y = 22;
+static const int PAUSE_BOX_X = 17;
+static const int PAUSE_BOX_Y = 24;
+static const int PAUSE_BOX_WIDTH = 95;
+static const int PAUSE_BOX_HEIGHT = 30;
+static const int PAUSE_TITLE_X = 28;
+static const int PAUSE_TITLE_Y = 26;
+static const int PAUSE_HINT_X = 19;
+static const int PAUSE_HINT_Y = 45;
+static const int GAME_OVER_TITLE_Y = 4;
+static const int SUMMARY_X = 15;
+static const int SUMMARY_SCORE_Y = 25;
+static const int SUMMARY_BEST_Y = 36;
+static const int SUMMARY_RECORD_Y = 46;
+static const int SUMMARY_RETRY_Y = 56;
+
+static GameState state = STATE_MENU;
+static Ship ship = {};
+static unsigned long state_entered_ms = 0;
+static unsigned long game_ms = 0;
+static uint32_t score = 0;
+static bool new_best = false;
+static bool retry_ready = false;
+
+static void set_state(GameState next_state) {
+    state = next_state;
+    state_entered_ms = millis();
 }
-static void drawWorld() {
-  auto& d = displayGet();
-  asteroidsDraw(d); bulletsDraw(d); particlesDraw(d); shipDraw(ship, d);
-  // Draw HUD last so effects never obscure the score.
-  d.fillRect(0, 0, SCREEN_W, HUD_HEIGHT, SSD1306_BLACK);
-  displayHUD(ship.lives, score);
+
+static void begin_game() {
+    ship_init(ship);
+    asteroids_init();
+    bullets_init();
+    particles_init();
+
+    score = 0;
+    game_ms = 0;
+    new_best = false;
+    set_state(STATE_COUNTDOWN);
 }
-static void label(int x, int y, const char* text, int size = 1) {
-  auto& d = displayGet(); d.setTextSize(size); d.setCursor(x,y); d.print(text);
+
+static void draw_world() {
+    Adafruit_SSD1306& display = display_get();
+    asteroids_draw(display);
+    bullets_draw(display);
+    particles_draw(display);
+    ship_draw(ship, display);
+
+    // Draw the HUD last so effects never obscure the score.
+    display.fillRect(0, 0, SCREEN_W, HUD_HEIGHT, SSD1306_BLACK);
+    display_hud(ship.lives, score);
 }
-void gameInit() {
-  highscoreInit(); setState(STATE_MENU);
+
+static void draw_label(int position_x,
+                       int position_y,
+                       const char *text,
+                       int text_size = NORMAL_TEXT_SIZE) {
+    Adafruit_SSD1306& display = display_get();
+    display.setTextSize(text_size);
+    display.setCursor(position_x, position_y);
+    display.print(text);
 }
-GameState gameGetState() { return state; }
-void gameUpdate() {
-  const auto& in = inputGet();
-  auto& d = displayGet();
-  d.clearDisplay(); d.setTextColor(SSD1306_WHITE); d.setTextSize(1);
-  switch (state) {
-    case STATE_MENU:
-      label(10, 5, "ASTEROIDS", 2);
-      d.setTextSize(1); d.setCursor(25, 27); d.printf("BEST %lu", (unsigned long)highscoreBest());
-      label(4, 41, "Up/down: move"); label(4, 52, "Fire to start");
-      if (in.firePressed) { soundPlay(SFX_MENU_SELECT); beginGame(); }
-      break;
-    case STATE_COUNTDOWN: {
-      unsigned long elapsed = millis()-entered;
-      int n = 3-int(elapsed/500);
-      if (n > 0) { d.setTextSize(3); d.setCursor(55,22); d.print(n); }
-      else { setState(STATE_PLAYING); }
-      break;
+
+static void update_menu(const InputState& input) {
+    Adafruit_SSD1306& display = display_get();
+    draw_label(TITLE_X, MENU_TITLE_Y, "ASTEROIDS", TITLE_TEXT_SIZE);
+    display.setTextSize(NORMAL_TEXT_SIZE);
+    display.setCursor(MENU_BEST_X, MENU_BEST_Y);
+    display.printf("BEST %lu", (unsigned long)highscore_best());
+
+    draw_label(MENU_HINT_X, MENU_MOVE_Y, "Up/down: move");
+    draw_label(MENU_HINT_X, MENU_START_Y, "Fire to start");
+
+    if (input.fire_pressed) {
+        sound_play(SFX_MENU_SELECT);
+        begin_game();
     }
-    case STATE_PLAYING:
-      if (in.pauseTriggered) { soundStop(); setState(STATE_PAUSED); drawWorld(); break; }
-      gameMs += FRAME_TIME_MS;
-      shipUpdate(ship, in.joyY);
-      asteroidsUpdate(gameMs);
-      if (in.firePressed && bulletsFire(ship.x+6, ship.y)) soundPlay(SFX_SHOOT);
-      bulletsUpdate(); score += bulletsCheckAsteroids(); particlesUpdate();
-      if (!ship.invincibleLeft && asteroidHitsShip(ship.x, ship.y)) {
-        shipDie(ship); particlesSpawn(ship.x, ship.y); soundPlay(SFX_DEATH);
-        displayShake(3); setState(STATE_DEATH_ANIM);
-      }
-      drawWorld();
-      break;
-    case STATE_PAUSED:
-      drawWorld();
-      d.fillRect(17, 24, 95, 30, SSD1306_BLACK);
-      label(28, 26, "PAUSED", 2); label(19, 45, "Double-click joy");
-      if (in.pauseTriggered) setState(STATE_PLAYING);
-      break;
-    case STATE_DEATH_ANIM:
-      particlesUpdate(); drawWorld();
-      if (millis()-entered >= 500) {
-        bulletsInit();
-        if (ship.lives) { shipRespawn(ship, asteroidSafeRespawnY()); setState(STATE_PLAYING); }
-        else {
-          newBest = highscoreRecord(score); retryReady = false;
-          soundStop(); soundPlay(SFX_GAMEOVER); setState(STATE_GAME_OVER);
+}
+
+static void update_countdown() {
+    Adafruit_SSD1306& display = display_get();
+    unsigned long elapsed_ms = millis() - state_entered_ms;
+    int countdown_number
+            = COUNTDOWN_START - int(elapsed_ms / COUNTDOWN_STEP_MS);
+
+    if (countdown_number > 0) {
+        display.setTextSize(COUNTDOWN_TEXT_SIZE);
+        display.setCursor(COUNTDOWN_X, COUNTDOWN_Y);
+        display.print(countdown_number);
+    } else {
+        set_state(STATE_PLAYING);
+    }
+}
+
+static void update_playing(const InputState& input) {
+    if (input.pause_triggered) {
+        sound_stop();
+        set_state(STATE_PAUSED);
+        draw_world();
+        return;
+    }
+
+    game_ms += FRAME_TIME_MS;
+    ship_update(ship, input.joystick_y);
+    asteroids_update(game_ms);
+
+    if (input.fire_pressed
+        && bullets_fire(ship.position_x + SHIP_BULLET_OFFSET,
+                        ship.position_y)) {
+        sound_play(SFX_SHOOT);
+    }
+
+    bullets_update();
+    score += bullets_check_asteroids();
+    particles_update();
+
+    if (!ship.invincible_left
+        && asteroid_hits_ship(ship.position_x, ship.position_y)) {
+        ship_die(ship);
+        particles_spawn(ship.position_x, ship.position_y);
+        sound_play(SFX_DEATH);
+        display_shake(DEATH_SHAKE_FRAMES);
+        set_state(STATE_DEATH_ANIM);
+    }
+
+    draw_world();
+}
+
+static void update_paused(const InputState& input) {
+    Adafruit_SSD1306& display = display_get();
+    draw_world();
+    display.fillRect(PAUSE_BOX_X,
+                     PAUSE_BOX_Y,
+                     PAUSE_BOX_WIDTH,
+                     PAUSE_BOX_HEIGHT,
+                     SSD1306_BLACK);
+    draw_label(PAUSE_TITLE_X, PAUSE_TITLE_Y, "PAUSED", TITLE_TEXT_SIZE);
+    draw_label(PAUSE_HINT_X, PAUSE_HINT_Y, "Double-click joy");
+
+    if (input.pause_triggered) {
+        set_state(STATE_PLAYING);
+    }
+}
+
+static void update_death_animation() {
+    particles_update();
+    draw_world();
+
+    if (millis() - state_entered_ms >= DEATH_ANIMATION_MS) {
+        bullets_init();
+
+        if (ship.lives) {
+            ship_respawn(ship, asteroid_safe_respawn_y());
+            set_state(STATE_PLAYING);
+        } else {
+            new_best = highscore_record(score);
+            retry_ready = false;
+            sound_stop();
+            sound_play(SFX_GAMEOVER);
+            set_state(STATE_GAME_OVER);
         }
-      }
-      break;
+    }
+}
+
+static void update_game_over(const InputState& input) {
+    Adafruit_SSD1306& display = display_get();
+    draw_label(TITLE_X, GAME_OVER_TITLE_Y, "GAME OVER", TITLE_TEXT_SIZE);
+    display.setTextSize(NORMAL_TEXT_SIZE);
+    display.setCursor(SUMMARY_X, SUMMARY_SCORE_Y);
+    display.printf("SCORE %lu", (unsigned long)score);
+    display.setCursor(SUMMARY_X, SUMMARY_BEST_Y);
+    display.printf("BEST  %lu", (unsigned long)highscore_best());
+
+    if (new_best) {
+        draw_label(SUMMARY_X, SUMMARY_RECORD_Y, "NEW BEST!");
+    }
+
+    draw_label(SUMMARY_X, SUMMARY_RETRY_Y, "Fire to retry");
+
+    if (!input.fire_held && millis() - state_entered_ms >= RETRY_GUARD_MS) {
+        retry_ready = true;
+    }
+
+    if (retry_ready && input.fire_pressed) {
+        begin_game();
+    }
+}
+
+void game_init() {
+    highscore_init();
+    set_state(STATE_MENU);
+}
+
+GameState game_get_state() {
+    return state;
+}
+
+void game_update() {
+    const InputState& input = input_get();
+    Adafruit_SSD1306& display = display_get();
+    display.clearDisplay();
+    display.setTextColor(SSD1306_WHITE);
+    display.setTextSize(NORMAL_TEXT_SIZE);
+
+    switch (state) {
+    case STATE_MENU:
+        update_menu(input);
+        break;
+    case STATE_COUNTDOWN:
+        update_countdown();
+        break;
+    case STATE_PLAYING:
+        update_playing(input);
+        break;
+    case STATE_PAUSED:
+        update_paused(input);
+        break;
+    case STATE_DEATH_ANIM:
+        update_death_animation();
+        break;
     case STATE_GAME_OVER:
-      label(10, 4, "GAME OVER", 2);
-      d.setTextSize(1); d.setCursor(15, 25); d.printf("SCORE %lu", (unsigned long)score);
-      d.setCursor(15, 36); d.printf("BEST  %lu", (unsigned long)highscoreBest());
-      if (newBest) label(15, 46, "NEW BEST!");
-      label(15, 56, "Fire to retry");
-      if (!in.fireHeld && millis()-entered >= 400) retryReady = true;
-      if (retryReady && in.firePressed) beginGame();
-      break;
-  }
-  displayShakeUpdate(); displayFlip();
+        update_game_over(input);
+        break;
+    }
+
+    display_shake_update();
+    display_flip();
 }

@@ -1,8 +1,10 @@
 #pragma once
+
 #include <Adafruit_SSD1306.h>
-bool displayInit();
-Adafruit_SSD1306& displayGet();
-void displayHUD(uint8_t lives, uint32_t score);
-void displayFlip();
-void displayShake(uint8_t frames);
-void displayShakeUpdate();
+
+bool display_init();
+Adafruit_SSD1306& display_get();
+void display_hud(uint8_t lives, uint32_t score);
+void display_flip();
+void display_shake(uint8_t frames);
+void display_shake_update();

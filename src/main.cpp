@@ -5,60 +5,70 @@
 #include "sound.h"
 #include "game.h"
 
-static unsigned long lastFrameMs = 0;
+static unsigned long last_frame_ms = 0;
+static const unsigned long SERIAL_BAUD = 115200;
+static const int DISPLAY_ERROR_BEEPS = 5;
+static const unsigned long DISPLAY_ERROR_BEEP_DELAY_MS = 200;
+static const int CALIBRATION_TEXT_X = 20;
+static const int CALIBRATION_TEXT_Y = 28;
+
+static void initialize_display() {
+    // Display must be ready before showing the calibration message.
+    if (!display_init()) {
+        Serial.println("ERROR: OLED not found!");
+        sound_init();
+
+        for (int i = 0; i < DISPLAY_ERROR_BEEPS; i++) {
+            sound_play(SFX_SHOOT);
+            delay(DISPLAY_ERROR_BEEP_DELAY_MS);
+        }
+
+        while (true) {
+            // Halt because the game cannot run without its display.
+        }
+    }
+}
+
+static void show_calibration_message() {
+    Adafruit_SSD1306& display = display_get();
+    display.clearDisplay();
+    display.setTextSize(1);
+    display.setTextColor(SSD1306_WHITE);
+    display.setCursor(CALIBRATION_TEXT_X, CALIBRATION_TEXT_Y);
+    display.print("Calibrating...");
+    display.display();
+}
 
 void setup() {
-  Serial.begin(115200);
-  Serial.println("\n=== ASTEROIDS ===\n");
+    Serial.begin(SERIAL_BAUD);
+    Serial.println("\n=== ASTEROIDS ===\n");
 
-  // Initialize display first (shows splash)
-  if (!displayInit()) {
-    Serial.println("ERROR: OLED not found!");
-    // Beep buzzer as error signal
-    soundInit();
-    for (int i = 0; i < 5; i++) {
-      soundPlay(SFX_SHOOT);
-      delay(200);
-    }
-    while (1);  // halt
-  }
+    initialize_display();
+    show_calibration_message();
 
-  // Show brief init message
-  Adafruit_SSD1306& d = displayGet();
-  d.clearDisplay();
-  d.setTextSize(1);
-  d.setTextColor(SSD1306_WHITE);
-  d.setCursor(20, 28);
-  d.print("Calibrating...");
-  d.display();
+    // Seed RNG from ESP32 hardware entropy so asteroids vary each run
+    randomSeed(esp_random());
 
-  // Seed RNG from ESP32 hardware entropy so asteroids vary each run
-  randomSeed(esp_random());
+    input_init(); // Calibrates joystick
+    sound_init();
+    game_init();
 
-  // Initialize subsystems
-  inputInit();   // Calibrates joystick
-  soundInit();
-  gameInit();
+    sound_play(SFX_MENU_SELECT);
 
-  // Startup beep
-  soundPlay(SFX_MENU_SELECT);
-
-  lastFrameMs = millis();
-  Serial.println("Init complete. Game starting.");
+    last_frame_ms = millis();
+    Serial.println("Init complete. Game starting.");
 }
 
 void loop() {
-  unsigned long now = millis();
+    unsigned long now = millis();
 
-  // ── Frame rate limiter ──
-  if (now - lastFrameMs < FRAME_TIME_MS) {
-    return;  // Not time for a new frame yet
-  }
-  lastFrameMs = now;
+    if (now - last_frame_ms < FRAME_TIME_MS) {
+        return;
+    }
 
-  // ── Per-frame update sequence ──
-  inputUpdate();    // Read all inputs
-  gameUpdate();     // State machine + physics + render
-  soundUpdate();    // Advance sound patterns
+    last_frame_ms = now;
 
+    input_update();
+    game_update();
+    sound_update();
 }

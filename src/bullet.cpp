@@ -1,28 +1,64 @@
 #include "bullet.h"
 #include "asteroid.h"
 #include "config.h"
-static Bullet bullets[BULLET_MAX];
-void bulletsInit() { memset(bullets, 0, sizeof(bullets)); }
-bool bulletsFire(float x, float y) {
-  for (auto& b : bullets) if (!b.active) {
-    b = {x, x, y, true};
-    return true;
-  }
-  return false;
+
+static Bullet bullets[BULLET_MAX] = {};
+
+void bullets_init() {
+    memset(bullets, 0, sizeof(bullets));
 }
-void bulletsUpdate() {
-  for (auto& b : bullets) if (b.active) { b.previousX = b.x; b.x += BULLET_SPEED; }
+
+bool bullets_fire(float position_x, float position_y) {
+    for (int i = 0; i < BULLET_MAX; i++) {
+        if (!bullets[i].active) {
+            bullets[i] = {position_x, position_x, position_y, true};
+            return true;
+        }
+    }
+
+    return false;
 }
-uint32_t bulletsCheckAsteroids() {
-  uint32_t score = 0;
-  for (auto& b : bullets) {
-    if (!b.active) continue;
-    uint32_t points = asteroidsHitBullet(b.previousX, b.x, b.y);
-    if (points) { score += points; b.active = false; }
-    else if (b.x >= SCREEN_W) b.active = false;
-  }
-  return score;
+
+void bullets_update() {
+    for (int i = 0; i < BULLET_MAX; i++) {
+        if (bullets[i].active) {
+            bullets[i].previous_x = bullets[i].position_x;
+            bullets[i].position_x += BULLET_SPEED;
+        }
+    }
 }
-void bulletsDraw(Adafruit_SSD1306& d) {
-  for (const auto& b : bullets) if (b.active) d.drawFastHLine(b.x, b.y, 3, SSD1306_WHITE);
+
+uint32_t bullets_check_asteroids() {
+    uint32_t total_points = 0;
+
+    for (int i = 0; i < BULLET_MAX; i++) {
+        Bullet& bullet = bullets[i];
+
+        if (!bullet.active) {
+            continue;
+        }
+
+        uint32_t points = asteroids_hit_bullet(
+                bullet.previous_x, bullet.position_x, bullet.position_y);
+
+        if (points) {
+            total_points += points;
+            bullet.active = false;
+        } else if (bullet.position_x >= SCREEN_W) {
+            bullet.active = false;
+        }
+    }
+
+    return total_points;
+}
+
+void bullets_draw(Adafruit_SSD1306& display) {
+    for (int i = 0; i < BULLET_MAX; i++) {
+        if (bullets[i].active) {
+            display.drawFastHLine(bullets[i].position_x,
+                                  bullets[i].position_y,
+                                  BULLET_DRAW_LENGTH,
+                                  SSD1306_WHITE);
+        }
+    }
 }

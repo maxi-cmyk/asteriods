@@ -61,3 +61,18 @@ The host checks compile production gameplay and input code with simulated hardwa
 To additionally enable AddressSanitizer on a compatible host, run `SANITIZERS=address,undefined sh tests/run_host.sh`. AddressSanitizer currently hangs on the development Mac, so it has not passed here.
 
 See [setup](docs/SETUP.md) and [game specification](docs/PRD.md).
+
+## Coding style
+
+Project-owned code follows the CS101 conventions summarized in
+[nextSteps.md](nextSteps.md): four-space indentation, 80-column lines, braces
+for every control-flow body, descriptive snake_case names, initialized
+variables, and short functions. Arduino and library API names retain their
+original spelling. `.clang-format` captures the formatting rules.
+
+With clang-format installed, check formatting using:
+
+```sh
+clang-format --dry-run --Werror src/*.cpp include/*.h tests/host/*.h \
+    tests/host/*.cpp
+```
