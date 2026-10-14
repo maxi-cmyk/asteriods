@@ -80,20 +80,76 @@ static void test_wave_progression() {
 }
 
 static void test_ship_movement() {
-    // Movement stops on release and clamps inside the display.
     Ship test_ship = {};
     ship_init(test_ship);
-    for (int i = 0; i < 100; ++i) {
-        ship_update(test_ship, -1);
-    }
-    assert(test_ship.position_y >= HUD_HEIGHT + SHIP_RADIUS);
+    ship_respawn(test_ship, 50, 35);
+    ship_update(test_ship, 0.3f, 0.4f);
+    assert(fabsf(test_ship.position_x - 50 - 0.3f * SHIP_MAX_SPEED) < 0.001f);
+    assert(fabsf(test_ship.position_y - 35 - 0.4f * SHIP_MAX_SPEED) < 0.001f);
+    float position_x = test_ship.position_x;
     float position_y = test_ship.position_y;
-    ship_update(test_ship, 0);
+    ship_update(test_ship, 0, 0);
+    assert(test_ship.position_x == position_x);
     assert(test_ship.position_y == position_y);
-    for (int i = 0; i < 100; ++i) {
-        ship_update(test_ship, 1);
+    ship_update(test_ship, 1, 1);
+    float distance_x = test_ship.position_x - position_x;
+    float distance_y = test_ship.position_y - position_y;
+    assert(fabsf(hypotf(distance_x, distance_y) - SHIP_MAX_SPEED) < 0.001f);
+
+    for (int i = 0; i < 200; i++) {
+        ship_update(test_ship, -1, -1);
     }
+    assert(test_ship.position_x == SHIP_MIN_X);
+    assert(test_ship.position_y == SHIP_MIN_Y);
+    assert(test_ship.position_x - SHIP_TAIL_OFFSET >= 0);
+    assert(test_ship.position_y - SHIP_RADIUS >= HUD_HEIGHT);
+    for (int i = 0; i < 200; i++) {
+        ship_update(test_ship, 1, 1);
+    }
+    assert(test_ship.position_x == SHIP_MAX_X);
+    assert(test_ship.position_y == SHIP_MAX_Y);
+    assert(test_ship.position_x + SHIP_NOSE_OFFSET < SCREEN_W);
     assert(test_ship.position_y + SHIP_RADIUS < SCREEN_H);
+    ship_die(test_ship);
+    ship_update(test_ship, -1, -1);
+    assert(test_ship.position_x == SHIP_MAX_X);
+    assert(test_ship.position_y == SHIP_MAX_Y);
+}
+
+static void test_input_movement_and_firing() {
+    begin_game();
+    set_state(STATE_PLAYING);
+    pending_asteroids = 0;
+    ship_respawn(ship, 50, 35);
+    input_init();
+    joystick_raw_x = 4095;
+    joystick_raw_y = 0;
+    tick();
+    assert(ship.position_x > 50 && ship.position_y < 35);
+    joystick_raw_x = TEST_ADC_CENTER;
+    joystick_raw_y = TEST_ADC_CENTER;
+    float position_x = ship.position_x;
+    float position_y = ship.position_y;
+    tick();
+    assert(ship.position_x == position_x && ship.position_y == position_y);
+    InputState shot_input = {};
+    shot_input.fire_pressed = true;
+    update_playing(shot_input);
+    assert(bullets[0].active);
+    assert(bullets[0].previous_x == ship.position_x + SHIP_BULLET_OFFSET);
+    assert(bullets[0].position_y == ship.position_y);
+    assert(bullets[0].position_x > bullets[0].previous_x);
+}
+
+static void test_spawn_warning() {
+    asteroids_init();
+    float warning_y = pending_spawn_y;
+    asteroids_update(SPAWN_WARNING_MS - 1);
+    assert(asteroid_active_count() == 0);
+    asteroids_update(SPAWN_WARNING_MS);
+    assert(asteroid_active_count() == 1);
+    assert(fabsf(rocks[0].position_y - warning_y) < 1.0f);
+    assert(next_spawn_ms == SPAWN_WARNING_MS + WAVE_SPAWN_INTERVAL_MS);
 }
 
 static void test_bullet_capacity() {
@@ -143,19 +199,40 @@ static void test_pause_state() {
     unsigned long frozen_time = game_ms;
     unsigned long invincibility_left = ship.invincible_left;
     float rock_x = rocks[0].position_x;
+    float ship_x = ship.position_x;
+    float ship_y = ship.position_y;
+    unsigned long warning_time = current_game_ms;
     for (int i = 0; i < 100; ++i) {
         tick();
     }
     assert(game_ms == frozen_time && ship.invincible_left == invincibility_left
            && rocks[0].position_x == rock_x);
+    assert(ship.position_x == ship_x && ship.position_y == ship_y);
+    assert(current_game_ms == warning_time);
 }
 
 static void test_respawn_location() {
-    // Respawn chooses the clearest position along the ship's vertical
-    // lane.
     memset(rocks, 0, sizeof(rocks));
     spawn_asteroid(SHIP_X, 20, AST_LARGE, -0.4f, 0);
-    assert(asteroid_safe_respawn_y() > 40);
+    float respawn_x = 0;
+    float respawn_y = 0;
+    asteroid_safe_respawn(respawn_x, respawn_y);
+    assert(respawn_x == SHIP_X && respawn_y > 40);
+
+    // Fill the old vertical lane: the search must find another safe lane.
+    memset(rocks, 0, sizeof(rocks));
+    for (int position_y = SHIP_MIN_Y; position_y <= SHIP_MAX_Y;
+         position_y += 8) {
+        spawn_asteroid(SHIP_X, position_y, AST_LARGE, -0.4f, 0);
+    }
+    asteroid_safe_respawn(respawn_x, respawn_y);
+    assert(respawn_x > SHIP_X && respawn_x < SCREEN_W / 2);
+    assert(respawn_clearance(respawn_x, respawn_y) >= RESPAWN_SAFE_CLEARANCE);
+    ship_respawn(ship, respawn_x, respawn_y);
+    assert(ship.alive && ship.invincible_left == SHIP_INVINCIBLE_MS);
+    assert(!asteroid_hits_ship(ship.position_x, ship.position_y));
+    assert(respawn_x >= SHIP_MIN_X && respawn_x <= SHIP_MAX_X);
+    assert(respawn_y >= SHIP_MIN_Y && respawn_y <= SHIP_MAX_Y);
 }
 
 static int test_best_score_and_retry() {
@@ -228,6 +305,9 @@ int main() {
     test_wave_progression();
     test_ship_movement();
     test_bullet_capacity();
+    test_spawn_warning();
+    test_input_movement_and_firing();
+    set_state(STATE_MENU);
 
     // Exercise a continuous session: fire, pause, die, retry, and save.
     test_fire_input_edges();

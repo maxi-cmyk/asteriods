@@ -1,17 +1,17 @@
 # Asteroids
 
-A simple side-scrolling Asteroids rendition for an ESP32 and a 128×64 SSD1306 OLED. The ship stays near the left edge, moves up and down, and shoots right at incoming rocks. One analog joystick and one fire button are all you need.
+A simple side-scrolling Asteroids rendition for an ESP32 and a 128×64 SSD1306 OLED. The ship moves freely within the playfield and shoots right at incoming rocks. One analog joystick and one fire button are all you need.
 
 ## Controls
 
 | Input | Action |
 | --- | --- |
-| Joystick up/down | Move vertically; release to stop |
+| Joystick X/Y | Move left/right and up/down; release to stop |
 | Fire button press | Shoot one bullet to the right |
 | Double-click joystick | Pause / resume |
 | Fire on title / game over | Start / retry |
 
-There is **no hold-to-fire and no shot cooldown**. Each debounced press fires once, including rapid repeated presses. A 20 ms debounce filters mechanical bouncing; both press and release must register. The 12-bullet pool bounds memory use. Joystick X is unused during play.
+There is **no hold-to-fire and no shot cooldown**. Each debounced press fires once, including rapid repeated presses. A 20 ms debounce filters mechanical bouncing; both press and release must register. The 12-bullet pool bounds memory use. Full diagonal speed is capped at straight-line speed.
 
 ## Rules
 
@@ -20,8 +20,8 @@ There is **no hold-to-fire and no shot cooldown**. Each debounced press fires on
 - Earn 20 / 50 / 100 points for large / medium / small rocks.
 - Wave one has three large rocks entering from the right, 1.8 seconds apart. After all rocks are destroyed or leave, there is a 1.5-second breather.
 - Add one large rock every two waves, up to six. Speed increases gradually through wave eleven, then stays capped.
-- Rocks drift slightly vertically and bounce inside the playfield; objects do not wrap.
-- Respawn at the clearest available vertical position with two seconds of blinking invincibility. The world freezes briefly during the death effect.
+- Rocks drift slightly vertically and bounce inside the playfield; objects do not wrap. A small right-edge marker previews the next rock's height for 700 ms before its scheduled entrance.
+- Respawn at a safe 2D position, favoring the left side, with two seconds of blinking invincibility. The world freezes briefly during the death effect.
 - Pause freezes movement, wave scheduling, bullets, and invincibility.
 - Runs end when all three lives are lost. There is no time limit, multiplier, saucer, initials entry, or attract demo.
 - The best score is stored in ESP32 Preferences and updated only when a completed run beats it. The simplified game uses a separate `best-v2` key; previous leaderboard data remains untouched.
@@ -56,7 +56,7 @@ If `pio` is not on your PATH, use `~/.platformio/penv/bin/pio`.
 sh tests/run_host.sh
 ```
 
-The host checks compile production gameplay and input code with simulated hardware, UndefinedBehaviorSanitizer. They cover firing edges, swept collisions, splitting and pool capacity, wave progression, movement bounds, pause, respawn selection, retry handling, and best-score storage logic. They do not verify physical joystick feel, OLED output, buzzer sound, or ESP32 flash persistence; test those on the board after uploading.
+The host checks compile production gameplay and input code with simulated hardware, UndefinedBehaviorSanitizer. They cover firing edges, swept collisions, splitting and pool capacity, wave progression, 2D movement bounds, diagonal speed, nose-relative firing, spawn warnings, pause, respawn selection, retry handling, and best-score storage logic. They do not verify physical joystick feel, OLED output, buzzer sound, or ESP32 flash persistence; test those on the board after uploading.
 
 To additionally enable AddressSanitizer on a compatible host, run `SANITIZERS=address,undefined sh tests/run_host.sh`. AddressSanitizer currently hangs on the development Mac, so it has not passed here.
 

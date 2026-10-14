@@ -12,7 +12,7 @@ struct Ship {
 };
 
 void ship_init(Ship& ship);
-void ship_update(Ship& ship, float joystick_y);
+void ship_update(Ship& ship, float joystick_x, float joystick_y);
 void ship_draw(const Ship& ship, Adafruit_SSD1306& display);
 void ship_die(Ship& ship);
-void ship_respawn(Ship& ship, float position_y);
+void ship_respawn(Ship& ship, float position_x, float position_y);

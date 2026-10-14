@@ -13,6 +13,8 @@ static const int WAVES_PER_EXTRA_ROCK = 2;
 static const uint16_t WAVE_NUMBER_MAX = 65535;
 static const unsigned long WAVE_SPAWN_INTERVAL_MS = 1800;
 static const unsigned long WAVE_CLEAR_DELAY_MS = 1500;
+static const unsigned long SPAWN_WARNING_MS = 700;
+static const int SPAWN_WARNING_WIDTH = 3;
 static const int RANDOM_ANGLE_STEPS = 628;
 static const float RANDOM_ANGLE_SCALE = 100.0f;
 static const int RANDOM_DRIFT_STEPS = 101;
@@ -25,7 +27,8 @@ static const float FRAGMENT_SPEED_MULTIPLIER = 1.08f;
 static const float FRAGMENT_VERTICAL_SPEED = 0.18f;
 static const int LARGE_ROCK_SHAKE_FRAMES = 2;
 static const int ROCK_BORDER_GAP = 1;
-static const int RESPAWN_BORDER_GAP = 2;
+static const int RESPAWN_SEARCH_STEP = 4;
+static const float RESPAWN_SAFE_CLEARANCE = 12.0f;
 static const float CLEARANCE_SEARCH_LIMIT = 1000.0f;
 
 static Asteroid rocks[ASTEROID_MAX] = {};
@@ -34,6 +37,8 @@ static uint8_t pending_asteroids = 0;
 static unsigned long next_spawn_ms = 0;
 static unsigned long wave_cleared_ms = 0;
 static bool waiting_for_next_wave = false;
+static unsigned long current_game_ms = 0;
+static float pending_spawn_y = 0;
 
 static float wave_speed() {
     int speed_steps = min(int(wave_number - 1), WAVE_SPEED_STEPS);
@@ -111,11 +116,18 @@ static void spawn_asteroid(float position_x,
     }
 }
 
+static float choose_spawn_height() {
+    return random(HUD_HEIGHT + ASTEROID_LARGE_R + ROCK_BORDER_GAP,
+                  SCREEN_H - ASTEROID_LARGE_R);
+}
+
 void asteroids_init() {
     memset(rocks, 0, sizeof(rocks));
     wave_number = 1;
     pending_asteroids = WAVE_INITIAL_ROCKS;
-    next_spawn_ms = 0;
+    current_game_ms = 0;
+    next_spawn_ms = SPAWN_WARNING_MS;
+    pending_spawn_y = choose_spawn_height();
     wave_cleared_ms = 0;
     waiting_for_next_wave = false;
 }
@@ -138,18 +150,17 @@ uint16_t asteroid_wave() {
 
 static void spawn_pending_asteroid(unsigned long now) {
     if (pending_asteroids && now >= next_spawn_ms && free_slots()) {
-        float spawn_y = random(HUD_HEIGHT + ASTEROID_LARGE_R + ROCK_BORDER_GAP,
-                               SCREEN_H - ASTEROID_LARGE_R);
         float vertical_speed
                 = (random(RANDOM_DRIFT_STEPS) - RANDOM_DRIFT_CENTER)
                   / VERTICAL_DRIFT_SCALE;
         spawn_asteroid(SCREEN_W + ASTEROID_LARGE_R,
-                       spawn_y,
+                       pending_spawn_y,
                        AST_LARGE,
                        -wave_speed(),
                        vertical_speed);
         pending_asteroids--;
         next_spawn_ms = now + WAVE_SPAWN_INTERVAL_MS;
+        pending_spawn_y = choose_spawn_height();
     }
 }
 
@@ -187,13 +198,15 @@ static void update_wave(unsigned long now) {
                     = min(WAVE_INITIAL_ROCKS
                                   + int(wave_number - 1) / WAVES_PER_EXTRA_ROCK,
                           WAVE_MAX_ROCKS);
-            next_spawn_ms = now;
+            next_spawn_ms = now + SPAWN_WARNING_MS;
+            pending_spawn_y = choose_spawn_height();
             waiting_for_next_wave = false;
         }
     }
 }
 
 void asteroids_update(unsigned long now) {
+    current_game_ms = now;
     spawn_pending_asteroid(now);
 
     for (int i = 0; i < ASTEROID_MAX; i++) {
@@ -223,6 +236,15 @@ static void draw_asteroid(const Asteroid& asteroid, Adafruit_SSD1306& display) {
 }
 
 void asteroids_draw(Adafruit_SSD1306& display) {
+    if (pending_asteroids
+        && (current_game_ms >= next_spawn_ms
+            || next_spawn_ms - current_game_ms <= SPAWN_WARNING_MS)) {
+        display.drawFastHLine(SCREEN_W - SPAWN_WARNING_WIDTH,
+                              pending_spawn_y,
+                              SPAWN_WARNING_WIDTH,
+                              SSD1306_WHITE);
+    }
+
     for (int i = 0; i < ASTEROID_MAX; i++) {
         if (rocks[i].active) {
             draw_asteroid(rocks[i], display);
@@ -334,7 +356,7 @@ uint32_t asteroids_hit_bullet(float from_x, float to_x, float position_y) {
     return asteroid_points(parent.size);
 }
 
-static float respawn_clearance(int position_y) {
+static float respawn_clearance(int position_x, int position_y) {
     float clearance = CLEARANCE_SEARCH_LIMIT;
 
     for (int i = 0; i < ASTEROID_MAX; i++) {
@@ -344,7 +366,7 @@ static float respawn_clearance(int position_y) {
             continue;
         }
 
-        float distance_x = asteroid.position_x - SHIP_X;
+        float distance_x = asteroid.position_x - position_x;
         float distance_y = asteroid.position_y - position_y;
         clearance = min(clearance,
                         sqrtf(distance_x * distance_x + distance_y * distance_y)
@@ -354,14 +376,11 @@ static float respawn_clearance(int position_y) {
     return clearance;
 }
 
-float asteroid_safe_respawn_y() {
-    float best_y = (HUD_HEIGHT + SCREEN_H) / 2.0f;
-    float best_clearance = -CLEARANCE_SEARCH_LIMIT;
+static float best_respawn_height(int position_x, float& best_y) {
+    float best_clearance = respawn_clearance(position_x, int(best_y));
 
-    for (int position_y = HUD_HEIGHT + SHIP_RADIUS + RESPAWN_BORDER_GAP;
-         position_y < SCREEN_H - SHIP_RADIUS - RESPAWN_BORDER_GAP;
-         position_y++) {
-        float clearance = respawn_clearance(position_y);
+    for (int position_y = SHIP_MIN_Y; position_y <= SHIP_MAX_Y; position_y++) {
+        float clearance = respawn_clearance(position_x, position_y);
 
         if (clearance > best_clearance) {
             best_clearance = clearance;
@@ -369,5 +388,33 @@ float asteroid_safe_respawn_y() {
         }
     }
 
-    return best_y;
+    return best_clearance;
+}
+
+void asteroid_safe_respawn(float& position_x, float& position_y) {
+    position_x = SHIP_X;
+    position_y = (HUD_HEIGHT + SCREEN_H) / 2.0f;
+    float best_clearance = best_respawn_height(SHIP_X, position_y);
+
+    if (best_clearance >= RESPAWN_SAFE_CLEARANCE) {
+        return;
+    }
+
+    // Search left to right; favor the first lane with adequate clearance.
+    // If every lane is crowded, use the clearest available position.
+    for (int candidate_x = SHIP_MIN_X; candidate_x <= SHIP_MAX_X;
+         candidate_x += RESPAWN_SEARCH_STEP) {
+        float candidate_y = position_y;
+        float clearance = best_respawn_height(candidate_x, candidate_y);
+
+        if (clearance > best_clearance) {
+            best_clearance = clearance;
+            position_x = candidate_x;
+            position_y = candidate_y;
+        }
+
+        if (best_clearance >= RESPAWN_SAFE_CLEARANCE) {
+            return;
+        }
+    }
 }

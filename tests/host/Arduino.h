@@ -11,6 +11,8 @@ constexpr int INPUT_PULLUP = 2;
 constexpr int TEST_FIRE_PIN = 25;
 constexpr int TEST_ADC_CENTER = 2048;
 inline unsigned long fake_millis = 0;
+inline int joystick_raw_x = TEST_ADC_CENTER;
+inline int joystick_raw_y = TEST_ADC_CENTER;
 inline bool fire_raw_high = true;
 inline bool click_raw_high = true;
 inline unsigned long millis() {
@@ -27,8 +29,8 @@ inline void pinMode(int, int) {
 inline void analogReadResolution(int) {
 }
 
-inline int analogRead(int) {
-    return TEST_ADC_CENTER;
+inline int analogRead(int pin) {
+    return pin == 34 ? joystick_raw_x : joystick_raw_y;
 }
 
 inline int digitalRead(int pin) {

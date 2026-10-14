@@ -2,11 +2,11 @@
 
 ## Goal
 
-A forgiving arcade game on a 128×64 OLED using the existing joystick and one fire button. Keep the action understandable at a glance: move vertically, shoot right, dodge rocks approaching from the right.
+A forgiving arcade game on a 128×64 OLED using the existing joystick and one fire button. Keep the action understandable at a glance: move in two dimensions, shoot right, dodge rocks approaching from the right.
 
 ## Gameplay
 
-- Ship fixed at x=12, facing right, with direct analog Y movement and no inertia.
+- Ship starts at x=12, faces right, and uses direct analog X/Y movement with no inertia. Clamp the whole ship within the playfield. Cap diagonal magnitude at one while preserving smaller analog deflections. Shots originate just ahead of the actual nose.
 - Playfield below a 10-pixel HUD displaying lives and score.
 - One shot per debounced fire press, no firing cooldown or automatic repeat; at most 12 bullets.
 - Three lives; collisions cost one life, missed rocks cost none.
@@ -15,9 +15,9 @@ A forgiving arcade game on a 128×64 OLED using the existing joystick and one fi
 - Scores: 20, 50, 100. No multiplier or time limit.
 - Three large rocks in wave one; one extra every two waves, capped at six. Entrances staggered 1.8 seconds apart.
 - Base speed 0.38 pixels/update, increasing 0.045 per wave to a cap of 0.83. Fragments inherit speed with an 8% increase per split.
-- Wait 1.5 seconds after the last active/pending rock before the next wave.
+- Wait 1.5 seconds after the last active/pending rock before the next wave. Preview the next entrance height with a small right-edge marker for 700 ms before its scheduled spawn, including the first rock of a run or wave. Warning timing freezes with gameplay.
 - At pool capacity, a splitting hit leaves the parent intact until both children can fit; never silently lose a child.
-- Safe-position respawn with two seconds of blinking protection. Pause and death animation freeze the world; brief particles continue during death.
+- Search for a safe 2D respawn, preferring the starting left lane; if crowded, search left to right for sufficient clearance, falling back to the clearest sampled position. Retain two seconds of blinking protection. Pause and death animation freeze the world; brief particles continue during death.
 
 ## Flow and storage
 

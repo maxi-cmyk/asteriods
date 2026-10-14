@@ -97,7 +97,7 @@ static void update_menu(const InputState& input) {
     display.setCursor(MENU_BEST_X, MENU_BEST_Y);
     display.printf("BEST %lu", (unsigned long)highscore_best());
 
-    draw_label(MENU_HINT_X, MENU_MOVE_Y, "Up/down: move");
+    draw_label(MENU_HINT_X, MENU_MOVE_Y, "Joystick: move");
     draw_label(MENU_HINT_X, MENU_START_Y, "Fire to start");
 
     if (input.fire_pressed) {
@@ -130,7 +130,7 @@ static void update_playing(const InputState& input) {
     }
 
     game_ms += FRAME_TIME_MS;
-    ship_update(ship, input.joystick_y);
+    ship_update(ship, input.joystick_x, input.joystick_y);
     asteroids_update(game_ms);
 
     if (input.fire_pressed
@@ -179,7 +179,10 @@ static void update_death_animation() {
         bullets_init();
 
         if (ship.lives) {
-            ship_respawn(ship, asteroid_safe_respawn_y());
+            float respawn_x = SHIP_X;
+            float respawn_y = ship.position_y;
+            asteroid_safe_respawn(respawn_x, respawn_y);
+            ship_respawn(ship, respawn_x, respawn_y);
             set_state(STATE_PLAYING);
         } else {
             new_best = highscore_record(score);

@@ -1,27 +1,39 @@
 #include "ship.h"
 #include "config.h"
 
-void ship_respawn(Ship& ship, float position_y) {
-    ship.position_x = SHIP_X;
-    ship.position_y = position_y;
+void ship_respawn(Ship& ship, float position_x, float position_y) {
+    ship.position_x
+            = constrain(position_x, float(SHIP_MIN_X), float(SHIP_MAX_X));
+    ship.position_y
+            = constrain(position_y, float(SHIP_MIN_Y), float(SHIP_MAX_Y));
     ship.alive = true;
     ship.invincible_left = SHIP_INVINCIBLE_MS;
 }
 
 void ship_init(Ship& ship) {
     ship.lives = LIVES_START;
-    ship_respawn(ship, (HUD_HEIGHT + SCREEN_H) / 2.0f);
+    ship_respawn(ship, SHIP_X, (HUD_HEIGHT + SCREEN_H) / 2.0f);
 }
 
-void ship_update(Ship& ship, float joystick_y) {
+void ship_update(Ship& ship, float joystick_x, float joystick_y) {
     if (!ship.alive) {
         return;
     }
 
-    ship.position_y
-            = constrain(ship.position_y + joystick_y * SHIP_MAX_SPEED,
-                        float(HUD_HEIGHT + SHIP_RADIUS + SHIP_TOP_GAP),
-                        float(SCREEN_H - SHIP_RADIUS - SHIP_BOTTOM_GAP));
+    float magnitude = sqrtf(joystick_x * joystick_x + joystick_y * joystick_y);
+
+    // Cap full diagonals without amplifying small stick deflections.
+    if (magnitude > 1.0f) {
+        joystick_x /= magnitude;
+        joystick_y /= magnitude;
+    }
+
+    ship.position_x = constrain(ship.position_x + joystick_x * SHIP_MAX_SPEED,
+                                float(SHIP_MIN_X),
+                                float(SHIP_MAX_X));
+    ship.position_y = constrain(ship.position_y + joystick_y * SHIP_MAX_SPEED,
+                                float(SHIP_MIN_Y),
+                                float(SHIP_MAX_Y));
 
     if (ship.invincible_left > FRAME_TIME_MS) {
         ship.invincible_left -= FRAME_TIME_MS;
