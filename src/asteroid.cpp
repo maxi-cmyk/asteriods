@@ -3,16 +3,16 @@
 #include "particle.h"
 #include "display.h"
 #include "sound.h"
+#include "difficulty.h"
+#include "rock_random.h"
 
-static const float WAVE_START_SPEED = 0.38f;
-static const float WAVE_SPEED_INCREMENT = 0.045f;
-static const int WAVE_SPEED_STEPS = 10;
-static const int WAVE_INITIAL_ROCKS = 3;
-static const int WAVE_MAX_ROCKS = 6;
-static const int WAVES_PER_EXTRA_ROCK = 2;
 static const uint16_t WAVE_NUMBER_MAX = 65535;
-static const unsigned long WAVE_SPAWN_INTERVAL_MS = 1800;
-static const unsigned long WAVE_CLEAR_DELAY_MS = 1500;
+static const unsigned long SPAWN_RETRY_MS = 100;
+static const unsigned long PAIR_RECOVERY_MS = 350;
+static const unsigned long WAVE_CUE_MS = 800;
+static const int SPAWN_MIN_FREE_SLOTS = 3;
+static const int SPAWN_DODGE_GAP = 12;
+static const int PATTERN_HEIGHT_RANGE = 5;
 static const unsigned long SPAWN_WARNING_MS = 700;
 static const int SPAWN_WARNING_WIDTH = 3;
 static const int RANDOM_ANGLE_STEPS = 628;
@@ -20,7 +20,7 @@ static const float RANDOM_ANGLE_SCALE = 100.0f;
 static const int RANDOM_DRIFT_STEPS = 101;
 static const int RANDOM_DRIFT_CENTER = 50;
 static const float ROTATION_RANDOM_SCALE = 4000.0f;
-static const float VERTICAL_DRIFT_SCALE = 500.0f;
+static const float VERTICAL_DRIFT_SCALE = 50.0f;
 static const int SMALL_ROCK_OUTLINE_RANGE = 2;
 static const int OTHER_ROCK_OUTLINE_RANGE = 3;
 static const float FRAGMENT_SPEED_MULTIPLIER = 1.08f;
@@ -39,11 +39,11 @@ static unsigned long wave_cleared_ms = 0;
 static bool waiting_for_next_wave = false;
 static unsigned long current_game_ms = 0;
 static float pending_spawn_y = 0;
-
-static float wave_speed() {
-    int speed_steps = min(int(wave_number - 1), WAVE_SPEED_STEPS);
-    return WAVE_START_SPEED + speed_steps * WAVE_SPEED_INCREMENT;
-}
+static WaveDifficulty wave_difficulty = {};
+static uint8_t wave_pattern = 0;
+static uint8_t spawned_in_wave = 0;
+static bool pattern_top_first = false;
+static unsigned long wave_started_ms = 0;
 
 static int free_slots() {
     int count = 0;
@@ -96,10 +96,11 @@ static void spawn_asteroid(float position_x,
         asteroid.velocity_y = velocity_y;
         asteroid.size = size;
         asteroid.radius = asteroid_radius(size);
-        asteroid.angle = random(RANDOM_ANGLE_STEPS) / RANDOM_ANGLE_SCALE;
-        asteroid.rotation_speed
-                = (random(RANDOM_DRIFT_STEPS) - RANDOM_DRIFT_CENTER)
-                  / ROTATION_RANDOM_SCALE;
+        asteroid.angle
+                = rock_random_bounded(RANDOM_ANGLE_STEPS) / RANDOM_ANGLE_SCALE;
+        asteroid.rotation_speed = (int(rock_random_bounded(RANDOM_DRIFT_STEPS))
+                                   - RANDOM_DRIFT_CENTER)
+                                  / ROTATION_RANDOM_SCALE;
 
         int outline_range = OTHER_ROCK_OUTLINE_RANGE;
 
@@ -109,7 +110,7 @@ static void spawn_asteroid(float position_x,
 
         // Keep the outline inside the collision circle, even for small rocks.
         for (int j = 0; j < ASTEROID_VERTICES; j++) {
-            asteroid.offsets[j] = -random(outline_range);
+            asteroid.offsets[j] = -int(rock_random_bounded(outline_range));
         }
 
         return;
@@ -117,19 +118,39 @@ static void spawn_asteroid(float position_x,
 }
 
 static float choose_spawn_height() {
-    return random(HUD_HEIGHT + ASTEROID_LARGE_R + ROCK_BORDER_GAP,
-                  SCREEN_H - ASTEROID_LARGE_R);
+    int minimum = HUD_HEIGHT + ASTEROID_LARGE_R + ROCK_BORDER_GAP;
+    int maximum = SCREEN_H - ASTEROID_LARGE_R;
+
+    if (wave_pattern) {
+        bool top = (spawned_in_wave % 2 == 0) == pattern_top_first;
+        if (top) {
+            maximum = minimum + PATTERN_HEIGHT_RANGE;
+        } else {
+            minimum = maximum - PATTERN_HEIGHT_RANGE;
+        }
+    }
+
+    return rock_random_range(minimum, maximum);
+}
+
+static void prepare_wave(unsigned long now) {
+    wave_difficulty = difficulty_for_wave(wave_number);
+    pending_asteroids = wave_difficulty.population;
+    wave_pattern = rock_random_bounded(wave_difficulty.pattern_level + 1);
+    pattern_top_first = rock_random_bounded(2) != 0;
+    spawned_in_wave = 0;
+    wave_started_ms = now;
+    next_spawn_ms = now + SPAWN_WARNING_MS;
+    pending_spawn_y = choose_spawn_height();
+    waiting_for_next_wave = false;
 }
 
 void asteroids_init() {
     memset(rocks, 0, sizeof(rocks));
     wave_number = 1;
-    pending_asteroids = WAVE_INITIAL_ROCKS;
     current_game_ms = 0;
-    next_spawn_ms = SPAWN_WARNING_MS;
-    pending_spawn_y = choose_spawn_height();
     wave_cleared_ms = 0;
-    waiting_for_next_wave = false;
+    prepare_wave(0);
 }
 
 int asteroid_active_count() {
@@ -148,20 +169,49 @@ uint16_t asteroid_wave() {
     return wave_number;
 }
 
-static void spawn_pending_asteroid(unsigned long now) {
-    if (pending_asteroids && now >= next_spawn_ms && free_slots()) {
-        float vertical_speed
-                = (random(RANDOM_DRIFT_STEPS) - RANDOM_DRIFT_CENTER)
-                  / VERTICAL_DRIFT_SCALE;
-        spawn_asteroid(SCREEN_W + ASTEROID_LARGE_R,
-                       pending_spawn_y,
-                       AST_LARGE,
-                       -wave_speed(),
-                       vertical_speed);
-        pending_asteroids--;
-        next_spawn_ms = now + WAVE_SPAWN_INTERVAL_MS;
-        pending_spawn_y = choose_spawn_height();
+static bool spawn_corridor_clear() {
+    for (int i = 0; i < ASTEROID_MAX; i++) {
+        const Asteroid& asteroid = rocks[i];
+        float horizontal_gap
+                = SCREEN_W + ASTEROID_LARGE_R - asteroid.position_x;
+        float vertical_gap = fabsf(pending_spawn_y - asteroid.position_y);
+        float safe_gap = asteroid.radius + ASTEROID_LARGE_R + SPAWN_DODGE_GAP;
+
+        if (asteroid.active && horizontal_gap < safe_gap
+            && vertical_gap < safe_gap) {
+            return false;
+        }
     }
+
+    return true;
+}
+
+static void spawn_pending_asteroid(unsigned long now) {
+    if (!pending_asteroids || now < next_spawn_ms) {
+        return;
+    }
+
+    if (free_slots() < SPAWN_MIN_FREE_SLOTS || !spawn_corridor_clear()) {
+        next_spawn_ms = now + SPAWN_RETRY_MS;
+        return;
+    }
+
+    float vertical_speed = (int(rock_random_bounded(RANDOM_DRIFT_STEPS))
+                            - RANDOM_DRIFT_CENTER)
+                           / VERTICAL_DRIFT_SCALE * wave_difficulty.drift;
+    spawn_asteroid(SCREEN_W + ASTEROID_LARGE_R,
+                   pending_spawn_y,
+                   AST_LARGE,
+                   -wave_difficulty.speed,
+                   vertical_speed);
+    pending_asteroids--;
+    spawned_in_wave++;
+    next_spawn_ms = now + wave_difficulty.spawn_interval_ms;
+    if (wave_pattern == 2 && spawned_in_wave % 2 == 0) {
+        next_spawn_ms += PAIR_RECOVERY_MS;
+        pattern_top_first = rock_random_bounded(2) != 0;
+    }
+    pending_spawn_y = choose_spawn_height();
 }
 
 static void move_asteroid(Asteroid& asteroid) {
@@ -189,18 +239,12 @@ static void update_wave(unsigned long now) {
         if (!waiting_for_next_wave) {
             waiting_for_next_wave = true;
             wave_cleared_ms = now;
-        } else if (now - wave_cleared_ms >= WAVE_CLEAR_DELAY_MS) {
+        } else if (now - wave_cleared_ms >= wave_difficulty.recovery_ms) {
             if (wave_number < WAVE_NUMBER_MAX) {
                 wave_number++;
             }
 
-            pending_asteroids
-                    = min(WAVE_INITIAL_ROCKS
-                                  + int(wave_number - 1) / WAVES_PER_EXTRA_ROCK,
-                          WAVE_MAX_ROCKS);
-            next_spawn_ms = now + SPAWN_WARNING_MS;
-            pending_spawn_y = choose_spawn_height();
-            waiting_for_next_wave = false;
+            prepare_wave(now);
         }
     }
 }
@@ -249,6 +293,12 @@ void asteroids_draw(Adafruit_SSD1306& display) {
         if (rocks[i].active) {
             draw_asteroid(rocks[i], display);
         }
+    }
+
+    if (current_game_ms - wave_started_ms < WAVE_CUE_MS) {
+        display.setTextSize(1);
+        display.setCursor(40, HUD_HEIGHT + 2);
+        display.printf("WAVE %u", unsigned(wave_number));
     }
 }
 

@@ -28,7 +28,7 @@ void bullets_update() {
     }
 }
 
-uint32_t bullets_check_asteroids() {
+uint32_t bullets_check_asteroids(AsteroidHitHandler on_hit) {
     uint32_t total_points = 0;
 
     for (int i = 0; i < BULLET_MAX; i++) {
@@ -43,6 +43,9 @@ uint32_t bullets_check_asteroids() {
 
         if (points) {
             total_points += points;
+            if (on_hit) {
+                on_hit(points);
+            }
             bullet.active = false;
         } else if (bullet.position_x >= SCREEN_W) {
             bullet.active = false;

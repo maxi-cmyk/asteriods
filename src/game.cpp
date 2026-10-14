@@ -8,7 +8,9 @@
 #include "sound.h"
 #include "highscore.h"
 #include "particle.h"
+#include "scoring.h"
 
+static const uint32_t SCORE_MAX = 999999;
 static const int COUNTDOWN_START = 3;
 static const unsigned long COUNTDOWN_STEP_MS = 500;
 static const unsigned long DEATH_ANIMATION_MS = 500;
@@ -63,6 +65,7 @@ static void begin_game() {
     particles_init();
 
     score = 0;
+    scoring_reset();
     game_ms = 0;
     new_best = false;
     set_state(STATE_COUNTDOWN);
@@ -77,7 +80,10 @@ static void draw_world() {
 
     // Draw the HUD last so effects never obscure the score.
     display.fillRect(0, 0, SCREEN_W, HUD_HEIGHT, SSD1306_BLACK);
-    display_hud(ship.lives, score);
+    display_hud(ship.lives,
+                score,
+                scoring_multiplier(),
+                scoring_chain_left(game_ms));
 }
 
 static void draw_label(int position_x,
@@ -95,7 +101,7 @@ static void update_menu(const InputState& input) {
     draw_label(TITLE_X, MENU_TITLE_Y, "ASTEROIDS", TITLE_TEXT_SIZE);
     display.setTextSize(NORMAL_TEXT_SIZE);
     display.setCursor(MENU_BEST_X, MENU_BEST_Y);
-    display.printf("BEST %lu", (unsigned long)highscore_best());
+    display.printf("BEST V3 %lu", (unsigned long)highscore_best());
 
     draw_label(MENU_HINT_X, MENU_MOVE_Y, "Joystick: move");
     draw_label(MENU_HINT_X, MENU_START_Y, "Fire to start");
@@ -121,6 +127,11 @@ static void update_countdown() {
     }
 }
 
+static void award_asteroid_score(uint32_t base_points) {
+    uint32_t awarded = scoring_award(base_points, game_ms);
+    score += min(awarded, SCORE_MAX - score);
+}
+
 static void update_playing(const InputState& input) {
     if (input.pause_triggered) {
         sound_stop();
@@ -130,6 +141,7 @@ static void update_playing(const InputState& input) {
     }
 
     game_ms += FRAME_TIME_MS;
+    scoring_update(game_ms);
     ship_update(ship, input.joystick_x, input.joystick_y);
     asteroids_update(game_ms);
 
@@ -140,12 +152,13 @@ static void update_playing(const InputState& input) {
     }
 
     bullets_update();
-    score += bullets_check_asteroids();
+    bullets_check_asteroids(award_asteroid_score);
     particles_update();
 
     if (!ship.invincible_left
         && asteroid_hits_ship(ship.position_x, ship.position_y)) {
         ship_die(ship);
+        scoring_reset();
         particles_spawn(ship.position_x, ship.position_y);
         sound_play(SFX_DEATH);
         display_shake(DEATH_SHAKE_FRAMES);

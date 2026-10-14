@@ -4,6 +4,7 @@
 #include "display.h"
 #include "sound.h"
 #include "game.h"
+#include "rock_random.h"
 
 static unsigned long last_frame_ms = 0;
 static const unsigned long SERIAL_BAUD = 115200;
@@ -46,8 +47,13 @@ void setup() {
     initialize_display();
     show_calibration_message();
 
-    // Seed RNG from ESP32 hardware entropy so asteroids vary each run
-    randomSeed(esp_random());
+    if (!rock_random_init()) {
+        Serial.println("ERROR: hardware RNG entropy initialization failed");
+        while (true) {
+            delay(1000);
+        }
+    }
+    Serial.println("Hardware RNG ready: RF entropy, no network connection");
 
     input_init(); // Calibrates joystick
     sound_init();

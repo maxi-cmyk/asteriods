@@ -12,8 +12,11 @@ static const int LIFE_ICON_TIP_OFFSET = 5;
 static const int LIFE_ICON_MIDDLE_Y = 4;
 static const int LIFE_ICON_TOP_Y = 1;
 static const int LIFE_ICON_BOTTOM_Y = 7;
-static const int HUD_SCORE_X = 38;
+static const int HUD_SCORE_X = 32;
 static const int HUD_SCORE_Y = 1;
+static const int HUD_MULTIPLIER_X = 108;
+static const int HUD_CHAIN_WIDTH = 12;
+static const unsigned long HUD_CHAIN_WINDOW_MS = 3000;
 static const int SHAKE_OFFSET_CHOICES = 2;
 static const int OLED_OFFSET_MASK = 0x3F;
 
@@ -36,7 +39,10 @@ Adafruit_SSD1306& display_get() {
     return oled;
 }
 
-void display_hud(uint8_t lives, uint32_t score) {
+void display_hud(uint8_t lives,
+                 uint32_t score,
+                 uint8_t multiplier,
+                 unsigned long chain_left_ms) {
     oled.setTextSize(1);
     oled.setTextColor(SSD1306_WHITE);
 
@@ -53,6 +59,12 @@ void display_hud(uint8_t lives, uint32_t score) {
 
     oled.setCursor(HUD_SCORE_X, HUD_SCORE_Y);
     oled.printf("%lu", (unsigned long)score);
+    oled.setCursor(HUD_MULTIPLIER_X, HUD_SCORE_Y);
+    oled.printf("x%u", unsigned(multiplier));
+    oled.drawFastHLine(HUD_MULTIPLIER_X,
+                       HUD_HEIGHT - 2,
+                       HUD_CHAIN_WIDTH * chain_left_ms / HUD_CHAIN_WINDOW_MS,
+                       SSD1306_WHITE);
     oled.drawFastHLine(0, HUD_HEIGHT - 1, SCREEN_W, SSD1306_WHITE);
 }
 
