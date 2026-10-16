@@ -34,17 +34,21 @@ A forgiving arcade game on a 128×64 OLED using the existing joystick and one fi
 
 ## Flow and storage
 
-Title (best score, controls, fire to start) → 1.5-second countdown → gameplay → game over (score, best, fire to retry).
+Title (saved leader's initials and score, V3 rules, controls) → 1.5-second countdown → gameplay → qualifying initials entry → game over (final score and top five). Non-qualifying runs skip initials entry.
 
-Double-click the joystick to pause/resume. Game-over retry requires a release after a short guard period and then a fresh press. Best score is written once on entry to game over, only if improved. Store under `asteroids/best-v3`; retain old leaderboard data without modification because multiplier scoring and difficulty rules have changed. Label the active rules V3 on the title screen.
+Double-click the joystick to pause/resume. Capture the final score once at the end of the last death animation. Freeze the completed run throughout name entry and game over. A nonzero score qualifies if there is space or it strictly beats fifth place. Sort descending, placing new equal scores after existing ties. Scores are bounded at 999,999.
+
+Initials start at `AAA`, with exactly three A–Z letters and a terminator. Up/down cycles the active letter with wrapping; left/right selects a position, clamped at the ends. Use a 0.55 normalized deadzone and 250 ms navigation repeat. Highlight the active letter. Require fire release followed by a fresh press to confirm. Gameplay firing and pause are inactive here. Save only on confirmation; a storage error keeps entry active with an error hint and requires another release/press to retry. An unconfirmed result is lost on power-off. After saving, highlight the inserted row. Game-over retry requires release after a 400 ms guard and then a fresh press; confirmation cannot also retry.
+
+Store the complete table in one Preferences blob under `asteroids/scores-v3`. Record version 1 uses 42 bytes: one version byte, one entry-count byte, then five slots of four little-endian score bytes and four initials bytes. Unused slots are zero. Validate exact length, version, count, nonzero bounded scores, descending order, uppercase letters, terminators, and empty slots. Missing/invalid data loads an empty table without writing. Check open/read/write results; update the in-memory table only after a successful complete write. Preserve legacy `magic`, `played`, `tbl`, `best-v2`, and `best-v3` keys without importing scores from them.
 
 ## Implementation and verification
 
 Arduino C++ / PlatformIO, fixed-size entity pools, 50 Hz target update rate. Gameplay timers use simulation time so pausing cannot expire invincibility or advance waves. If the OLED/loop cannot sustain 50 Hz, simulation slows rather than skipping collisions.
 
-Use horizontal segment-circle bullet collisions and bounded rock outlines. Keep particles brief and shake subtle. Reset transient entities between runs. Keep saucers, initials, extra statistics, and demo absent until their planned tasks are implemented. Shared per-hit scoring is available to future powered-up weapons; the current game has ordinary single shots.
+Use horizontal segment-circle bullet collisions and bounded rock outlines. Keep particles brief and shake subtle. Reset transient entities between runs. Keep saucers, extra statistics, and demo absent until their planned tasks are implemented. Shared per-hit scoring is available to future powered-up weapons; the current game has ordinary single shots.
 
-Build with `pio run`. Run `sh tests/run_host.sh` for host gameplay checks. Physical acceptance: check direction and neutral drift, rapid fire presses versus holding, legibility, comfortable dodge spacing, pause during invincibility, repeated retries, and best-score retention across a power cycle.
+Build with `pio run`. Run `sh tests/run_host.sh` for host gameplay checks. Physical acceptance: check direction and neutral drift, rapid fire presses versus holding, legibility, comfortable dodge spacing, pause during invincibility, repeated retries, and confirmed leaderboard retention across reset and a power cycle. Initials/leaderboard host checks and firmware build cover implementation; physical OLED readability and flash persistence remain pending.
 
 
 ## Randomness and validation boundary

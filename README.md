@@ -10,6 +10,8 @@ A simple side-scrolling Asteroids rendition for an ESP32 and a 128×64 SSD1306 O
 | Fire button press | Shoot one bullet to the right |
 | Double-click joystick | Pause / resume |
 | Fire on title / game over | Start / retry |
+| Initials: joystick up/down, left/right | Cycle A–Z, select one of three letters |
+| Initials: fresh fire press | Confirm and save; retry a failed save |
 
 There is **no hold-to-fire and no shot cooldown**. Each debounced press fires once, including rapid repeated presses. A 20 ms debounce filters mechanical bouncing; both press and release must register. The 12-bullet pool bounds memory use. Full diagonal speed is capped at straight-line speed.
 
@@ -24,8 +26,10 @@ There is **no hold-to-fire and no shot cooldown**. Each debounced press fires on
 - Rocks drift slightly vertically and bounce inside the playfield; objects do not wrap. A small right-edge marker previews the next rock's height for 700 ms before its scheduled entrance.
 - Respawn at a safe 2D position, favoring the left side, with two seconds of blinking invincibility. The world freezes briefly during the death effect.
 - Pause freezes movement, wave scheduling, bullets, and invincibility.
-- Runs end when all three lives are lost. There is no time limit, saucer, initials entry, or attract demo.
-- The best score is stored in ESP32 Preferences and updated only when a completed run beats it. The multiplier/difficulty rules use a separate `best-v3` key, labeled V3 on the title screen; `best-v2` and previous leaderboard data remain untouched.
+- Runs end when all three lives are lost. There is no time limit, saucer, or attract demo.
+- The top five completed nonzero scores qualify for three-letter initials entry, starting at `AAA`. Existing equal scores stay ahead of new ties; a tie with fifth place does not qualify. Joystick navigation repeats every 250 ms while held. A fresh fire press confirms and saves. A failed save stays on the entry screen for a deliberate retry.
+- The title shows the saved leader; game over shows the final score and top five, highlighting the saved entry. Release fire after the retry guard, then press again to start a new run.
+- Preferences stores one 42-byte versioned table under `asteroids/scores-v3` (record version 1). Missing or invalid records load an empty table without writing. Older `best-v3`, `best-v2`, and legacy leaderboard keys remain untouched; their scores are not imported.
 
 ## Hardware and wiring
 
@@ -43,7 +47,7 @@ Uses an ESP32 DevKit (`esp32dev`), an I²C SSD1306 at `0x3C`, a dual-axis joysti
 
 Rock generation uses direct ESP32 hardware RNG calls with unbiased bounded ranges. The Wi-Fi radio stays enabled, with modem sleep disabled, to supply continuous entropy; no network connection or credentials are needed. This adds radio power consumption. GPIO 34/35 use ADC1, so joystick sampling does not use the ADC-based entropy source. The game stops at startup if radio entropy initialization fails; it never substitutes a software PRNG for rocks. See [Espressif RNG prerequisites](https://docs.espressif.com/projects/esp-idf/en/release-v4.4/esp32/api-reference/system/random.html).
 
-Overheating, power-ups, the attract demo, and initials entry remain planned in `nextSteps.md`. Difficulty tuning still needs physical playtesting, especially after overheating and power-ups are implemented.
+Overheating, power-ups, and the attract demo remain planned in `nextSteps.md`. Difficulty tuning still needs physical playtesting, especially after overheating and power-ups are implemented.
 
 ## Build and upload
 
@@ -61,7 +65,7 @@ If `pio` is not on your PATH, use `~/.platformio/penv/bin/pio`.
 sh tests/run_host.sh
 ```
 
-The host checks compile production gameplay and input code with simulated hardware, UndefinedBehaviorSanitizer. They cover firing edges, swept collisions, splitting and pool capacity, wave progression, 2D movement bounds, diagonal speed, nose-relative firing, spawn warnings, pause, respawn selection, retry handling, per-hit multiplier scoring, expiry/reset, all wave-profile bounds, deferred entrance patterns, unbiased random ranges with a deterministic test source, and versioned best-score storage logic. They do not verify physical joystick feel, OLED output, buzzer sound, or ESP32 flash persistence; test those on the board after uploading.
+The host checks compile production gameplay and input code with simulated hardware, UndefinedBehaviorSanitizer. They cover firing edges, swept collisions, splitting and pool capacity, wave progression, 2D movement bounds, diagonal speed, nose-relative firing, spawn warnings, pause, respawn selection, retry handling, per-hit multiplier scoring, expiry/reset, all wave-profile bounds, deferred entrance patterns, unbiased random ranges with a deterministic test source, and leaderboard ranking, initials navigation, held-button guards, one-time confirmation, reload, malformed records, and failed storage writes. They do not verify physical joystick feel, OLED output, buzzer sound, or ESP32 flash persistence; test those on the board after uploading.
 
 To additionally enable AddressSanitizer on a compatible host, run `SANITIZERS=address,undefined sh tests/run_host.sh`. AddressSanitizer currently hangs on the development Mac, so it has not passed here.
 

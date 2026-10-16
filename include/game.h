@@ -8,6 +8,7 @@ enum GameState {
     STATE_PLAYING,
     STATE_PAUSED,
     STATE_DEATH_ANIM,
+    STATE_INITIALS,
     STATE_GAME_OVER
 };
 

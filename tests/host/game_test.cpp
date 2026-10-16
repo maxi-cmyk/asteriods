@@ -241,12 +241,32 @@ static void test_respawn_location() {
 }
 
 static int test_best_score_and_retry() {
-    // Death records best exactly once and holding fire cannot retry.
+    // Confirmation saves once; death and held buttons cannot save or retry.
     ship.lives = 0;
     score = 100;
     set_state(STATE_DEATH_ANIM);
     tick(600);
+    assert(game_get_state() == STATE_INITIALS && highscore_best() == 0);
+    assert(final_score == 100 && !confirm_ready);
+    int before = Preferences::writes;
+    unsigned long frozen_ms = game_ms;
+    float frozen_x = ship.position_x;
+    for (int i = 0; i < 100; i++) {
+        tick();
+    }
+    assert(Preferences::writes == before);
+    assert(game_ms == frozen_ms && ship.position_x == frozen_x);
+    assert(final_score == 100 && score == 100);
+    fire(false);
+    Preferences::fail_write = true;
+    fire(true);
+    assert(game_get_state() == STATE_INITIALS && save_failed);
+    assert(highscore_count() == 0);
+    Preferences::fail_write = false;
+    fire(false);
+    fire(true);
     assert(game_get_state() == STATE_GAME_OVER && highscore_best() == 100);
+    assert(saved_rank == 0);
     int writes = Preferences::writes;
     for (int i = 0; i < 100; ++i) {
         tick();
@@ -259,7 +279,7 @@ static int test_best_score_and_retry() {
     assert(score == 0 && ship.lives == LIVES_START);
     highscore_init();
     assert(highscore_best() == 100);
-    assert(!highscore_record(50) && Preferences::writes == writes);
+    assert(!highscore_qualifies(0) && Preferences::writes == writes);
 
     return writes;
 }
@@ -292,7 +312,7 @@ static void test_repeated_runs(int expected_writes) {
     // Further low-scoring runs reset cleanly and do not rewrite the best.
     for (int run = 0; run < 3; ++run) {
         ship.lives = 0;
-        score = 10;
+        score = 0;
         set_state(STATE_DEATH_ANIM);
         tick(600);
         assert(game_get_state() == STATE_GAME_OVER && highscore_best() == 100);
@@ -509,16 +529,117 @@ static void test_hardware_random_ranges() {
 
 static void test_score_versioning() {
     Preferences::values.clear();
+    Preferences::blobs.clear();
     Preferences::values["best-v2"] = 99999;
+    Preferences::values["best-v3"] = 777;
+    Preferences::blobs["tbl"] = {1, 2, 3};
     highscore_init();
-    assert(highscore_best() == 0);
-    assert(highscore_record(100));
+    assert(highscore_best() == 0 && highscore_count() == 0);
+    assert(!highscore_qualifies(0) && !highscore_qualifies(1000000));
+    assert(highscore_record(100, "AAA") == 0);
+    assert(highscore_record(100, "BBB") == 1);
+    assert(highscore_record(50, "CCC") == 2);
+    assert(highscore_record(200, "DDD") == 0);
+    assert(highscore_record(25, "EEE") == 4);
+    assert(!highscore_qualifies(25));
+    assert(highscore_record(100, "FFF") == 3);
+    assert(highscore_count() == 5);
+    assert(strcmp(highscore_entries()[1].initials, "AAA") == 0);
+    assert(strcmp(highscore_entries()[2].initials, "BBB") == 0);
+    assert(highscore_entries()[4].score == 50);
+    int writes = Preferences::writes;
+    assert(highscore_record(300, "aaA") == -1);
+    assert(highscore_record(300, "AB") == -1);
+    assert(highscore_record(300, "ABCD") == -1);
+    assert(Preferences::writes == writes);
+    Preferences::fail_begin = true;
+    assert(highscore_record(300, "ABC") == -1);
+    Preferences::fail_begin = false;
+    Preferences::fail_write = true;
+    assert(highscore_record(300, "ABC") == -1);
+    assert(highscore_best() == 200);
+    Preferences::fail_write = false;
+    assert(highscore_record(HIGHSCORE_MAX, "XYZ") == 0);
+    highscore_init();
+    assert(highscore_best() == HIGHSCORE_MAX);
+    assert(strcmp(highscore_entries()[0].initials, "XYZ") == 0);
     assert(Preferences::values["best-v2"] == 99999);
-    assert(Preferences::values["best-v3"] == 100);
+    assert(Preferences::values["best-v3"] == 777);
+    assert(Preferences::blobs["tbl"].size() == 3);
+    auto valid = Preferences::blobs[TABLE_KEY];
+    Preferences::fail_begin = true;
     highscore_init();
-    assert(highscore_best() == 100);
+    assert(highscore_count() == 0);
+    Preferences::fail_begin = false;
+    Preferences::fail_read = true;
+    highscore_init();
+    assert(highscore_count() == 0);
+    Preferences::fail_read = false;
+    // A valid score in the wrong order must also reject the whole table.
+    for (int byte = 0; byte < ENTRY_BYTES; byte++) {
+        std::swap(Preferences::blobs[TABLE_KEY][RECORD_HEADER + byte],
+                  Preferences::blobs[TABLE_KEY]
+                                    [RECORD_HEADER + ENTRY_BYTES + byte]);
+    }
+    highscore_init();
+    assert(highscore_count() == 0);
+    Preferences::blobs[TABLE_KEY] = valid;
+    Preferences::blobs[TABLE_KEY][1] = 0;
+    highscore_init();
+    assert(highscore_count() == 0);
+    for (int offset : {0, 1, 2, 6, 9, 13}) {
+        Preferences::blobs[TABLE_KEY] = valid;
+        Preferences::blobs[TABLE_KEY][offset] = 255;
+        highscore_init();
+        assert(highscore_count() == 0);
+    }
+    Preferences::blobs[TABLE_KEY] = valid;
+    Preferences::blobs[TABLE_KEY].pop_back();
+    highscore_init();
+    assert(highscore_count() == 0);
+    Preferences::blobs.clear();
     Preferences::values.clear();
     Preferences::writes = 0;
+}
+
+static void test_initials_navigation() {
+    memcpy(entered_initials, "AAA", 4);
+    selected_initial = 0;
+    navigation_direction = 0;
+    InputState input = {};
+    input.joystick_y = -1;
+    navigate_initials(input);
+    assert(strcmp(entered_initials, "BAA") == 0);
+    navigate_initials(input);
+    assert(strcmp(entered_initials, "BAA") == 0);
+    fake_millis += INITIALS_REPEAT_MS;
+    navigate_initials(input);
+    assert(strcmp(entered_initials, "CAA") == 0);
+    input.joystick_x = 1;
+    navigate_initials(input);
+    assert(selected_initial == 1);
+    input.joystick_x = 0;
+    input.joystick_y = 1;
+    navigate_initials(input);
+    assert(strcmp(entered_initials, "CZA") == 0);
+    input.joystick_y = -1;
+    navigate_initials(input);
+    assert(strcmp(entered_initials, "CAA") == 0);
+    input.joystick_x = 1;
+    navigate_initials(input);
+    fake_millis += INITIALS_REPEAT_MS;
+    navigate_initials(input);
+    assert(selected_initial == 2 && entered_initials[3] == '\0');
+    input.joystick_x = -1;
+    for (int i = 0; i < 4; i++) {
+        fake_millis += INITIALS_REPEAT_MS;
+        navigate_initials(input);
+    }
+    assert(selected_initial == 0);
+    input.joystick_x = 0.1f;
+    input.joystick_y = 0.1f;
+    navigate_initials(input);
+    assert(navigation_direction == 0);
 }
 
 int main() {
@@ -529,6 +650,7 @@ int main() {
     test_scoring_chain();
     test_individual_hit_scoring();
     test_score_versioning();
+    test_initials_navigation();
     test_bullet_collisions();
     test_wave_progression();
     test_ship_movement();

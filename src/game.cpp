@@ -23,7 +23,7 @@ static const int COUNTDOWN_TEXT_SIZE = 3;
 // Text positions are fixed for the 128x64 display.
 static const int TITLE_X = 10;
 static const int MENU_TITLE_Y = 5;
-static const int MENU_BEST_X = 25;
+static const int MENU_BEST_X = 4;
 static const int MENU_BEST_Y = 27;
 static const int MENU_HINT_X = 4;
 static const int MENU_MOVE_Y = 41;
@@ -39,10 +39,6 @@ static const int PAUSE_TITLE_Y = 26;
 static const int PAUSE_HINT_X = 19;
 static const int PAUSE_HINT_Y = 45;
 static const int GAME_OVER_TITLE_Y = 4;
-static const int SUMMARY_X = 15;
-static const int SUMMARY_SCORE_Y = 25;
-static const int SUMMARY_BEST_Y = 36;
-static const int SUMMARY_RECORD_Y = 46;
 static const int SUMMARY_RETRY_Y = 56;
 
 static GameState state = STATE_MENU;
@@ -50,7 +46,16 @@ static Ship ship = {};
 static unsigned long state_entered_ms = 0;
 static unsigned long game_ms = 0;
 static uint32_t score = 0;
-static bool new_best = false;
+static const float INITIALS_DEADZONE = 0.55f;
+static const unsigned long INITIALS_REPEAT_MS = 250;
+static char entered_initials[4] = "AAA";
+static int selected_initial = 0;
+static int saved_rank = -1;
+static uint32_t final_score = 0;
+static bool confirm_ready = false;
+static bool save_failed = false;
+static int navigation_direction = 0;
+static unsigned long navigation_ms = 0;
 static bool retry_ready = false;
 
 static void set_state(GameState next_state) {
@@ -67,7 +72,7 @@ static void begin_game() {
     score = 0;
     scoring_reset();
     game_ms = 0;
-    new_best = false;
+    saved_rank = -1;
     set_state(STATE_COUNTDOWN);
 }
 
@@ -101,7 +106,9 @@ static void update_menu(const InputState& input) {
     draw_label(TITLE_X, MENU_TITLE_Y, "ASTEROIDS", TITLE_TEXT_SIZE);
     display.setTextSize(NORMAL_TEXT_SIZE);
     display.setCursor(MENU_BEST_X, MENU_BEST_Y);
-    display.printf("BEST V3 %lu", (unsigned long)highscore_best());
+    const char *leader
+            = highscore_count() ? highscore_entries()[0].initials : "---";
+    display.printf("V3 %s %lu", leader, (unsigned long)highscore_best());
 
     draw_label(MENU_HINT_X, MENU_MOVE_Y, "Joystick: move");
     draw_label(MENU_HINT_X, MENU_START_Y, "Fire to start");
@@ -198,34 +205,103 @@ static void update_death_animation() {
             ship_respawn(ship, respawn_x, respawn_y);
             set_state(STATE_PLAYING);
         } else {
-            new_best = highscore_record(score);
+            final_score = score;
+            saved_rank = -1;
             retry_ready = false;
             sound_stop();
             sound_play(SFX_GAMEOVER);
+            if (highscore_qualifies(final_score)) {
+                memcpy(entered_initials, "AAA", sizeof(entered_initials));
+                selected_initial = 0;
+                confirm_ready = false;
+                save_failed = false;
+                navigation_direction = 0;
+                set_state(STATE_INITIALS);
+            } else {
+                set_state(STATE_GAME_OVER);
+            }
+        }
+    }
+}
+
+static void navigate_initials(const InputState& input) {
+    int direction = 0;
+    if (fabsf(input.joystick_x) >= INITIALS_DEADZONE) {
+        direction = input.joystick_x > 0 ? 1 : -1;
+    } else if (fabsf(input.joystick_y) >= INITIALS_DEADZONE) {
+        direction = input.joystick_y > 0 ? 2 : -2;
+    }
+    if (!direction) {
+        navigation_direction = 0;
+        return;
+    }
+    if (direction == navigation_direction
+        && millis() - navigation_ms < INITIALS_REPEAT_MS) {
+        return;
+    }
+    navigation_direction = direction;
+    navigation_ms = millis();
+    if (abs(direction) == 1) {
+        selected_initial = constrain(selected_initial + direction, 0, 2);
+    } else {
+        int letter = entered_initials[selected_initial] - 'A';
+        letter = (letter + (direction < 0 ? 1 : 25)) % 26;
+        entered_initials[selected_initial] = 'A' + letter;
+    }
+}
+
+static void update_initials(const InputState& input) {
+    navigate_initials(input);
+    draw_label(4, 2, "TOP FIVE! ENTER NAME");
+    Adafruit_SSD1306& display = display_get();
+    display.setCursor(4, 13);
+    display.printf("SCORE %lu", (unsigned long)final_score);
+    draw_label(46, 25, entered_initials, TITLE_TEXT_SIZE);
+    display.drawFastHLine(46 + selected_initial * 12, 42, 10, SSD1306_WHITE);
+    draw_label(4, 46, "U/D:letter L/R:slot");
+    draw_label(
+            4, 56, save_failed ? "Save failed. Fire?" : "Fire: save initials");
+    if (!input.fire_held) {
+        confirm_ready = true;
+    }
+    if (confirm_ready && input.fire_pressed) {
+        confirm_ready = false;
+        saved_rank = highscore_record(final_score, entered_initials);
+        save_failed = saved_rank < 0;
+        if (!save_failed) {
+            retry_ready = false;
             set_state(STATE_GAME_OVER);
+        }
+    }
+}
+
+static void draw_leaderboard() {
+    Adafruit_SSD1306& display = display_get();
+    for (int i = 0; i < HIGHSCORE_CAPACITY; i++) {
+        display.setCursor(4, 15 + i * 8);
+        if (i < highscore_count()) {
+            const HighScoreEntry& entry = highscore_entries()[i];
+            display.printf("%c%d %s %6lu",
+                           i == saved_rank ? '>' : ' ',
+                           i + 1,
+                           entry.initials,
+                           (unsigned long)entry.score);
+        } else {
+            display.printf(" %d ---      -", i + 1);
         }
     }
 }
 
 static void update_game_over(const InputState& input) {
     Adafruit_SSD1306& display = display_get();
-    draw_label(TITLE_X, GAME_OVER_TITLE_Y, "GAME OVER", TITLE_TEXT_SIZE);
-    display.setTextSize(NORMAL_TEXT_SIZE);
-    display.setCursor(SUMMARY_X, SUMMARY_SCORE_Y);
-    display.printf("SCORE %lu", (unsigned long)score);
-    display.setCursor(SUMMARY_X, SUMMARY_BEST_Y);
-    display.printf("BEST  %lu", (unsigned long)highscore_best());
-
-    if (new_best) {
-        draw_label(SUMMARY_X, SUMMARY_RECORD_Y, "NEW BEST!");
-    }
-
-    draw_label(SUMMARY_X, SUMMARY_RETRY_Y, "Fire to retry");
-
+    draw_label(4, GAME_OVER_TITLE_Y, "GAME OVER");
+    display.setCursor(64, GAME_OVER_TITLE_Y);
+    display.printf("%6lu", (unsigned long)final_score);
+    draw_leaderboard();
+    draw_label(4, SUMMARY_RETRY_Y, "Fire to retry");
     if (!input.fire_held && millis() - state_entered_ms >= RETRY_GUARD_MS) {
         retry_ready = true;
     }
-
     if (retry_ready && input.fire_pressed) {
         begin_game();
     }
@@ -262,6 +338,9 @@ void game_update() {
         break;
     case STATE_DEATH_ANIM:
         update_death_animation();
+        break;
+    case STATE_INITIALS:
+        update_initials(input);
         break;
     case STATE_GAME_OVER:
         update_game_over(input);
