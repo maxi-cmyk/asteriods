@@ -8,7 +8,9 @@ A forgiving arcade game on a 128×64 OLED using the existing joystick and one fi
 
 - Ship starts at x=12, faces right, and uses direct analog X/Y movement with no inertia. Clamp the whole ship within the playfield. Cap diagonal magnitude at one while preserving smaller analog deflections. Shots originate just ahead of the actual nose.
 - Playfield below a 10-pixel HUD displaying lives, score, multiplier, and a compact chain-expiry underline.
-- One shot per debounced fire press, no firing cooldown or automatic repeat; at most 12 bullets.
+- One shot per debounced fire press, no automatic repeat; at most 12 bullets. Below 120 heat, firing has no cooldown and movement stays at full speed. Each successful shot adds 20 heat, capped at 120. Cool at 20 units/second after 250 ms without a successful shot, preserving fractional heat in milliunits.
+- Allow the shot reaching 120, then overheat for exactly 2,000 ms of gameplay time. Movement on both axes is 30% of normal, with diagonal magnitude capped before scaling. At most one successful shot per 500 ms, always requiring a fresh press; count the threshold shot as the start of that interval. Overheated shots do not add heat or extend recovery. Drain heat linearly to zero; restore both normal movement and unrestricted per-press firing at 2,000 ms. Consume rejected presses without queuing; full pools do not add heat, restart cooling, consume a firing interval, or play a shoot sound.
+- Show a centered 9×3 outlined bar below the ship with a two-pixel gap, using its seven inner pixels for heat. Blink only the outline every 100 ms while overheated. Keep the bar visible during invincibility blinking; hide it when dead. Reserve the bar's full bounds for movement and safe respawns without changing collision radius. Pause and death animation freeze heat, cooldowns, and blink time; respawn and a new run reset heat and penalties.
 - Three lives; collisions cost one life, missed rocks cost none.
 - Rocks move left with slight vertical drift and bounce vertically; exiting left removes them.
 - Large → two medium → two small; fragments separate vertically and continue left.
@@ -46,9 +48,9 @@ Store the complete table in one Preferences blob under `asteroids/scores-v3`. Re
 
 Arduino C++ / PlatformIO, fixed-size entity pools, 50 Hz target update rate. Gameplay timers use simulation time so pausing cannot expire invincibility or advance waves. If the OLED/loop cannot sustain 50 Hz, simulation slows rather than skipping collisions.
 
-Use horizontal segment-circle bullet collisions and bounded rock outlines. Keep particles brief and shake subtle. Reset transient entities between runs. Keep saucers, extra statistics, and demo absent until their planned tasks are implemented. Shared per-hit scoring is available to future powered-up weapons; the current game has ordinary single shots.
+Use horizontal segment-circle bullet collisions and bounded rock outlines. Keep particles brief and shake subtle. Reset transient entities between runs. Keep saucers, extra statistics, and demo absent until their planned tasks are implemented. Shared per-hit scoring and weapon heat helpers are available to future powered-up weapons and demo controllers; the current game has ordinary single shots. Future volleys must call the successful-shot hook once only after a volley or fallback bullet spawns, and weapon changes must retain the ship’s weapon heat state.
 
-Build with `pio run`. Run `sh tests/run_host.sh` for host gameplay checks. Physical acceptance: check direction and neutral drift, rapid fire presses versus holding, legibility, comfortable dodge spacing, pause during invincibility, repeated retries, and confirmed leaderboard retention across reset and a power cycle. Initials/leaderboard host checks and firmware build cover implementation; physical OLED readability and flash persistence remain pending.
+Build with `pio run`. Run `sh tests/run_host.sh` for host gameplay checks. Host checks cover passive/fractional cooling, threshold shots, clamping, exact recovery, 500 ms boundaries, rejected presses, movement scaling, pause/death/reset, held-button recovery, and heat-bar bounds. The ESP32 build also passes. Physical acceptance: check heat-bar readability and blinking, edge clearance, slower movement and rapid-press feel, direction and neutral drift, rapid fire presses versus holding, legibility, comfortable dodge spacing, pause during invincibility, repeated retries, and confirmed leaderboard retention across reset and a power cycle. Initials/leaderboard host checks and firmware build cover implementation; physical OLED readability and flash persistence remain pending.
 
 
 ## Randomness and validation boundary
@@ -66,4 +68,5 @@ They validate scoring, wave bounds, spawn deferral, pattern constraints, and
 range rejection; they cannot establish physical entropy quality or gameplay
 fairness. ESP32 checks must cover radio startup, ADC stability, frame rate,
 multiplier readability, early/middle/late-wave dodge time, and persistence.
-Heat and power-up interaction playtests remain pending those implementations.
+Heat playtesting remains pending on the board; power-up interaction checks
+await task 6.

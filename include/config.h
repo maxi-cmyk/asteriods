@@ -31,6 +31,17 @@
 #define BULLET_SPEED 5.0f
 #define BULLET_MAX 12
 
+// Weapon heat (fixed-point milliunits preserve fractional cooling).
+#define WEAPON_HEAT_MAX 120
+#define WEAPON_HEAT_PER_SHOT 20
+#define WEAPON_HEAT_SCALE 1000UL
+#define WEAPON_COOL_PER_SECOND 20UL
+#define WEAPON_COOL_DELAY_MS 250UL
+#define WEAPON_RECOVERY_MS 2000UL
+#define WEAPON_OVERHEAT_SHOT_MS 500UL
+#define WEAPON_OVERHEAT_SPEED 0.3f
+#define WEAPON_BLINK_MS 100UL
+
 // Asteroid pools and sizes
 #define ASTEROID_LARGE_R 9
 #define ASTEROID_MEDIUM_R 5
@@ -58,10 +69,16 @@
 #define SHIP_BULLET_OFFSET 6
 #define SHIP_TOP_GAP 1
 #define SHIP_BOTTOM_GAP 2
-#define SHIP_MIN_X SHIP_TAIL_OFFSET
+#define HEAT_BAR_WIDTH 9
+#define HEAT_BAR_HEIGHT 3
+#define HEAT_BAR_HALF_WIDTH (HEAT_BAR_WIDTH / 2)
+#define HEAT_BAR_GAP 2
+#define HEAT_BAR_Y_OFFSET (SHIP_RADIUS + HEAT_BAR_GAP)
+#define SHIP_MIN_X HEAT_BAR_HALF_WIDTH
 #define SHIP_MAX_X (SCREEN_W - 1 - SHIP_NOSE_OFFSET)
 #define SHIP_MIN_Y (HUD_HEIGHT + SHIP_RADIUS + SHIP_TOP_GAP)
-#define SHIP_MAX_Y (SCREEN_H - SHIP_RADIUS - SHIP_BOTTOM_GAP)
+#define SHIP_MAX_Y                                                             \
+    (SCREEN_H - HEAT_BAR_Y_OFFSET - HEAT_BAR_HEIGHT - SHIP_BOTTOM_GAP)
 #define SHIP_BLINK_MS 100
 #define BULLET_DRAW_LENGTH 3
 #define ASTEROID_VERTICES 8

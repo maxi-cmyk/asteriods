@@ -81,7 +81,7 @@ static void draw_world() {
     asteroids_draw(display);
     bullets_draw(display);
     particles_draw(display);
-    ship_draw(ship, display);
+    ship_draw(ship, display, game_ms);
 
     // Draw the HUD last so effects never obscure the score.
     display.fillRect(0, 0, SCREEN_W, HUD_HEIGHT, SSD1306_BLACK);
@@ -149,12 +149,14 @@ static void update_playing(const InputState& input) {
 
     game_ms += FRAME_TIME_MS;
     scoring_update(game_ms);
+    weapon_update(ship.weapon, game_ms);
     ship_update(ship, input.joystick_x, input.joystick_y);
     asteroids_update(game_ms);
 
-    if (input.fire_pressed
+    if (input.fire_pressed && weapon_can_fire(ship.weapon, game_ms)
         && bullets_fire(ship.position_x + SHIP_BULLET_OFFSET,
                         ship.position_y)) {
+        weapon_shot_succeeded(ship.weapon, game_ms);
         sound_play(SFX_SHOOT);
     }
 
@@ -202,7 +204,7 @@ static void update_death_animation() {
             float respawn_x = SHIP_X;
             float respawn_y = ship.position_y;
             asteroid_safe_respawn(respawn_x, respawn_y);
-            ship_respawn(ship, respawn_x, respawn_y);
+            ship_respawn(ship, respawn_x, respawn_y, game_ms);
             set_state(STATE_PLAYING);
         } else {
             final_score = score;
