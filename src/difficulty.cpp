@@ -49,7 +49,9 @@ WaveDifficulty difficulty_for_wave(uint16_t wave) {
               + uint8_t(progress * (end.population - start.population));
     result.drift = start.drift + progress * (end.drift - start.drift);
     // Unlock alternating heights at wave 4 and staggered pairs at wave 8.
-    if (wave >= 8) {
+    if (wave >= 12) {
+        result.pattern_level = 3;
+    } else if (wave >= 8) {
         result.pattern_level = 2;
     } else if (wave >= 4) {
         result.pattern_level = 1;

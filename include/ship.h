@@ -2,10 +2,12 @@
 
 #include <Arduino.h>
 #include "weapon.h"
+#include "powerup.h"
 #include <Adafruit_SSD1306.h>
 
 struct Ship {
     WeaponState weapon;
+    PowerupEffects effects;
     float position_x;
     float position_y;
     bool alive;

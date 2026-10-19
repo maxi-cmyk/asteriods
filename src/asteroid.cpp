@@ -121,7 +121,15 @@ static float choose_spawn_height() {
     int minimum = HUD_HEIGHT + ASTEROID_LARGE_R + ROCK_BORDER_GAP;
     int maximum = SCREEN_H - ASTEROID_LARGE_R;
 
-    if (wave_pattern) {
+    if (wave_pattern == 3) {
+        int lane = spawned_in_wave % 3;
+        if (!pattern_top_first) {
+            lane = 2 - lane;
+        }
+        int middle = minimum + (maximum - minimum) * lane / 2;
+        minimum = max(minimum, middle - 2);
+        maximum = min(maximum, middle + 2);
+    } else if (wave_pattern) {
         bool top = (spawned_in_wave % 2 == 0) == pattern_top_first;
         if (top) {
             maximum = minimum + PATTERN_HEIGHT_RANGE;
@@ -169,13 +177,17 @@ uint16_t asteroid_wave() {
     return wave_number;
 }
 
+static AsteroidSize pending_spawn_size() {
+    return wave_number >= 6 && spawned_in_wave % 4 == 3 ? AST_SMALL : AST_LARGE;
+}
+
 static bool spawn_corridor_clear() {
+    float pending_radius = asteroid_radius(pending_spawn_size());
     for (int i = 0; i < ASTEROID_MAX; i++) {
         const Asteroid& asteroid = rocks[i];
-        float horizontal_gap
-                = SCREEN_W + ASTEROID_LARGE_R - asteroid.position_x;
+        float horizontal_gap = SCREEN_W + pending_radius - asteroid.position_x;
         float vertical_gap = fabsf(pending_spawn_y - asteroid.position_y);
-        float safe_gap = asteroid.radius + ASTEROID_LARGE_R + SPAWN_DODGE_GAP;
+        float safe_gap = asteroid.radius + pending_radius + SPAWN_DODGE_GAP;
 
         if (asteroid.active && horizontal_gap < safe_gap
             && vertical_gap < safe_gap) {
@@ -199,15 +211,24 @@ static void spawn_pending_asteroid(unsigned long now) {
     float vertical_speed = (int(rock_random_bounded(RANDOM_DRIFT_STEPS))
                             - RANDOM_DRIFT_CENTER)
                            / VERTICAL_DRIFT_SCALE * wave_difficulty.drift;
-    spawn_asteroid(SCREEN_W + ASTEROID_LARGE_R,
+    AsteroidSize size = pending_spawn_size();
+    float speed = wave_difficulty.speed * (size == AST_SMALL ? 1.45f : 1.0f);
+    spawn_asteroid(SCREEN_W + asteroid_radius(size),
                    pending_spawn_y,
-                   AST_LARGE,
-                   -wave_difficulty.speed,
+                   size,
+                   -speed,
                    vertical_speed);
     pending_asteroids--;
     spawned_in_wave++;
     next_spawn_ms = now + wave_difficulty.spawn_interval_ms;
-    if (wave_pattern == 2 && spawned_in_wave % 2 == 0) {
+    if ((wave_pattern == 2 && spawned_in_wave % 2 != 0)
+        || (wave_pattern == 3 && spawned_in_wave % 3 != 0)) {
+        next_spawn_ms = now
+                        + max(SPAWN_WARNING_MS,
+                              wave_difficulty.spawn_interval_ms * 2 / 3);
+    }
+    if ((wave_pattern == 2 && spawned_in_wave % 2 == 0)
+        || (wave_pattern == 3 && spawned_in_wave % 3 == 0)) {
         next_spawn_ms += PAIR_RECOVERY_MS;
         pattern_top_first = rock_random_bounded(2) != 0;
     }
@@ -287,6 +308,12 @@ void asteroids_draw(Adafruit_SSD1306& display) {
                               pending_spawn_y,
                               SPAWN_WARNING_WIDTH,
                               SSD1306_WHITE);
+        if (pending_spawn_size() == AST_SMALL) {
+            display.drawFastHLine(SCREEN_W - SPAWN_WARNING_WIDTH,
+                                  pending_spawn_y + 2,
+                                  SPAWN_WARNING_WIDTH,
+                                  SSD1306_WHITE);
+        }
     }
 
     for (int i = 0; i < ASTEROID_MAX; i++) {
@@ -319,35 +346,38 @@ bool asteroid_hits_ship(float position_x, float position_y) {
     return false;
 }
 
-static int find_bullet_hit(float from_x, float to_x, float position_y) {
+static int find_bullet_hit(float from_x, float from_y, float to_x, float to_y) {
     int hit_index = -1;
-    float first_intersection = to_x + 1;
+    float first_intersection = 2.0f;
+    float delta_x = to_x - from_x;
+    float delta_y = to_y - from_y;
+    float length_squared = delta_x * delta_x + delta_y * delta_y;
 
-    // Choose the first intersected rock along the horizontal bullet segment.
+    // Solve segment-circle entry time, including shots starting inside a rock.
     for (int i = 0; i < ASTEROID_MAX; i++) {
         const Asteroid& asteroid = rocks[i];
-
         if (!asteroid.active) {
             continue;
         }
-
-        float distance_y = position_y - asteroid.position_y;
-        float radius = asteroid.radius;
-
-        if (fabsf(distance_y) > radius) {
-            continue;
+        float offset_x = from_x - asteroid.position_x;
+        float offset_y = from_y - asteroid.position_y;
+        float outside = offset_x * offset_x + offset_y * offset_y
+                        - float(asteroid.radius * asteroid.radius);
+        float entry = 0;
+        if (outside > 0) {
+            float projection = offset_x * delta_x + offset_y * delta_y;
+            float discriminant
+                    = projection * projection - length_squared * outside;
+            if (length_squared == 0 || discriminant < 0) {
+                continue;
+            }
+            entry = (-projection - sqrtf(discriminant)) / length_squared;
         }
-
-        float half_chord = sqrtf(radius * radius - distance_y * distance_y);
-        float entry_x = max(from_x, asteroid.position_x - half_chord);
-
-        if (asteroid.position_x + half_chord >= from_x && entry_x <= to_x
-            && entry_x < first_intersection) {
-            first_intersection = entry_x;
+        if (entry >= 0 && entry <= 1 && entry < first_intersection) {
+            first_intersection = entry;
             hit_index = i;
         }
     }
-
     return hit_index;
 }
 
@@ -373,7 +403,15 @@ static void split_asteroid(const Asteroid& parent) {
 }
 
 uint32_t asteroids_hit_bullet(float from_x, float to_x, float position_y) {
-    int hit_index = find_bullet_hit(from_x, to_x, position_y);
+    return asteroids_hit_segment(from_x, position_y, to_x, position_y);
+}
+
+uint32_t asteroids_hit_segment(float from_x,
+                               float from_y,
+                               float to_x,
+                               float to_y,
+                               AsteroidDestroyedHandler on_destroy) {
+    int hit_index = find_bullet_hit(from_x, from_y, to_x, to_y);
 
     if (hit_index < 0) {
         return 0;
@@ -403,6 +441,9 @@ uint32_t asteroids_hit_bullet(float from_x, float to_x, float position_y) {
         split_asteroid(parent);
     }
 
+    if (on_destroy) {
+        on_destroy(parent.position_x, parent.position_y);
+    }
     return asteroid_points(parent.size);
 }
 

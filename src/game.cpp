@@ -46,6 +46,9 @@ static Ship ship = {};
 static unsigned long state_entered_ms = 0;
 static unsigned long game_ms = 0;
 static uint32_t score = 0;
+static uint32_t run_destroyed = 0;
+static uint8_t run_best_multiplier = 1;
+static uint32_t run_prior_best = 0;
 static const float INITIALS_DEADZONE = 0.55f;
 static const unsigned long INITIALS_REPEAT_MS = 250;
 static char entered_initials[4] = "AAA";
@@ -68,8 +71,12 @@ static void begin_game() {
     asteroids_init();
     bullets_init();
     particles_init();
+    powerups_init();
 
     score = 0;
+    run_destroyed = 0;
+    run_best_multiplier = 1;
+    run_prior_best = highscore_best();
     scoring_reset();
     game_ms = 0;
     saved_rank = -1;
@@ -81,6 +88,7 @@ static void draw_world() {
     asteroids_draw(display);
     bullets_draw(display);
     particles_draw(display);
+    powerups_draw(display);
     ship_draw(ship, display, game_ms);
 
     // Draw the HUD last so effects never obscure the score.
@@ -135,7 +143,11 @@ static void update_countdown() {
 }
 
 static void award_asteroid_score(uint32_t base_points) {
+    if (base_points) {
+        run_destroyed++;
+    }
     uint32_t awarded = scoring_award(base_points, game_ms);
+    run_best_multiplier = max(run_best_multiplier, scoring_multiplier());
     score += min(awarded, SCORE_MAX - score);
 }
 
@@ -149,24 +161,30 @@ static void update_playing(const InputState& input) {
 
     game_ms += FRAME_TIME_MS;
     scoring_update(game_ms);
-    weapon_update(ship.weapon, game_ms);
     ship_update(ship, input.joystick_x, input.joystick_y);
+    powerups_update(ship);
     asteroids_update(game_ms);
 
-    if (input.fire_pressed && weapon_can_fire(ship.weapon, game_ms)
+    if (input.fire_pressed
         && bullets_fire(ship.position_x + SHIP_BULLET_OFFSET,
-                        ship.position_y)) {
+                        ship.position_y,
+                        ship.effects.multishot_left_ms > 0)) {
         weapon_shot_succeeded(ship.weapon, game_ms);
         sound_play(SFX_SHOOT);
     }
 
     bullets_update();
-    bullets_check_asteroids(award_asteroid_score);
+    bullets_check_asteroids(award_asteroid_score, powerups_drop);
     particles_update();
 
-    if (!ship.invincible_left
-        && asteroid_hits_ship(ship.position_x, ship.position_y)) {
+    bool collision = !ship.invincible_left
+                     && asteroid_hits_ship(ship.position_x, ship.position_y);
+    if (collision && ship.effects.shield) {
+        ship.effects.shield = false;
+        ship.invincible_left = SHIELD_PROTECTION_MS;
+    } else if (collision) {
         ship_die(ship);
+        powerups_init();
         scoring_reset();
         particles_spawn(ship.position_x, ship.position_y);
         sound_play(SFX_DEATH);

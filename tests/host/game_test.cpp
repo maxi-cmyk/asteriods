@@ -7,6 +7,7 @@
 #include "../../src/bullet.cpp"
 #include "../../src/weapon.cpp"
 #include "../../src/ship.cpp"
+#include "../../src/powerup.cpp"
 #include "../../src/particle.cpp"
 #include "../../src/highscore.cpp"
 #include "../../src/game.cpp"
@@ -489,6 +490,41 @@ static void test_deferred_spawns_and_patterns() {
         assert(next_spawn_ms == second_ms + expected_gap);
     }
 
+    // Three-lane clusters keep a full warning interval between members.
+    memset(rocks, 0, sizeof(rocks));
+    wave_number = 12;
+    prepare_wave(0);
+    assert(wave_difficulty.pattern_level == 3);
+    wave_pattern = 3;
+    pattern_top_first = true;
+    float heights[3] = {};
+    for (int i = 0; i < 3; i++) {
+        heights[i] = choose_spawn_height();
+        pending_spawn_y = heights[i];
+        unsigned long at = next_spawn_ms;
+        spawn_pending_asteroid(at);
+        assert(next_spawn_ms - at >= SPAWN_WARNING_MS);
+        memset(rocks, 0, sizeof(rocks));
+    }
+    assert(heights[0] < heights[1] && heights[1] < heights[2]);
+    // Every fourth entrance from wave six is a faster small rock. Its preview
+    // and pending identity survive a blocked entrance.
+    wave_number = 6;
+    prepare_wave(0);
+    spawned_in_wave = 3;
+    assert(pending_spawn_size() == AST_SMALL);
+    float fast_y = pending_spawn_y;
+    spawn_asteroid(SCREEN_W, fast_y, AST_LARGE, 0, 0);
+    unsigned long blocked_at = next_spawn_ms;
+    spawn_pending_asteroid(blocked_at);
+    assert(pending_spawn_y == fast_y && spawned_in_wave == 3);
+    memset(rocks, 0, sizeof(rocks));
+    spawn_pending_asteroid(next_spawn_ms);
+    assert(rocks[0].size == AST_SMALL);
+    assert(fabsf(rocks[0].velocity_x + wave_difficulty.speed * 1.45f) < 0.001f);
+    wave_number = 5;
+    assert(pending_spawn_size() == AST_LARGE);
+
     // The last wave saturates, rather than wrapping to the opening profile.
     memset(rocks, 0, sizeof(rocks));
     wave_number = 65535;
@@ -647,271 +683,270 @@ static void test_initials_navigation() {
     assert(navigation_direction == 0);
 }
 
-static void heat_to_threshold(WeaponState& weapon, unsigned long start_ms) {
-    weapon_reset(weapon, start_ms);
-    for (int i = 0; i < 6; i++) {
-        unsigned long shot_ms = start_ms + i * 40;
-        weapon_update(weapon, shot_ms);
-        assert(weapon_can_fire(weapon, shot_ms));
-        weapon_shot_succeeded(weapon, shot_ms);
-        assert(weapon.overheated == (i == 5));
-        if (i == 4) {
-            assert(weapon.heat_milliunits == 100000);
-            assert(weapon_speed_scale(weapon) == 1.0f);
-            assert(weapon_can_fire(weapon, shot_ms + 1));
-        }
-    }
+static void clear_test_world() {
+    begin_game();
+    set_state(STATE_PLAYING);
+    pending_asteroids = 0;
+    memset(rocks, 0, sizeof(rocks));
+    ship_respawn(ship, 50, 35);
 }
 
-static void test_weapon_heat_and_cooling() {
-    WeaponState weapon = {};
-    weapon_reset(weapon);
-    for (int i = 0; i < 4; i++) {
-        weapon_update(weapon, i * 40);
-        weapon_shot_succeeded(weapon, i * 40);
-        assert(weapon_speed_scale(weapon) == 1);
-        assert(weapon_can_fire(weapon, i * 40 + 1));
-    }
-    assert(weapon.heat_milliunits == 80000 && !weapon.overheated);
-    weapon_update(weapon, 370);
-    assert(weapon.heat_milliunits == 80000);
-    weapon_update(weapon, 371);
-    assert(weapon.heat_milliunits == 79980);
-    for (unsigned long time_ms = 372; time_ms <= 420; time_ms++) {
-        weapon_update(weapon, time_ms);
-    }
-    assert(weapon.heat_milliunits == 79000);
-    weapon_update(weapon, 1000000);
-    assert(weapon.heat_milliunits == 0);
-    // Paced fire cools completely between shots and never overheats.
-    weapon_reset(weapon);
-    for (unsigned long time_ms = 0; time_ms < 20000; time_ms += 1250) {
-        weapon_update(weapon, time_ms);
-        assert(weapon.heat_milliunits == 0);
-        weapon_shot_succeeded(weapon, time_ms);
-        assert(!weapon.overheated);
-    }
-    weapon.heat_milliunits = 119000;
-    weapon_shot_succeeded(weapon, 20000);
-    assert(weapon.heat_milliunits == 120000 && weapon.overheated);
-}
-
-static void test_weapon_recovery() {
-    WeaponState weapon = {};
-    heat_to_threshold(weapon, 0);
-    unsigned long start_ms = weapon.overheat_started_ms;
-    assert(start_ms == 200 && weapon_speed_scale(weapon) == 0.3f);
-    for (unsigned long elapsed = 1; elapsed <= 2000; elapsed++) {
-        unsigned long now_ms = start_ms + elapsed;
-        weapon_update(weapon, now_ms);
-        if (elapsed < 2000) {
-            assert(weapon.overheated);
-            assert(weapon.heat_milliunits == 120000 - elapsed * 60);
-            assert(weapon_can_fire(weapon, now_ms) == (elapsed % 500 == 0));
-            if (elapsed % 500 == 0) {
-                weapon_shot_succeeded(weapon, now_ms);
-                assert(weapon.overheat_started_ms == start_ms);
-            }
-        }
-    }
-    assert(!weapon.overheated && weapon.heat_milliunits == 0);
-    assert(weapon_speed_scale(weapon) == 1);
-    assert(weapon_can_fire(weapon, start_ms + 2000));
-    weapon_shot_succeeded(weapon, start_ms + 2000);
-    assert(weapon.heat_milliunits == 20000);
-    assert(weapon_can_fire(weapon, start_ms + 2001));
-    // Unsigned gameplay-time wrap preserves cooldown and recovery.
-    unsigned long near_wrap = ~0UL - 200;
-    heat_to_threshold(weapon, near_wrap);
-    start_ms = weapon.overheat_started_ms;
-    weapon_update(weapon, start_ms + 499);
-    assert(!weapon_can_fire(weapon, start_ms + 499));
-    weapon_update(weapon, start_ms + 500);
-    assert(weapon_can_fire(weapon, start_ms + 500));
-    weapon_update(weapon, start_ms + 2000);
-    assert(!weapon.overheated && weapon.heat_milliunits == 0);
-}
-
-static void test_heat_bar_and_movement() {
-    Ship test_ship = {};
-    ship_init(test_ship);
-    for (int corner = 0; corner < 4; corner++) {
-        ship_respawn(test_ship,
-                     corner & 1 ? 1000 : -1000,
-                     corner & 2 ? 1000 : -1000);
-        Adafruit_SSD1306 display = {};
-        ship_draw(test_ship, display, 0);
-        assert(display.outline_calls == 1 && display.fill_calls == 0);
-        assert(display.triangle_calls == 0); // invincibility blink
-        assert(display.bar_x >= 0 && display.bar_y >= HUD_HEIGHT);
-        assert(display.bar_x + display.bar_width <= SCREEN_W);
-        assert(display.bar_y + display.bar_height <= SCREEN_H);
-    }
-    ship_respawn(test_ship, 50, 35);
-    test_ship.weapon.heat_milliunits = 119000;
-    ship_update(test_ship, 1, 0);
-    assert(fabsf(test_ship.position_x - 50 - SHIP_MAX_SPEED) < 0.001f);
-    heat_to_threshold(test_ship.weapon, 0);
-    test_ship.position_x = 50;
-    ship_update(test_ship, 1, 0);
-    assert(fabsf(test_ship.position_x - 50 - SHIP_MAX_SPEED * 0.3f) < 0.001f);
-    test_ship.position_x = 50;
-    test_ship.position_y = 35;
-    ship_update(test_ship, 1, 1);
-    assert(fabsf(hypotf(test_ship.position_x - 50, test_ship.position_y - 35)
-                 - SHIP_MAX_SPEED * 0.3f)
+static void test_multishot_allocation_and_sweep() {
+    bullets_init();
+    assert(bullets_fire(20, 35, true));
+    assert(active_bullet_count() == 3);
+    bullets_update();
+    assert(bullets[0].position_y == 35);
+    assert(bullets[1].position_y < 35 && bullets[2].position_y > 35);
+    assert(fabsf(hypotf(bullets[1].velocity_x, bullets[1].velocity_y)
+                 - BULLET_SPEED)
            < 0.001f);
-    Adafruit_SSD1306 display = {};
-    ship_draw(test_ship, display, 200);
-    assert(display.outline_calls == 1 && display.fill_width == 7);
-    display = {};
-    ship_draw(test_ship, display, 300);
-    assert(display.outline_calls == 0 && display.fill_calls == 1);
-    weapon_update(test_ship.weapon, 1200);
-    display = {};
-    ship_draw(test_ship, display, 1200);
-    assert(display.fill_width == 3);
-    ship_die(test_ship);
-    display = {};
-    ship_draw(test_ship, display, 1200);
-    assert(display.outline_calls == 0 && display.fill_calls == 0);
-    ship_respawn(test_ship, 50, 35, 1200);
-    assert(!test_ship.weapon.overheated && !test_ship.weapon.heat_milliunits);
+    for (int free = 0; free <= 3; free++) {
+        bullets_init();
+        for (int i = 0; i < BULLET_MAX - free; i++) {
+            assert(bullets_fire(20, 35));
+        }
+        assert(bullets_fire(20, 35, true) == (free > 0));
+        int added = free == 3 ? 3 : (free > 0 ? 1 : 0);
+        assert(active_bullet_count() == BULLET_MAX - free + added);
+    }
+
+    memset(rocks, 0, sizeof(rocks));
+    spawn_asteroid(50, 35, AST_SMALL, 0, 0);
+    assert(asteroids_hit_segment(40, 25, 60, 45) == SCORE_SMALL);
+    spawn_asteroid(50, 35, AST_SMALL, 0, 0);
+    assert(asteroids_hit_segment(60, 45, 40, 25) == SCORE_SMALL);
+    spawn_asteroid(50, 35, AST_SMALL, 0, 0);
+    assert(asteroids_hit_segment(40, 20, 60, 30) == 0);
+    assert(asteroids_hit_segment(50, 35, 50, 35) == SCORE_SMALL);
+    spawn_asteroid(60, 45, AST_SMALL, 0, 0);
+    spawn_asteroid(50, 35, AST_SMALL, 0, 0);
+    assert(asteroids_hit_segment(40, 25, 70, 55) == SCORE_SMALL);
+    assert(rocks[0].active && !rocks[1].active);
+
+    bullets_init();
+    memset(rocks, 0, sizeof(rocks));
+    assert(bullets_fire(20, HUD_HEIGHT, true));
+    bullets_update();
+    bullets_check_asteroids();
+    assert(!bullets[1].active && bullets[0].active && bullets[2].active);
+    bullets_init();
+    assert(bullets_fire(20, SCREEN_H - 1, true));
+    bullets_update();
+    bullets_check_asteroids();
+    assert(!bullets[2].active);
 }
 
-static void test_game_weapon_pause() {
-    begin_game();
+static void force_pickup(PickupKind kind, float x, float y) {
+    pickup = {x, y, kind, true};
+}
+
+static void test_pickup_drops_and_collection() {
+    clear_test_world();
+    // Controlled hardware words verify the exact 10/100 boundary and kinds.
+    random_words = {110, 0};
+    powerups_drop(-20, 100);
+    assert(!pickup.active);
+    random_words = {109, 0};
+    powerups_drop(-20, 100);
+    assert(pickup.active && pickup.kind == PICKUP_MULTISHOT);
+    assert(pickup.position_x == SHIP_MIN_X);
+    assert(pickup.position_y == SHIP_MAX_Y);
+    unsigned reads = random_word_reads;
+    powerups_drop(50, 35);
+    assert(random_word_reads == reads && pickup.position_x == SHIP_MIN_X);
+    pickup.active = false;
+    random_words = {100, 1};
+    powerups_drop(50, 35);
+    assert(pickup.kind == PICKUP_SHIELD);
+    powerups_update(ship);
+    assert(!pickup.active && ship.effects.shield && collection_cue_left);
+    force_pickup(PICKUP_SHIELD, 50, 35);
+    powerups_update(ship);
+    assert(ship.effects.shield);
+    force_pickup(PICKUP_MULTISHOT, 50, 35);
+    powerups_update(ship);
+    assert(ship.effects.shield);
+    assert(ship.effects.multishot_left_ms == MULTISHOT_DURATION_MS);
+    powerups_update(ship);
+    assert(ship.effects.multishot_left_ms
+           == MULTISHOT_DURATION_MS - FRAME_TIME_MS);
+    force_pickup(PICKUP_MULTISHOT, 50, 35);
+    powerups_update(ship);
+    assert(ship.effects.multishot_left_ms == MULTISHOT_DURATION_MS);
+    for (unsigned long i = 0; i < MULTISHOT_DURATION_MS / FRAME_TIME_MS - 1;
+         i++) {
+        powerups_update(ship);
+    }
+    assert(ship.effects.multishot_left_ms == FRAME_TIME_MS);
+    powerups_update(ship);
+    assert(ship.effects.multishot_left_ms == 0 && ship.effects.shield);
+    force_pickup(PICKUP_MULTISHOT, -PICKUP_RADIUS, 35);
+    powerups_update(ship);
+    assert(!pickup.active);
+
+    // Only a successful destruction rolls for a drop (including fragments).
+    clear_test_world();
+    spawn_asteroid(60, 35, AST_SMALL, 0, 0);
+    assert(bullets_fire(50, 35));
+    bullets[0].position_x = 70;
+    random_words = {100, 1};
+    bullets_check_asteroids(nullptr, powerups_drop);
+    assert(pickup.active && pickup.kind == PICKUP_SHIELD);
+    assert(pickup.position_x == 60 && pickup.position_y == 35);
+    random_words.clear();
+}
+
+static void test_powerup_game_rules() {
+    clear_test_world();
+    force_pickup(PICKUP_MULTISHOT, 50, 35);
+    InputState pressed = {};
+    pressed.fire_pressed = true;
+    update_playing(pressed);
+    assert(active_bullet_count() == 3);
+    assert(ship.weapon.last_shot_ms == game_ms);
+    InputState idle = {};
+    update_playing(idle);
+    assert(active_bullet_count() == 3);
+    unsigned long remaining = ship.effects.multishot_left_ms;
+    force_pickup(PICKUP_SHIELD, 100, 35);
+    float pickup_x = pickup.position_x;
+    InputState pause = {};
+    pause.pause_triggered = true;
+    update_playing(pause);
+    for (int i = 0; i < 400; i++) {
+        update_paused(idle);
+    }
+    assert(ship.effects.multishot_left_ms == remaining);
+    assert(pickup.position_x == pickup_x);
     set_state(STATE_PLAYING);
-    pending_asteroids = 0;
-    InputState input = {};
-    input.fire_pressed = true;
-    // Fill the pool: rejected presses do not charge or postpone cooling.
-    int sounds_before = shot_sounds;
-    for (int i = 0; i < BULLET_MAX; i++) {
-        assert(bullets_fire(0, 35));
-    }
-    update_playing(input);
-    assert(ship.weapon.heat_milliunits == 0 && ship.weapon.last_shot_ms == 0);
-    assert(shot_sounds == sounds_before);
+    // Consecutive multishot volleys have no firing delay.
     bullets_init();
-    for (int i = 0; i < 6; i++) {
-        update_playing(input);
-    }
-    assert(ship.weapon.overheated && active_bullet_count() == 6);
-    unsigned long last_shot_ms = ship.weapon.last_shot_ms;
-    update_playing(input);
+    update_playing(pressed);
+    assert(active_bullet_count() == 3);
+    update_playing(pressed);
     assert(active_bullet_count() == 6);
-    assert(ship.weapon.last_shot_ms == last_shot_ms);
-    // Pause ignores fire and freezes recovery and bar animation time.
-    input.pause_triggered = true;
-    update_playing(input);
-    unsigned long frozen_ms = game_ms;
-    uint32_t frozen_heat = ship.weapon.heat_milliunits;
-    input.pause_triggered = false;
-    for (int i = 0; i < 200; i++) {
-        update_paused(input);
-    }
-    assert(ship.weapon.heat_milliunits == frozen_heat && game_ms == frozen_ms);
-    input.pause_triggered = true;
-    update_paused(input);
-}
-
-static void test_overheated_pool_and_recovery() {
-    InputState input = {};
-    input.fire_pressed = true;
-    unsigned long start_ms = ship.weapon.overheat_started_ms;
-    unsigned long last_shot_ms = ship.weapon.last_shot_ms;
-    // At the 500 ms boundary, a full pool must not consume the interval.
-    game_ms = start_ms + 500 - FRAME_TIME_MS;
+    // Expiry immediately restores single fire.
+    ship.effects.multishot_left_ms = FRAME_TIME_MS;
     bullets_init();
-    for (int i = 0; i < BULLET_MAX; i++) {
-        assert(bullets_fire(0, 35));
-    }
-    update_playing(input);
-    assert(ship.weapon.last_shot_ms == last_shot_ms);
-    bullets_init();
-    update_playing(input);
+    update_playing(pressed);
     assert(active_bullet_count() == 1);
-    assert(ship.weapon.overheat_started_ms == start_ms);
-    // No queued shot at recovery, including holding a rejected press.
-    input.fire_pressed = false;
-    input.fire_held = true;
-    game_ms = start_ms + WEAPON_RECOVERY_MS - FRAME_TIME_MS;
-    bullets_init();
-    update_playing(input);
-    assert(!ship.weapon.overheated && active_bullet_count() == 0);
-    input.fire_pressed = true;
-    update_playing(input);
-    assert(active_bullet_count() == 1 && ship.weapon.heat_milliunits == 20000);
+
+    clear_test_world();
+    ship.invincible_left = 0;
+    ship.effects.shield = true;
+    ship.effects.multishot_left_ms = MULTISHOT_DURATION_MS;
+    for (int i = 0; i < 3; i++) {
+        award_asteroid_score(SCORE_SMALL);
+    }
+    uint32_t preserved_score = score;
+    spawn_asteroid(50, 35, AST_SMALL, 0, 0);
+    update_playing(idle);
+    assert(state == STATE_PLAYING && ship.lives == LIVES_START);
+    assert(!ship.effects.shield
+           && ship.invincible_left == SHIELD_PROTECTION_MS);
+    assert(score == preserved_score && scoring_multiplier() == 2);
+    for (unsigned long i = 0; i < SHIELD_PROTECTION_MS / FRAME_TIME_MS - 1;
+         i++) {
+        update_playing(idle);
+    }
+    assert(ship.alive && ship.lives == LIVES_START);
+    update_playing(idle);
+    assert(state == STATE_DEATH_ANIM && ship.lives == LIVES_START - 1);
+    assert(ship.effects.multishot_left_ms == 0 && !ship.effects.shield);
+    assert(!pickup.active && scoring_multiplier() == 1);
+    ship_respawn(ship, 50, 35, game_ms);
+    assert(!ship.effects.shield && ship.effects.multishot_left_ms == 0);
+    force_pickup(PICKUP_SHIELD, 50, 35);
+    ship.effects.shield = true;
+    begin_game();
+    assert(!pickup.active && !ship.effects.shield);
 }
 
-static void test_weapon_death_reset() {
-    heat_to_threshold(ship.weapon, game_ms);
-    game_ms = ship.weapon.updated_ms;
-    set_state(STATE_DEATH_ANIM);
-    uint32_t frozen_heat = ship.weapon.heat_milliunits;
-    unsigned long frozen_ms = game_ms;
-    update_death_animation();
-    assert(ship.weapon.heat_milliunits == frozen_heat && game_ms == frozen_ms);
-    fake_millis += DEATH_ANIMATION_MS;
-    update_death_animation();
-    assert(state == STATE_PLAYING && ship.weapon.heat_milliunits == 0);
-    assert(!ship.weapon.overheated && ship.weapon.updated_ms == game_ms);
-    heat_to_threshold(ship.weapon, game_ms);
-    begin_game();
-    assert(!ship.weapon.overheated && !ship.weapon.heat_milliunits);
-}
-
-static void test_held_fire_recovery() {
-    begin_game();
-    set_state(STATE_PLAYING);
-    pending_asteroids = 0;
+static void test_powerup_input_and_rendering() {
+    clear_test_world();
     input_init();
     fire(false);
-    for (int i = 0; i < 6; i++) {
-        fire(false);
-        fire(true);
-    }
-    assert(ship.weapon.overheated);
-    int sounds_before = shot_sounds;
-    // Release, press during lockout, then hold through recovery.
-    fire(false);
+    ship.effects.multishot_left_ms = MULTISHOT_DURATION_MS;
+    int sounds = shot_sounds;
     fire(true);
-    assert(shot_sounds == sounds_before);
-    for (int i = 0; i < 110; i++) {
+    assert(active_bullet_count() == 3 && shot_sounds == sounds + 1);
+    for (int i = 0; i < 10; i++) {
         tick();
     }
-    assert(!ship.weapon.overheated && ship.weapon.heat_milliunits == 0);
-    assert(shot_sounds == sounds_before);
+    assert(shot_sounds == sounds + 1);
     fire(false);
     fire(true);
-    assert(shot_sounds == sounds_before + 1);
-    assert(ship.weapon.heat_milliunits == 20000);
+    assert(shot_sounds == sounds + 2);
     fire(false);
+
+    // Record the shield alone while the inner ship blinks off, at all corners.
+    Ship powered_ship = {};
+    ship_init(powered_ship);
+    powered_ship.effects = {MULTISHOT_DURATION_MS, true};
+    powered_ship.invincible_left = 2 * SHIP_BLINK_MS;
+    for (int x : {SHIP_MIN_X, SHIP_MAX_X}) {
+        for (int y : {SHIP_MIN_Y, SHIP_MAX_Y}) {
+            powered_ship.position_x = x;
+            powered_ship.position_y = y;
+            Adafruit_SSD1306 drawing = {};
+            ship_draw(powered_ship, drawing);
+            assert(drawing.triangle_calls == 1);
+            assert(drawing.triangle_min_x >= 0);
+            assert(drawing.triangle_max_x < SCREEN_W);
+            assert(drawing.triangle_min_y >= HUD_HEIGHT);
+            assert(drawing.triangle_max_y < SCREEN_H);
+            assert(drawing.line_x >= 0);
+            assert(drawing.line_x + drawing.line_width <= SCREEN_W);
+            assert(drawing.line_y < SCREEN_H && drawing.line_y >= HUD_HEIGHT);
+            powered_ship.effects.multishot_left_ms = 1;
+            ship_draw(powered_ship, drawing);
+            assert(drawing.line_width == 1);
+        }
+    }
 }
 
-static void test_rejected_press_cooling() {
-    begin_game();
-    set_state(STATE_PLAYING);
-    pending_asteroids = 0;
-    InputState input = {};
-    input.fire_pressed = true;
-    update_playing(input);
-    unsigned long shot_ms = ship.weapon.last_shot_ms;
+static void test_unlimited_primary_fire() {
+    clear_test_world();
+    InputState pressed = {};
+    pressed.fire_pressed = true;
+    for (int i = 0; i < 100; i++) {
+        bullets_init();
+        update_playing(pressed);
+        assert(active_bullet_count() == 1);
+        assert(ship.weapon.last_shot_ms == game_ms);
+    }
+    float start_x = ship.position_x;
+    ship_update(ship, 1, 0);
+    assert(fabsf(ship.position_x - start_x - SHIP_MAX_SPEED) < 0.001f);
+    // Full pools reject quietly; the next available frame can shoot.
     bullets_init();
     for (int i = 0; i < BULLET_MAX; i++) {
         assert(bullets_fire(0, 35));
     }
-    game_ms = shot_ms + WEAPON_COOL_DELAY_MS + 50 - FRAME_TIME_MS;
-    int sounds_before = shot_sounds;
-    update_playing(input);
-    assert(ship.weapon.heat_milliunits == 19000);
-    assert(ship.weapon.last_shot_ms == shot_ms);
-    assert(shot_sounds == sounds_before);
+    int sounds = shot_sounds;
+    unsigned long last_shot = ship.weapon.last_shot_ms;
+    update_playing(pressed);
+    assert(shot_sounds == sounds && ship.weapon.last_shot_ms == last_shot);
+    bullets_init();
+    InputState held = {};
+    held.fire_held = true;
+    update_playing(held);
+    assert(active_bullet_count() == 0);
+    update_playing(pressed);
+    assert(active_bullet_count() == 1 && shot_sounds == sounds + 1);
+    Adafruit_SSD1306 drawing = {};
+    ship_draw(ship, drawing);
+    assert(drawing.outline_calls == 0 && drawing.fill_calls == 0);
 }
 
 int main() {
     assert(rock_random_init());
+    test_unlimited_primary_fire();
+    test_multishot_allocation_and_sweep();
+    test_pickup_drops_and_collection();
+    test_powerup_game_rules();
+    test_powerup_input_and_rendering();
     test_hardware_random_ranges();
     test_difficulty_profiles();
     test_deferred_spawns_and_patterns();
@@ -919,14 +954,6 @@ int main() {
     test_individual_hit_scoring();
     test_score_versioning();
     test_initials_navigation();
-    test_weapon_heat_and_cooling();
-    test_weapon_recovery();
-    test_heat_bar_and_movement();
-    test_game_weapon_pause();
-    test_overheated_pool_and_recovery();
-    test_weapon_death_reset();
-    test_held_fire_recovery();
-    test_rejected_press_cooling();
     test_bullet_collisions();
     test_wave_progression();
     test_ship_movement();

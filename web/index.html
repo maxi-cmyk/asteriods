@@ -1,0 +1,58 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#111310">
+  <title>Asteroids — Pixel flight</title>
+  <link rel="stylesheet" href="./style.css">
+</head>
+<body>
+  <main>
+    <header><div><h1>Asteroids</h1></div><a class="asset-link" href="./assets.html" target="_blank" rel="noopener">View pixel assets</a></header>
+    <section class="console" aria-label="Asteroids game">
+      <div class="status"><span id="controller" role="status">Keyboard ready · connect a controller and press a button</span><span id="state">LOADING</span></div>
+      <div class="hud" aria-label="Run status">
+        <div class="hud-group"><span>SHIPS <b id="lives">03</b></span><span>WAVE <b id="wave">01</b></span></div>
+        <div class="score"><b id="score">000000</b><span class="chain"><span id="multiplier">x1</span><span class="track"><i id="chainFill"></i></span></span></div>
+      </div>
+      <div class="screen"><canvas id="game" width="480" height="270" tabindex="0" aria-label="Asteroids game screen. Move with arrow keys or left stick. Aim with mouse, IJKL or right stick. Fire with left click, Space or R2. Hold right click, F or L2 to charge laser. Pause with Escape or Options.">Your browser needs Canvas and WebAssembly to play.</canvas></div>
+      <div class="combat-hud" aria-label="Weapon abilities">
+        <span>L2 LASER <b id="laserStatus">READY</b><span class="track"><i id="laserFill"></i></span></span>
+        <span>L1 SHIELD <b id="shieldStatus">EMPTY</b></span>
+        <span id="precisionStatus">PRECISION</span>
+      </div>
+      <div id="practicePanel" class="practice-panel" hidden>
+        <div><strong>Practice flight</strong><span id="practiceProgress" role="status">No lives lost. Scores stay out of the leaderboard.</span></div>
+        <ol id="practiceGoals"><li>Move</li><li>Aim</li><li>Fire</li><li>Fire laser</li><li>Arm shield</li></ol>
+        <div class="actions"><button id="resetTargets">Reset targets</button><button id="practiceMultishot">Try multishot</button><button id="endPractice">End practice</button></div>
+      </div>
+      <div id="runSummary" class="run-summary" hidden aria-label="Run results">
+        <strong id="personalBest"></strong><dl><div><dt>Wave reached</dt><dd id="resultWave"></dd></div><div><dt>Survival time</dt><dd id="resultTime"></dd></div><div><dt>Asteroids destroyed</dt><dd id="resultKills"></dd></div><div><dt>Best multiplier</dt><dd id="resultMultiplier"></dd></div></dl>
+      </div>
+      <dialog id="settingsDialog" aria-labelledby="settingsTitle">
+        <form method="dialog"><div class="settings-heading"><h2 id="settingsTitle">Flight settings</h2><button>Close</button></div></form>
+        <p>Settings save on this device. Close settings, then resume when ready.</p>
+        <div class="settings-sliders">
+          <label for="volume">Volume <output id="volumeValue"></output><input id="volume" type="range" min="0" max="1" step="0.05"></label>
+          <label for="deadzone">Controller deadzone <output id="deadzoneValue"></output><input id="deadzone" type="range" min="0.05" max="0.45" step="0.01"></label>
+          <label for="aimSensitivity">Aim response <output id="aimSensitivityValue"></output><input id="aimSensitivity" type="range" min="0.25" max="2" step="0.05"></label>
+          <label for="shake">Screen shake <output id="shakeValue"></output><input id="shake" type="range" min="0" max="1" step="0.1"></label>
+        </div>
+        <p class="settings-help">Aim response controls turning speed for mouse and right-stick aim. Higher turns faster. Lower deadzones detect smaller stick movements.</p>
+        <div class="settings-bindings"><section><h3>Keyboard</h3><p>Select a key, then press its replacement. Esc cancels. Arrows, Enter and Esc remain available.</p><div id="keyBindings"></div></section><section><h3>Controller</h3><p>Assign abilities below. Hold Shield + Precision for slow movement; tap Shield alone to arm it.</p><div id="padBindings"></div></section></div>
+        <div class="settings-footer"><button id="resetSettings">Restore defaults</button><span id="settingsStatus" role="status">Saved locally</span></div>
+      </dialog>
+      <div class="toolbar"><span id="hint" role="status">Loading game…</span><div class="actions"><button id="fire" disabled>Start / Fire</button><button id="practice" disabled>Practice</button><button id="pause" disabled>Pause</button><button id="settingsOpen">Settings</button><button id="sound" aria-pressed="false">Sound off</button><button id="fullscreen">Fullscreen</button></div></div>
+    </section>
+    <p class="binding-note">Default controls below. Customize keyboard and controller buttons in Settings.</p>
+    <section class="controls" aria-label="Controls">
+      <div><h2>PS4 controller</h2><p><span>Move / Aim</span>Left stick / Right stick</p><p><span>Primary fire</span>R2 / Cross — one shot per press</p><p><span>Laser</span>Hold L2 for 3s · 7s cooldown</p><p><span>Precision</span>Hold R1 + L1</p><p><span>Shield</span>Tap L1 alone to arm a stored charge</p><p><span>Pause</span>Options / double-click L3</p></div>
+      <div><h2>Keyboard + mouse</h2><p><span>Move / Aim</span>WASD or arrows / Mouse or IJKL</p><p><span>Primary fire</span>Left click / Space / Enter</p><p><span>Laser</span>Hold right click / F for 3s</p><p><span>Precision</span>Hold Shift</p><p><span>Shield</span>Tap Q alone</p><p><span>Pause</span>Esc / P</p></div>
+      <div class="note"><h2>Flight rules</h2><p>One shot per press. Right-stick aim stays where you leave it. Laser charge cancels when released early; it fires once at full charge.</p><p>Shield pickups store one charge. L1 arms it until one hit is absorbed. Precision movement never spends the charge.</p><p>Top five scores save in this browser.</p></div>
+    </section>
+    <footer>Connect by USB or Bluetooth. Release fire between shots.<span>Move to a letter; fire to save initials.</span></footer>
+  </main>
+  <script type="module" src="./app.mjs"></script>
+</body>
+</html>

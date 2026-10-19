@@ -1,0 +1,10 @@
+{
+  "name": "asteroids-oled-web",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "build": "node build.mjs",
+    "test": "node build.mjs --test --oled && node build.mjs --test && node --test tests/*.test.mjs",
+    "start": "node serve.mjs"
+  }
+}

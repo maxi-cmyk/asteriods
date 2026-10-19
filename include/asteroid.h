@@ -28,6 +28,12 @@ void asteroids_update(unsigned long game_ms);
 void asteroids_draw(Adafruit_SSD1306& display);
 bool asteroid_hits_ship(float position_x, float position_y);
 uint32_t asteroids_hit_bullet(float from_x, float to_x, float position_y);
+using AsteroidDestroyedHandler = void (*)(float position_x, float position_y);
+uint32_t asteroids_hit_segment(float from_x,
+                               float from_y,
+                               float to_x,
+                               float to_y,
+                               AsteroidDestroyedHandler on_destroy = nullptr);
 int asteroid_active_count();
 void asteroid_safe_respawn(float& position_x, float& position_y);
 uint16_t asteroid_wave();

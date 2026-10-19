@@ -6,6 +6,7 @@ void ship_respawn(Ship& ship,
                   float position_y,
                   unsigned long game_ms) {
     weapon_reset(ship.weapon, game_ms);
+    ship.effects = {};
     ship.position_x
             = constrain(position_x, float(SHIP_MIN_X), float(SHIP_MAX_X));
     ship.position_y
@@ -32,7 +33,7 @@ void ship_update(Ship& ship, float joystick_x, float joystick_y) {
         joystick_y /= magnitude;
     }
 
-    float speed = SHIP_MAX_SPEED * weapon_speed_scale(ship.weapon);
+    float speed = SHIP_MAX_SPEED;
     ship.position_x = constrain(ship.position_x + joystick_x * speed,
                                 float(SHIP_MIN_X),
                                 float(SHIP_MAX_X));
@@ -47,31 +48,26 @@ void ship_update(Ship& ship, float joystick_x, float joystick_y) {
     }
 }
 
-static void draw_heat_bar(const Ship& ship,
-                          Adafruit_SSD1306& display,
-                          unsigned long game_ms) {
-    int position_x = int(ship.position_x) - HEAT_BAR_HALF_WIDTH;
-    int position_y = int(ship.position_y) + HEAT_BAR_Y_OFFSET;
-    bool outline_visible
-            = !ship.weapon.overheated
-              || ((game_ms - ship.weapon.overheat_started_ms) / WEAPON_BLINK_MS)
-                                 % 2
-                         == 0;
-    if (outline_visible) {
-        display.drawRect(position_x,
-                         position_y,
-                         HEAT_BAR_WIDTH,
-                         HEAT_BAR_HEIGHT,
-                         SSD1306_WHITE);
+static void draw_powerup_indicators(const Ship& ship,
+                                    Adafruit_SSD1306& display) {
+    if (ship.effects.multishot_left_ms) {
+        int width = (ship.effects.multishot_left_ms * (EFFECT_BAR_WIDTH - 2)
+                     + MULTISHOT_DURATION_MS - 1)
+                    / MULTISHOT_DURATION_MS;
+        display.drawFastHLine(int(ship.position_x) - EFFECT_BAR_HALF_WIDTH + 1,
+                              int(ship.position_y) + EFFECT_BAR_Y_OFFSET
+                                      + EFFECT_BAR_HEIGHT,
+                              width,
+                              SSD1306_WHITE);
     }
-    int fill_width = ship.weapon.heat_milliunits * (HEAT_BAR_WIDTH - 2)
-                     / (WEAPON_HEAT_MAX * WEAPON_HEAT_SCALE);
-    if (fill_width > 0) {
-        display.fillRect(position_x + 1,
-                         position_y + 1,
-                         fill_width,
-                         HEAT_BAR_HEIGHT - 2,
-                         SSD1306_WHITE);
+    if (ship.effects.shield) {
+        display.drawTriangle(ship.position_x + SHIP_NOSE_OFFSET + 1,
+                             ship.position_y,
+                             ship.position_x - SHIP_TAIL_OFFSET - 1,
+                             ship.position_y - SHIP_RADIUS - 1,
+                             ship.position_x - SHIP_TAIL_OFFSET - 1,
+                             ship.position_y + SHIP_RADIUS + 1,
+                             SSD1306_WHITE);
     }
 }
 
@@ -81,7 +77,8 @@ void ship_draw(const Ship& ship,
     if (!ship.alive) {
         return;
     }
-    draw_heat_bar(ship, display, game_ms);
+    (void)game_ms;
+    draw_powerup_indicators(ship, display);
     if (ship.invincible_left
         && (ship.invincible_left / SHIP_BLINK_MS) % 2 == 0) {
         return;
@@ -97,6 +94,7 @@ void ship_draw(const Ship& ship,
 
 void ship_die(Ship& ship) {
     ship.alive = false;
+    ship.effects = {};
 
     if (ship.lives) {
         ship.lives--;

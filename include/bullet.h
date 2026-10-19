@@ -7,12 +7,17 @@ struct Bullet {
     float position_x;
     float previous_x;
     float position_y;
+    float previous_y;
+    float velocity_x;
+    float velocity_y;
     bool active;
 };
 
 void bullets_init();
-bool bullets_fire(float position_x, float position_y);
+bool bullets_fire(float position_x, float position_y, bool multishot = false);
 void bullets_update();
 void bullets_draw(Adafruit_SSD1306& display);
 using AsteroidHitHandler = void (*)(uint32_t base_points);
-uint32_t bullets_check_asteroids(AsteroidHitHandler on_hit = nullptr);
+using PickupDropHandler = void (*)(float position_x, float position_y);
+uint32_t bullets_check_asteroids(AsteroidHitHandler on_hit = nullptr,
+                                 PickupDropHandler on_destroy = nullptr);
