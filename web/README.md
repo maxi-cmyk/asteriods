@@ -166,3 +166,10 @@ with the same rejection sampling; individual runs differ from the ESP32.
 Feature checks run with `npm test`: settings validation/persistence, quick mouse
 clicks, remapping, configurable deadzones/aim response, practice isolation,
 actual destruction counts, multiplier peaks, and laser audio event timing.
+
+## Attract demo
+
+Leave the title idle for ten seconds to watch the shared right-facing demo
+controller. Move or press fire to return to the title, then release and press
+fire again to play. Demo runs never save leaderboard entries. The HD demo uses
+the shared primary-fire gameplay; player runs retain the browser combat abilities.

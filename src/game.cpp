@@ -9,6 +9,7 @@
 #include "highscore.h"
 #include "particle.h"
 #include "scoring.h"
+#include "demo.h"
 
 static const uint32_t SCORE_MAX = 999999;
 static const int COUNTDOWN_START = 3;
@@ -41,6 +42,10 @@ static const int PAUSE_HINT_Y = 45;
 static const int GAME_OVER_TITLE_Y = 4;
 static const int SUMMARY_RETRY_Y = 56;
 
+static const unsigned long DEMO_IDLE_MS = 10000;
+static bool demo_running = false;
+static bool menu_input_ready = true;
+static DemoController demo = {};
 static GameState state = STATE_MENU;
 static Ship ship = {};
 static unsigned long state_entered_ms = 0;
@@ -67,6 +72,7 @@ static void set_state(GameState next_state) {
 }
 
 static void begin_game() {
+    demo_running = false;
     ship_init(ship);
     asteroids_init();
     bullets_init();
@@ -121,9 +127,22 @@ static void update_menu(const InputState& input) {
     draw_label(MENU_HINT_X, MENU_MOVE_Y, "Joystick: move");
     draw_label(MENU_HINT_X, MENU_START_Y, "Fire to start");
 
-    if (input.fire_pressed) {
+    bool active = input.fire_held || input.fire_pressed || input.pause_triggered
+                  || input.joystick_held || fabsf(input.joystick_x) > 0.15f
+                  || fabsf(input.joystick_y) > 0.15f;
+    if (!active) {
+        menu_input_ready = true;
+    } else if (!input.fire_pressed || !menu_input_ready) {
+        state_entered_ms = millis();
+    }
+    if (menu_input_ready && input.fire_pressed) {
         sound_play(SFX_MENU_SELECT);
         begin_game();
+    } else if (!active && millis() - state_entered_ms >= DEMO_IDLE_MS) {
+        begin_game();
+        demo_reset(demo);
+        demo_running = true;
+        set_state(STATE_DEMO);
     }
 }
 
@@ -223,7 +242,11 @@ static void update_death_animation() {
             float respawn_y = ship.position_y;
             asteroid_safe_respawn(respawn_x, respawn_y);
             ship_respawn(ship, respawn_x, respawn_y, game_ms);
-            set_state(STATE_PLAYING);
+            set_state(demo_running ? STATE_DEMO : STATE_PLAYING);
+        } else if (demo_running) {
+            demo_running = false;
+            sound_stop();
+            set_state(STATE_MENU);
         } else {
             final_score = score;
             saved_rank = -1;
@@ -329,6 +352,8 @@ static void update_game_over(const InputState& input) {
 
 void game_init() {
     highscore_init();
+    demo_running = false;
+    menu_input_ready = true;
     set_state(STATE_MENU);
 }
 
@@ -343,7 +368,24 @@ void game_update() {
     display.setTextColor(SSD1306_WHITE);
     display.setTextSize(NORMAL_TEXT_SIZE);
 
+    if (demo_running
+        && (input.fire_held || input.fire_pressed || input.pause_triggered
+            || input.joystick_held || fabsf(input.joystick_x) > 0.15f
+            || fabsf(input.joystick_y) > 0.15f)) {
+        demo_running = false;
+        menu_input_ready = false;
+        sound_stop();
+        set_state(STATE_MENU);
+    }
+
     switch (state) {
+    case STATE_DEMO: {
+        InputState automated
+                = demo_update(demo, ship, asteroids_get(), game_ms);
+        update_playing(automated);
+        draw_label(4, SCREEN_H - 8, "DEMO - input to exit");
+        break;
+    }
     case STATE_MENU:
         update_menu(input);
         break;

@@ -1,4 +1,4 @@
-export const STATES = ['menu', 'countdown', 'playing', 'paused', 'death', 'initials', 'game-over'];
+export const STATES = ['menu', 'countdown', 'playing', 'paused', 'death', 'initials', 'game-over', 'demo'];
 export const SCORE_KEY = 'asteroids.web.scores-v3';
 
 export async function createRuntime(bytes, { storage, random, tone = () => {}, scoreKey = SCORE_KEY } = {}) {

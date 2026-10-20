@@ -34,7 +34,7 @@ Diagonal movement speed is capped at straight-line speed.
 - Destroyed rocks have a 10% chance to drop a pickup while none is visible. Pickups drift left: three prongs give six seconds of multishot; a dotted box gives one shield charge. Collecting again refreshes multishot or retains one shield. Both can coexist, freeze during pause, and clear on death/new runs.
 - Multishot fires straight plus two shallow diagonal shots per press. If fewer than three bullet slots are free, it fires one straight shot when possible. A shrinking line beneath the ship shows remaining multishot time.
 - A shield appears as an outer ship outline. One asteroid collision consumes it, preserving the life and score chain and granting 800 ms of blinking protection to escape the overlap.
-- Runs end when all three lives are lost. There is no time limit, saucer, or attract demo.
+- Runs end when all three lives are lost. There is no time limit or saucer. After ten idle seconds on the title, an automated demo begins. Move the joystick, click it, or press fire to return to the title; release and press fire again to start. Demo scores are never saved.
 - The top five completed nonzero scores qualify for three-letter initials entry, starting at `AAA`. Existing equal scores stay ahead of new ties; a tie with fifth place does not qualify. Joystick navigation repeats every 250 ms while held. A fresh fire press confirms and saves. A failed save stays on the entry screen for a deliberate retry.
 - The title shows the saved leader; game over shows the final score and top five, highlighting the saved entry. Release fire after the retry guard, then press again to start a new run.
 - Preferences stores one 42-byte versioned table under `asteroids/scores-v3` (record version 1). Missing or invalid records load an empty table without writing. Older `best-v3`, `best-v2`, and legacy leaderboard keys remain untouched; their scores are not imported.
@@ -59,7 +59,7 @@ From wave 6, every fourth entrance is a faster small rock (1.45× wave speed);
 wave 12 unlocks three-lane clusters. Pairs and clusters retain at least 700 ms
 warning for each entrance. Fast rocks use a double-line warning on OLED.
 
-Multishot and shield implement task 6 in `nextSteps.md`; other power-up ideas and the attract demo remain planned. Difficulty tuning still needs physical playtesting, including pickup balance, and shield escape time.
+Multishot and shield implement task 6 in `nextSteps.md`; the attract demo implements task 3. Other power-up ideas remain planned. Difficulty tuning still needs physical playtesting, including pickup balance, and shield escape time.
 
 ## Browser version
 

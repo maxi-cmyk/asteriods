@@ -10,6 +10,7 @@ struct InputState {
     bool fire_held;
     bool fire_pressed;
     bool pause_triggered;
+    bool joystick_held;
 };
 
 void input_init();

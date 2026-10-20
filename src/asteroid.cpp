@@ -509,3 +509,7 @@ void asteroid_safe_respawn(float& position_x, float& position_y) {
         }
     }
 }
+
+const Asteroid *asteroids_get() {
+    return rocks;
+}

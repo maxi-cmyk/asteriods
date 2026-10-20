@@ -126,6 +126,7 @@ static void update_joystick_click(unsigned long now) {
     bool click_raw = !digitalRead(PIN_JOY_CLK);
     bool previous_click = click_stable;
     debounce(click_raw, last_click_raw, click_stable, last_click_change);
+    input_state.joystick_held = click_stable;
     bool click_rising = click_stable && !previous_click;
     input_state.pause_triggered = false;
 

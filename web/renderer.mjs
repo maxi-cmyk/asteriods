@@ -242,6 +242,7 @@ export class PixelRenderer {
         const count=3-Math.floor(scene[3]/500);
         this.text(count>0?count:'GO',WIDTH/2,111,COLOUR.ink,4,'center');
       }
+      if (scene[0]===7) this.text('DEMO · MOVE OR FIRE TO EXIT',WIDTH/2,HEIGHT-12,COLOUR.cyan,1,'center');
       if (scene[0]===3) this.overlay('PAUSED','TAKE A BREATHER',scene);
     }
   }

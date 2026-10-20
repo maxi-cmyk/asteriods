@@ -37,3 +37,5 @@ uint32_t asteroids_hit_segment(float from_x,
 int asteroid_active_count();
 void asteroid_safe_respawn(float& position_x, float& position_y);
 uint16_t asteroid_wave();
+
+const Asteroid *asteroids_get();

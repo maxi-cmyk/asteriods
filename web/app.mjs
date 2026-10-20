@@ -141,7 +141,7 @@ function draw() {
     stateLabel.textContent = state.toUpperCase().replace('-', ' ');
     pauseButton.textContent = state === 'paused' ? 'Resume' : 'Pause';
     pauseButton.disabled = !['playing', 'paused'].includes(state);
-    const hints = { menu:'Press fire to start', countdown:'Get ready', playing:'Release fire between shots', paused:'Paused · Options / Esc to resume', death:'Ship lost', initials:'Choose three letters, then press fire to save', 'game-over':'Release fire, then press to retry' };
+    const hints = { demo:'Demo · move or press fire to exit', menu:'Press fire to start', countdown:'Get ready', playing:'Release fire between shots', paused:'Paused · Options / Esc to resume', death:'Ship lost', initials:'Choose three letters, then press fire to save', 'game-over':'Release fire, then press to retry' };
     hint.textContent = hints[state];
   }
 }

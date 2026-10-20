@@ -9,7 +9,8 @@ enum GameState {
     STATE_PAUSED,
     STATE_DEATH_ANIM,
     STATE_INITIALS,
-    STATE_GAME_OVER
+    STATE_GAME_OVER,
+    STATE_DEMO
 };
 
 void game_init();

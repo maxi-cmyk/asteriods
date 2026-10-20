@@ -29,6 +29,7 @@ WaveDifficulty difficulty_for_wave(uint16_t wave) {
 #include "../../src/powerup.cpp"
 #include "../../src/particle.cpp"
 #include "../../src/highscore.cpp"
+#include "../../src/demo.cpp"
 #include "../../src/game.cpp"
 
 unsigned long browser_ms = 0;
@@ -107,7 +108,8 @@ void web_step(int raw_x, int raw_y, int fire, int click, int pause) {
     if (pause) {
         input_state.pause_triggered = true;
     }
-    if (state == STATE_PLAYING || state == STATE_DEATH_ANIM) {
+    if (state == STATE_PLAYING || state == STATE_DEATH_ANIM
+        || state == STATE_DEMO) {
         visual_ms += FRAME_TIME_MS;
     }
 #ifdef WEB_HD
@@ -136,6 +138,8 @@ void web_start(int practice) {
 #endif
 }
 void web_menu() {
+    demo_running = false;
+    menu_input_ready = false;
 #ifdef WEB_HD
     practice_mode = false;
     combat_reset();
