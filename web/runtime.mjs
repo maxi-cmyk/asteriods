@@ -38,7 +38,8 @@ export async function createRuntime(bytes, { storage, random, tone = () => {}, s
   api = instance.exports;
   const runtime = {
     api,
-    step({ x = 2048, y = 2048, fire = false, click = false, pause = false, aimX = 0, aimY = 0, laser = false, precision = false, shield = false } = {}) {
+    step({ x = 2048, y = 2048, fire = false, firePressed = false, click = false, pause = false, aimX = 0, aimY = 0, laser = false, precision = false, shield = false } = {}) {
+      api.web_fire_press(+firePressed);
       api.web_actions(aimX, aimY, +laser, +precision, +shield);
       api.web_step(x, y, +fire, +click, +pause);
     },
@@ -49,6 +50,7 @@ export async function createRuntime(bytes, { storage, random, tone = () => {}, s
     get state() { return STATES[api.web_state()]; },
     get width() { return api.web_width(); },
     get height() { return api.web_height(); },
+    fireDiagnostics() { return [...new Uint32Array(api.memory.buffer,api.web_fire_diagnostics(),4)]; },
     scene() { return new Float32Array(api.memory.buffer, api.web_scene(), 512); },
     pixels() { return new Uint8Array(api.memory.buffer, api.web_pixels(), 128 * 64); },
     snapshot() { return [...new Float32Array(api.memory.buffer, api.web_snapshot(), 16)]; },

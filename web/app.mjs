@@ -1,6 +1,7 @@
 import { createRuntime } from './runtime.mjs';
-import { Controls } from './controls.mjs';
-import { defaults, KEY_ACTIONS, PAD_ACTIONS, PAD_BUTTONS, loadSettings, saveSettings, sanitizeSettings, keyLabel } from './settings.mjs';
+import { Controls, PauseSettingsShortcut } from './controls.mjs';
+import { defaults, KEY_ACTIONS, PAD_ACTIONS, PAD_BUTTONS, loadProfiles, saveProfiles, sanitizeSettings, SettingsDraft, keyLabel } from './settings.mjs';
+import { setupCalibration } from './calibration.mjs';
 import { GameAudio } from './audio.mjs';
 import { PixelRenderer, loadArt, WIDTH, HEIGHT } from './renderer.mjs';
 
@@ -10,13 +11,22 @@ const controllerLabel = document.querySelector('#controller');
 const stateLabel = document.querySelector('#state');
 const hint = document.querySelector('#hint');
 const fireButton = document.querySelector('#fire');
+const inputDiagnostics=document.querySelector('#inputDiagnostics');
+inputDiagnostics.hidden=!new URLSearchParams(location.search).has('input-fix');
+let diagnosticPad=null;
 const pauseButton = document.querySelector('#pause');
 const soundButton = document.querySelector('#sound');
 let storage;
 try { storage=localStorage; } catch {}
-const settings=loadSettings(storage);
-try { if (!storage?.getItem('asteroids.web.settings-v1') && matchMedia('(prefers-reduced-motion: reduce)').matches) settings.shake=0; } catch {}
+const profileStore=loadProfiles(storage);
+const settings=sanitizeSettings(profileStore.profiles[profileStore.activeProfile]);
+try { if (!storage?.getItem('asteroids.web.settings-v1') && matchMedia('(prefers-reduced-motion: reduce)').matches) {
+  settings.shake=0;for(const profile of profileStore.profiles)profile.shake=0;
+} } catch {}
 const controls = new Controls(settings);
+const settingsDraft=new SettingsDraft(profileStore,settings);
+const pauseShortcut=new PauseSettingsShortcut();
+const applyButton=document.querySelector('#applySettings');
 const audio = new GameAudio(settings);
 const settingsDialog=document.querySelector('#settingsDialog');
 const settingsStatus=document.querySelector('#settingsStatus');
@@ -28,16 +38,27 @@ const hud = Object.fromEntries(['lives','wave','score','multiplier','chainFill',
 function setTone(value) { audio.setTone(value); }
 function unlockAudio() { audio.unlock(); }
 function persistSettings() {
-  settingsStatus.textContent=saveSettings(storage,settings)?'Saved locally':'Storage unavailable; settings apply for this visit';
+  profileStore.profiles[profileStore.activeProfile]=sanitizeSettings(settings);
+  settingsStatus.textContent=saveProfiles(storage,profileStore)?'Saved locally':'Storage unavailable; settings apply for this visit';
+  syncSettingsEffects();
+}
+function syncSettingsEffects() {
   audio.apply();
   if(renderer)renderer.shake=settings.shake;
   soundButton.textContent=settings.soundEnabled?'Sound on':'Sound off';
   soundButton.setAttribute('aria-pressed',String(settings.soundEnabled));
 }
+function markSettingsChanged() {
+  const dirty=settingsDraft.changed();
+  applyButton.disabled=!dirty;
+  settingsStatus.textContent=dirty?'Changes pending — press Apply':'No pending changes';
+}
 function renderSettings() {
-  for(const name of ['volume','deadzone','aimSensitivity','shake']) {
+  document.querySelector('#inputProfile').value=profileStore.activeProfile;
+  if(!storage)settingsStatus.textContent='Storage unavailable; settings apply for this visit';
+  for(const name of ['volume','deadzone','aimDeadzone','aimSensitivity','mouseAimSensitivity','movementSensitivity','shake']) {
     document.getElementById(name).value=settings[name];
-    document.getElementById(`${name}Value`).textContent=name==='aimSensitivity'?`${settings[name].toFixed(2)}×`:`${Math.round(settings[name]*100)}%`;
+    document.getElementById(`${name}Value`).textContent=name.endsWith('Sensitivity')?`${settings[name].toFixed(2)}×`:`${Math.round(settings[name]*100)}%`;
   }
   const keys=document.querySelector('#keyBindings');keys.replaceChildren();
   for(const [action,[title]] of Object.entries(KEY_ACTIONS)) {
@@ -59,27 +80,48 @@ function renderSettings() {
       const previous=settings.buttons[action],next=Number(select.value);
       const conflict=Object.keys(settings.buttons).find(key=>key!==action && settings.buttons[key]===next);
       if(conflict)settings.buttons[conflict]=previous;
-      settings.buttons[action]=next;controls.clear();renderSettings();persistSettings();
+      settings.buttons[action]=next;controls.clear();renderSettings();markSettingsChanged();
       document.querySelector(`#padBindings [data-action="${action}"]`).focus();
     });label.append(select);pads.append(label);
   }
 }
-for(const name of ['volume','deadzone','aimSensitivity','shake']) {
+for(const name of ['volume','deadzone','aimDeadzone','aimSensitivity','mouseAimSensitivity','movementSensitivity','shake']) {
   document.getElementById(name).addEventListener('input',event=>{
     settings[name]=Number(event.target.value);
-    document.getElementById(`${name}Value`).textContent=name==='aimSensitivity'?`${settings[name].toFixed(2)}×`:`${Math.round(settings[name]*100)}%`;
+    document.getElementById(`${name}Value`).textContent=name.endsWith('Sensitivity')?`${settings[name].toFixed(2)}×`:`${Math.round(settings[name]*100)}%`;
     if(name==='volume') {settings.soundEnabled=true;unlockAudio();}
-    persistSettings();
+    markSettingsChanged();
   });
 }
-document.querySelector('#settingsOpen').addEventListener('click',()=>{
-  controls.clear();pointerPosition=null;runtime?.pause();audio.suspend(true);renderSettings();settingsDialog.showModal();if(runtime)draw();
+const calibration=setupCalibration({settings,findController,persist:markSettingsChanged,render:renderSettings});
+document.querySelector('#inputProfile').addEventListener('change',event=>{
+  profileStore.profiles[profileStore.activeProfile]=sanitizeSettings(settings);
+  profileStore.activeProfile=Number(event.target.value);
+  Object.assign(settings,sanitizeSettings(profileStore.profiles[profileStore.activeProfile]));
+  rebinding=null;controls.clear();calibration.reset();renderSettings();markSettingsChanged();
 });
-settingsDialog.addEventListener('close',()=>{rebinding=null;controls.clear();audio.suspend(suspended);previousTime=null;canvas.focus();fitCanvas();});
+function openSettings() {
+  if(settingsDialog.open)return;
+  settingsDraft.begin();applyButton.disabled=true;
+  settingsStatus.textContent='No pending changes';
+  controls.clear();pointerPosition=null;runtime?.pause();audio.suspend(true);
+  calibration.reset();renderSettings();settingsDialog.showModal();if(runtime)draw();
+}
+document.querySelector('#settingsOpen').addEventListener('click',openSettings);
+document.querySelector('#pauseSettings').addEventListener('click',openSettings);
+applyButton.addEventListener('click',()=>{
+  const saved=settingsDraft.apply(storage);
+  controls.clear();calibration.reset();syncSettingsEffects();applyButton.disabled=true;
+  settingsStatus.textContent=saved?'Applied and saved locally':'Applied for this visit; storage unavailable';
+});
+settingsDialog.addEventListener('close',()=>{
+  settingsDraft.discard();syncSettingsEffects();rebinding=null;controls.clear();calibration.reset();
+  audio.suspend(suspended);previousTime=null;canvas.focus();fitCanvas();
+});
 settingsDialog.addEventListener('cancel',event=>{if(rebinding){event.preventDefault();rebinding=null;renderSettings();settingsStatus.textContent='Key change canceled';}});
 document.querySelector('#resetSettings').addEventListener('click',()=>{
   Object.assign(settings,defaults());if(matchMedia('(prefers-reduced-motion: reduce)').matches)settings.shake=0;
-  rebinding=null;controls.clear();renderSettings();persistSettings();
+  rebinding=null;controls.clear();calibration.reset();renderSettings();markSettingsChanged();
 });
 practiceButton.addEventListener('click',()=>{controls.clear();pointerPosition=null;runtime.start(true);canvas.focus();draw();fitCanvas();});
 document.querySelector('#resetTargets').addEventListener('click',()=>{runtime.resetTargets();canvas.focus();});
@@ -102,6 +144,15 @@ function draw() {
   const update = (element, text) => { if (element.textContent !== text) element.textContent = text; };
   const scene = runtime.scene();
   renderer.render(scene);
+  if(!inputDiagnostics.hidden) {
+    const pad=diagnosticPad;
+    update(document.querySelector('#inputRaw'),pad
+      ? `X: ${pad.buttons[0]?.pressed?'DOWN':'up'} · R2: ${(pad.buttons[7]?.value ?? 0).toFixed(3)} (${pad.buttons[7]?.pressed?'DOWN':'up'}) · L2: ${(pad.buttons[6]?.value ?? 0).toFixed(3)}`
+      : 'No controller visible to this tab. Press a controller button with this tab focused.');
+    const [presses,shots,pool,laser]=runtime.fireDiagnostics();
+    update(document.querySelector('#inputCounts'),`Controller presses detected: ${controls.observedFirePresses} · Game presses: ${presses} · Shots fired: ${shots}`);
+    update(document.querySelector('#inputBlocks'),`Rejected — full projectile pool: ${pool} · Laser charging: ${laser} · State: ${runtime.state}`);
+  }
   audio.observe(scene);
   const practice=!!scene[60];
   const practicePanel=document.querySelector('#practicePanel');
@@ -136,17 +187,33 @@ function draw() {
   update(hud.precisionStatus, scene[56]?'PRECISION ON':'PRECISION');
   hud.precisionStatus.classList.toggle('active',!!scene[56]);
   const state = runtime.state;
+  document.querySelector('#pauseMenu').hidden=state!=='paused' || settingsDialog.open;
   if (state !== lastState) {
+    controls.discardFirePresses();
     lastState = state;
     stateLabel.textContent = state.toUpperCase().replace('-', ' ');
     pauseButton.textContent = state === 'paused' ? 'Resume' : 'Pause';
     pauseButton.disabled = !['playing', 'paused'].includes(state);
-    const hints = { demo:'Demo · move or press fire to exit', menu:'Press fire to start', countdown:'Get ready', playing:'Release fire between shots', paused:'Paused · Options / Esc to resume', death:'Ship lost', initials:'Choose three letters, then press fire to save', 'game-over':'Release fire, then press to retry' };
+    const hints = { demo:'Demo · move or press fire to exit', menu:'Press fire to start', countdown:'Get ready', playing:'Release fire between shots', paused:'Paused · Options / Esc to resume · X on PS4 opens Settings', death:'Ship lost', initials:'Choose three letters, then press fire to save', 'game-over':'Release fire, then press to retry' };
     hint.textContent = hints[state];
   }
 }
+// Preserve brief controller releases between the fixed simulation ticks.
+// No gameplay or DOM work occurs in this input-only polling callback.
+setInterval(()=>{
+  if(!runtime || suspended || settingsDialog.open)return;
+  let pads=[];
+  try { pads=navigator.getGamepads?.() || []; } catch {}
+  const pad=Array.from(pads).find(p=>p?.index===activePadIndex && p.connected)
+    || Array.from(pads).find(p=>p?.connected && p.mapping==='standard');
+  controls.observeController(pad);
+},4);
 function frame(now) {
   requestAnimationFrame(frame);
+  const pad=findController();diagnosticPad=pad;
+  if(!settingsDialog.open && !suspended)controls.observeController(pad);
+  if(pauseShortcut.update(pad,runtime?.state==='paused' && !settingsDialog.open))openSettings();
+  if(settingsDialog.open)calibration.update(now);
   if (!runtime || suspended) { previousTime = now; return; }
   const delta = previousTime === null ? 0 : now - previousTime;
   previousTime = now;
@@ -172,7 +239,7 @@ window.addEventListener('keydown', event => {
       const conflict=Object.keys(settings.keys).find(key=>key!==rebinding && settings.keys[key]===event.code);
       if(conflict)candidate.keys[conflict]=settings.keys[rebinding];
       if(sanitizeSettings(candidate).keys[rebinding]!==event.code) {settingsStatus.textContent='Choose a letter, number, modifier, Space or punctuation key.';return;}
-      const action=rebinding;settings.keys=candidate.keys;rebinding=null;renderSettings();persistSettings();
+      const action=rebinding;settings.keys=candidate.keys;rebinding=null;renderSettings();markSettingsChanged();
       document.querySelector(`#keyBindings [data-action="${action}"]`).focus();
     }
     return;
@@ -182,11 +249,11 @@ window.addEventListener('keydown', event => {
   event.preventDefault();unlockAudio();controls.keyDown(event.code,event.repeat);
 });
 canvas.addEventListener('pointermove', event => {
-  if(event.pointerType==='mouse')pointerPosition=[event.clientX,event.clientY];
+  if(event.pointerType==='mouse') {pointerPosition=[event.clientX,event.clientY];controls.activateMouseAim();}
 });
 canvas.addEventListener('pointerdown',event=>{
   if(event.pointerType!=='mouse' || ![0,2].includes(event.button))return;
-  event.preventDefault();canvas.focus();pointerPosition=[event.clientX,event.clientY];
+  event.preventDefault();canvas.focus();controls.activateMouseAim();pointerPosition=[event.clientX,event.clientY];
   controls.pointerDown(event.button,performance.now());
   canvas.setPointerCapture(event.pointerId);
 });

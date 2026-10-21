@@ -18,7 +18,7 @@ const pad=()=>({connected:true,mapping:'standard',axes:[0,0,0,0],buttons:Array.f
 test('right stick aims actual primary shots and retains aim through the deadzone',async()=>{
   const g=await game();const p=pad();const c=new Controls();
   p.axes[3]=-1;p.buttons[7].pressed=true;
-  ticks(g,2,c.sample(p));let s=g.scene();
+  ticks(g,1,c.sample(p));let s=g.scene();
   near(s[45],0);near(s[46],-1);
   near(s[257],240);near(s[258],135-13-18.75);
   near(s[259],0);near(s[260],-18.75);
@@ -27,10 +27,40 @@ test('right stick aims actual primary shots and retains aim through the deadzone
 
 test('multishot spread rotates with aim; left-facing projectiles leave the pool',async()=>{
   const g=await game(1);
-  ticks(g,2,{fire:true,aimX:-1});const s=g.scene();
+  ticks(g,1,{fire:true,aimX:-1});const s=g.scene();
   assert(g.snapshot()[9]===3);assert(s[259]<0 && s[265]<0 && s[271]<0);
   assert(s[266]>0 && s[272]<0);
   ticks(g,30);assert.equal(g.snapshot()[9],0);
+});
+
+test('tight multishot keeps speed and symmetric spread at every aim angle',async()=>{
+  for(const angle of [0,Math.PI/2,Math.PI,-Math.PI/2,Math.PI/4]) {
+    const g=await game(1);
+    ticks(g,1,{fire:true,aimX:Math.cos(angle),aimY:Math.sin(angle)});
+    const scene=g.scene();
+    assert.equal(g.snapshot()[9],3);
+    const directions=[];
+    for(const offset of [256,262,268]) {
+      const vx=scene[offset+3],vy=scene[offset+4];
+      near(Math.hypot(vx,vy),18.75);
+      directions.push(Math.atan2(Math.sin(Math.atan2(vy,vx)-angle),Math.cos(Math.atan2(vy,vx)-angle)));
+    }
+    near(directions[0],0);near(directions[1],-Math.asin(.15));near(directions[2],Math.asin(.15));
+  }
+});
+
+test('tight multishot falls back to one shot with two free slots and rejects a full pool',async()=>{
+  for(const scenario of [15,16]) {
+    const g=await game(scenario);
+    const before=g.snapshot()[9];
+    ticks(g,2,{fire:true,aimY:-1});
+    assert.equal(g.snapshot()[9],before+(scenario===15?1:0));
+    const s=g.scene();
+    if(scenario===15) {
+      const newOffset=256+before*6;
+      near(s[newOffset+3],0);near(s[newOffset+4],-18.75);
+    }
+  }
 });
 
 test('precision halves straight and diagonal speed and stays unchanged after repeated shots',async()=>{

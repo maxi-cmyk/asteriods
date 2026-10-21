@@ -35,6 +35,7 @@ WaveDifficulty difficulty_for_wave(uint16_t wave) {
 unsigned long browser_ms = 0;
 int browser_x = 2048, browser_y = 2048;
 bool browser_fire = false, browser_click = false;
+static bool browser_fire_edge = false;
 static unsigned long visual_ms = 0;
 
 extern "C" void *memcpy(void *dest, const void *src, size_t count) {
@@ -89,14 +90,36 @@ void web_init() {
     sound_play(SFX_MENU_SELECT);
     game_update();
 }
+const uint32_t *web_fire_diagnostics() {
+    static uint32_t values[4] = {};
+#ifdef WEB_HD
+    values[0] = combat.primary_presses;
+    values[1] = combat.primary_volleys;
+    values[2] = combat.primary_pool_blocked;
+    values[3] = combat.primary_laser_blocked;
+#endif
+    return values;
+}
+void web_fire_press(int pressed) {
+    browser_fire_edge = pressed != 0;
+}
 void web_step(int raw_x, int raw_y, int fire, int click, int pause) {
     browser_ms += FRAME_TIME_MS;
     browser_x = constrain(raw_x, 0, 4095);
     browser_y = constrain(raw_y, 0, 4095);
     browser_fire = fire;
     browser_click = click;
+#ifdef WEB_HD
+    bool previous_fire_held = input_state.fire_held;
+#endif
     input_update();
 #ifdef WEB_HD
+    // Browser buttons are already digital samples, not mechanical contacts.
+    // Do not make a quick press/release survive the OLED debounce window.
+    input_state.fire_held = browser_fire;
+    input_state.fire_pressed
+            = browser_fire_edge || (browser_fire && !previous_fire_held);
+    browser_fire_edge = false;
     // Web controls apply the configurable radial deadzone before conversion.
     input_state.joystick_x
             = (browser_x - 2048) / (browser_x >= 2048 ? 2047.0f : 2048.0f);
@@ -382,6 +405,13 @@ void web_scenario(int scenario) {
         spawn_asteroid(400, 135, AST_LARGE, 0, 0);
         spawn_asteroid(160, 135, AST_SMALL, 0, 0);
         spawn_asteroid(320, 180, AST_SMALL, 0, 0);
+    }
+    if (scenario == 15 || scenario == 16) {
+        // Keep existing bullets stationary so the test can fill the pool.
+        ship.effects.multishot_left_ms = MULTISHOT_DURATION_MS;
+        for (int i = 0; i < BULLET_MAX - (scenario == 15 ? 2 : 0); i++) {
+            spawn_bullet(i, 20, 20, 0, 0);
+        }
     }
     if (scenario == 14) {
         for (int i = 0; i < ASTEROID_MAX; i++) {

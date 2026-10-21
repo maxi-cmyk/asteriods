@@ -15,6 +15,10 @@ struct CombatInput {
     bool shield;
 };
 struct CombatState {
+    uint32_t primary_presses = 0;
+    uint32_t primary_volleys = 0;
+    uint32_t primary_pool_blocked = 0;
+    uint32_t primary_laser_blocked = 0;
     float aim_x = 1;
     float aim_y = 0;
     bool laser_was_held = false;
@@ -231,13 +235,20 @@ static void combat_update_playing(bool laser_pressed) {
         asteroids_update(game_ms);
     }
     bool laser_fired = combat_update_laser(laser_pressed);
-    if (!combat.charging && !laser_fired && input.fire_pressed
-        && combat_fire_volley()) {
-        if (practice_mode) {
-            practice_goals |= 4;
+    if (input.fire_pressed) {
+        combat.primary_presses++;
+        if (combat.charging || laser_fired) {
+            combat.primary_laser_blocked++;
+        } else if (combat_fire_volley()) {
+            combat.primary_volleys++;
+            if (practice_mode) {
+                practice_goals |= 4;
+            }
+            weapon_shot_succeeded(ship.weapon, game_ms);
+            sound_play(SFX_SHOOT);
+        } else {
+            combat.primary_pool_blocked++;
         }
-        weapon_shot_succeeded(ship.weapon, game_ms);
-        sound_play(SFX_SHOOT);
     }
     bullets_update();
     bullets_check_asteroids(award_asteroid_score, powerups_drop);

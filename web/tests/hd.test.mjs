@@ -28,7 +28,7 @@ test('HD entity data matches the planned sprite sizes and projectile origin', as
   const s=new Float32Array(g.scene());
   assert.equal(s[64+3]*2,32);assert.equal(s[72+3]*2,20);assert.equal(s[80+3]*2,12);
   assert.equal(s[478],1);assert.equal(s[481],0);assert.equal(s[15],1);
-  ticks(g,2,{fire:true});let scene=g.scene();
+  ticks(g,1,{fire:true});let scene=g.scene();
   assert.equal(g.snapshot()[9],3);assert.equal(scene[9],0);
   assert.equal(scene[256+1],scene[4]+13+18.75);
   assert(scene[262+2]<scene[5] && scene[268+2]>scene[5]);

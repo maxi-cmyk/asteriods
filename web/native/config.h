@@ -36,7 +36,8 @@
 // Reduce web movement response by 25% after analog normalization.
 #define SHIP_MAX_SPEED 3.65625f
 #define BULLET_SPEED 18.75f
-#define MULTISHOT_DIAGONAL_SPEED 5.625f
+// Side shots are ~8.6 degrees from aim (previously ~17.5 degrees).
+#define MULTISHOT_DIAGONAL_SPEED 2.8125f
 #define PICKUP_RADIUS 6
 #define PICKUP_SPEED 1.125f
 #define ASTEROID_LARGE_R 16

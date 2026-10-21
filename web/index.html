@@ -12,11 +12,17 @@
     <header><div><h1>Asteroids</h1></div><a class="asset-link" href="./assets.html" target="_blank" rel="noopener">View pixel assets</a></header>
     <section class="console" aria-label="Asteroids game">
       <div class="status"><span id="controller" role="status">Keyboard ready · connect a controller and press a button</span><span id="state">LOADING</span></div>
+      <aside id="inputDiagnostics" hidden aria-label="Controller input check">
+        <strong>Controller input check</strong>
+        <p id="inputRaw">Press a controller button to connect it to this tab.</p>
+        <p id="inputCounts"></p>
+        <p id="inputBlocks"></p>
+      </aside>
       <div class="hud" aria-label="Run status">
         <div class="hud-group"><span>SHIPS <b id="lives">03</b></span><span>WAVE <b id="wave">01</b></span></div>
         <div class="score"><b id="score">000000</b><span class="chain"><span id="multiplier">x1</span><span class="track"><i id="chainFill"></i></span></span></div>
       </div>
-      <div class="screen"><canvas id="game" width="480" height="270" tabindex="0" aria-label="Asteroids game screen. Move with arrow keys or left stick. Aim with mouse, IJKL or right stick. Fire with left click, Space or R2. Hold right click, F or L2 to charge laser. Pause with Escape or Options.">Your browser needs Canvas and WebAssembly to play.</canvas></div>
+      <div class="screen"><canvas id="game" width="480" height="270" tabindex="0" aria-label="Asteroids game screen. Move with arrow keys or left stick. Aim with mouse, IJKL or right stick. Fire with left click, Space or R2. Hold right click, F or L2 to charge laser. Pause with Escape or Options.">Your browser needs Canvas and WebAssembly to play.</canvas><div id="pauseMenu" class="pause-menu" hidden><button id="pauseSettings" aria-describedby="pauseSettingsHint">Settings</button><p id="pauseSettingsHint">PS4: press X to open settings.</p></div></div>
       <div class="combat-hud" aria-label="Weapon abilities">
         <span>L2 LASER <b id="laserStatus">READY</b><span class="track"><i id="laserFill"></i></span></span>
         <span>L1 SHIELD <b id="shieldStatus">EMPTY</b></span>
@@ -32,22 +38,48 @@
       </div>
       <dialog id="settingsDialog" aria-labelledby="settingsTitle">
         <form method="dialog"><div class="settings-heading"><h2 id="settingsTitle">Flight settings</h2><button>Close</button></div></form>
-        <p>Settings save on this device. Close settings, then resume when ready.</p>
+        <p>Change your controls, then press Apply. Closing discards unapplied changes.</p>
+        <label class="profile-picker" for="inputProfile">Input profile
+          <select id="inputProfile"><option value="0">Player 1</option><option value="1">Player 2</option></select>
+        </label>
+        <p>Each profile keeps its own input, sound, and display settings. Choose a profile to use its saved controls.</p>
         <div class="settings-sliders">
           <label for="volume">Volume <output id="volumeValue"></output><input id="volume" type="range" min="0" max="1" step="0.05"></label>
-          <label for="deadzone">Controller deadzone <output id="deadzoneValue"></output><input id="deadzone" type="range" min="0.05" max="0.45" step="0.01"></label>
-          <label for="aimSensitivity">Aim response <output id="aimSensitivityValue"></output><input id="aimSensitivity" type="range" min="0.25" max="2" step="0.05"></label>
+          <label for="deadzone">Left-stick deadzone <output id="deadzoneValue"></output><input id="deadzone" type="range" min="0.05" max="0.45" step="0.01"></label>
+          <label for="aimDeadzone">Right-stick deadzone <output id="aimDeadzoneValue"></output><input id="aimDeadzone" type="range" min="0.05" max="0.8" step="0.01"></label>
+          <label for="aimSensitivity">Controller / keyboard aim response <output id="aimSensitivityValue"></output><input id="aimSensitivity" type="range" min="0.25" max="2" step="0.05"></label>
+          <label for="mouseAimSensitivity">Mouse aim response <output id="mouseAimSensitivityValue"></output><input id="mouseAimSensitivity" type="range" min="0.25" max="2" step="0.05"></label>
+          <label for="movementSensitivity">Controller movement response <output id="movementSensitivityValue"></output><input id="movementSensitivity" type="range" min="0.25" max="2" step="0.05"></label>
           <label for="shake">Screen shake <output id="shakeValue"></output><input id="shake" type="range" min="0" max="1" step="0.1"></label>
         </div>
-        <p class="settings-help">Aim response controls turning speed for mouse and right-stick aim. Higher turns faster. Lower deadzones detect smaller stick movements.</p>
+        <p class="settings-help">Aim response controls how quickly the ship turns toward your target. Higher movement response makes partial stick deflections stronger; top speed stays the same. Raise the right-stick deadzone to suppress aim drift without changing movement. Lower deadzones detect smaller stick movements. Mouse movement sets aim, not ship speed.</p>
+        <section id="calibration" aria-labelledby="calibrationTitle">
+          <h3 id="calibrationTitle">Test your controls</h3>
+          <p id="calibrationController">Connect a controller and press a button.</p>
+          <div class="stick-plots">
+            <figure><svg id="moveStick" viewBox="0 0 100 100" role="img" aria-label="Left stick: raw and adjusted movement">
+              <circle class="stick-bound" cx="50" cy="50" r="44"/><path class="stick-axis" d="M6 50H94M50 6V94"/><circle class="deadzone" cx="50" cy="50" r="11"/><circle class="raw" cx="50" cy="50" r="5"/><circle class="adjusted" cx="50" cy="50" r="2.5"/>
+            </svg><figcaption>Movement <span id="moveValues"></span></figcaption></figure>
+            <figure><svg id="aimStick" viewBox="0 0 100 100" role="img" aria-label="Right stick: raw and adjusted aim">
+              <circle class="stick-bound" cx="50" cy="50" r="44"/><path class="stick-axis" d="M6 50H94M50 6V94"/><circle class="deadzone" cx="50" cy="50" r="11"/><circle class="raw" cx="50" cy="50" r="5"/><circle class="adjusted" cx="50" cy="50" r="2.5"/>
+            </svg><figcaption>Aim <span id="aimValues"></span></figcaption></figure>
+          </div>
+          <p>Outlined dot: raw input. Filled dot: adjusted input. Shaded circle: deadzone.</p>
+          <div class="calibration-actions"><button id="sampleDrift" disabled>Sample stick drift</button><button id="applyDeadzone" disabled>Use suggested deadzone</button></div>
+          <p id="calibrationStatus" role="status">Leave both sticks untouched for a two-second drift sample.</p>
+          <svg id="inputPreview" viewBox="0 0 320 130" tabindex="0" role="img" aria-label="Control preview. Focus to move with your movement keys or arrows; aim with mouse, aim keys, or right stick. No shots are fired." aria-describedby="previewHelp">
+            <g id="previewShip" transform="translate(160 65)"><path class="preview-aim" d="M12 0H48"/><path class="preview-ship" d="M12 0L-9 -7L-5 0L-9 7Z"/></g>
+          </svg>
+          <p id="previewHelp">Click or Tab into the preview to test movement and aim. Controller sticks work here too. Precision slows movement. The game stays paused and no shots are fired.</p>
+        </section>
         <div class="settings-bindings"><section><h3>Keyboard</h3><p>Select a key, then press its replacement. Esc cancels. Arrows, Enter and Esc remain available.</p><div id="keyBindings"></div></section><section><h3>Controller</h3><p>Assign abilities below. Hold Shield + Precision for slow movement; tap Shield alone to arm it.</p><div id="padBindings"></div></section></div>
-        <div class="settings-footer"><button id="resetSettings">Restore defaults</button><span id="settingsStatus" role="status">Saved locally</span></div>
+        <div class="settings-footer"><button id="applySettings" disabled>Apply</button><button id="resetSettings">Reset this profile</button><span id="settingsStatus" role="status">Saved locally</span></div>
       </dialog>
       <div class="toolbar"><span id="hint" role="status">Loading game…</span><div class="actions"><button id="fire" disabled>Start / Fire</button><button id="practice" disabled>Practice</button><button id="pause" disabled>Pause</button><button id="settingsOpen">Settings</button><button id="sound" aria-pressed="false">Sound off</button><button id="fullscreen">Fullscreen</button></div></div>
     </section>
     <p class="binding-note">Default controls below. Customize keyboard and controller buttons in Settings.</p>
     <section class="controls" aria-label="Controls">
-      <div><h2>PS4 controller</h2><p><span>Move / Aim</span>Left stick / Right stick</p><p><span>Primary fire</span>R2 / Cross — one shot per press</p><p><span>Laser</span>Hold L2 for 3s · 7s cooldown</p><p><span>Precision</span>Hold R1 + L1</p><p><span>Shield</span>Tap L1 alone to arm a stored charge</p><p><span>Pause</span>Options / double-click L3</p></div>
+      <div><h2>PS4 controller</h2><p><span>Move / Aim</span>Left stick / Right stick</p><p><span>Primary fire</span>R2 / Cross — one shot per press</p><p><span>Laser</span>Hold L2 for 3s · 7s cooldown</p><p><span>Precision</span>Hold R1 + L1</p><p><span>Shield</span>Tap L1 alone to arm a stored charge</p><p><span>Pause</span>Options / double-click L3</p><p><span>Settings</span>Pause, then press X</p></div>
       <div><h2>Keyboard + mouse</h2><p><span>Move / Aim</span>WASD or arrows / Mouse or IJKL</p><p><span>Primary fire</span>Left click / Space / Enter</p><p><span>Laser</span>Hold right click / F for 3s</p><p><span>Precision</span>Hold Shift</p><p><span>Shield</span>Tap Q alone</p><p><span>Pause</span>Esc / P</p></div>
       <div class="note"><h2>Flight rules</h2><p>One shot per press. Right-stick aim stays where you leave it. Laser charge cancels when released early; it fires once at full charge.</p><p>Shield pickups store one charge. L1 arms it until one hit is absorbed. Precision movement never spends the charge.</p><p>Top five scores save in this browser.</p></div>
     </section>

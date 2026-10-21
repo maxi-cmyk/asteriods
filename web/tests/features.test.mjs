@@ -45,7 +45,7 @@ test('deadzone removes drift and aim response changes turning speed without slow
   assert.deepEqual(radial(.1,.1,.25),[0,0]);assert.deepEqual(radial(1,0,.25),[1,0]);
   const settings=defaults(),c=new Controls(settings),p=pad();p.axes[0]=.2;assert.equal(c.sample(p).x,2048);
   settings.deadzone=.1;assert(c.sample(p).x>2048);
-  const slow=new Controls({...defaults(),aimSensitivity:.25}),fast=new Controls({...defaults(),aimSensitivity:2});
+  const slow=new Controls({...defaults(),mouseAimSensitivity:.25}),fast=new Controls({...defaults(),mouseAimSensitivity:2});
   slow.aimAt(10,0);fast.aimAt(10,0);slow.sample(null);fast.sample(null);
   slow.aimAt(0,10);fast.aimAt(0,10);
   assert(slow.sample(null).aimY<fast.sample(null).aimY);
