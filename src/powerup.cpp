@@ -5,7 +5,10 @@
 
 enum PickupKind {
     PICKUP_MULTISHOT,
-    PICKUP_SHIELD
+    PICKUP_SHIELD,
+#ifdef WEB_HD
+    PICKUP_DOUBLE_FIRE,
+#endif
 };
 
 struct Pickup {
@@ -33,13 +36,21 @@ void powerups_drop(float position_x, float position_y) {
             = constrain(position_x, float(SHIP_MIN_X), float(SHIP_MAX_X));
     pickup.position_y
             = constrain(position_y, float(SHIP_MIN_Y), float(SHIP_MAX_Y));
+#ifdef WEB_HD
+    pickup.kind = PickupKind(rock_random_bounded(3));
+#else
     pickup.kind = PickupKind(rock_random_bounded(2));
+#endif
     pickup.active = true;
 }
 
 static void collect_pickup(Ship& ship) {
     if (pickup.kind == PICKUP_MULTISHOT) {
         ship.effects.multishot_left_ms = MULTISHOT_DURATION_MS;
+#ifdef WEB_HD
+    } else if (pickup.kind == PICKUP_DOUBLE_FIRE) {
+        ship.effects.double_fire_left_ms = 6000;
+#endif
     } else {
         ship.effects.shield = true;
     }
@@ -50,6 +61,10 @@ static void collect_pickup(Ship& ship) {
 }
 
 void powerups_update(Ship& ship) {
+#ifdef WEB_HD
+    ship.effects.double_fire_left_ms -= min(ship.effects.double_fire_left_ms,
+                                             (unsigned long)FRAME_TIME_MS);
+#endif
     ship.effects.multishot_left_ms -= min(ship.effects.multishot_left_ms,
                                           (unsigned long)FRAME_TIME_MS);
     collection_cue_left

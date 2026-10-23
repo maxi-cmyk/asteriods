@@ -77,9 +77,9 @@ and smaller relative collision sizes change available dodge space; balance
 still needs hands-on playtesting.
 
 Primary fire has no heat, overheating, firing cooldown, or movement penalty.
-One shot per press and the 12-bullet pool still apply. Browser combat adds
+One event per press (two with the temporary 2× pickup) and the 12-bullet pool apply. Browser combat adds
 aimed weapons and manual shield activation. Its laser destroys every target
-it hits without splitting, with a 3-second windup and 7-second cooldown.
+it hits without splitting, with a 1.5-second windup and 5-second cooldown.
 The HUD exposes laser charge/cooldown, shield state, and precision movement.
 See [COMBAT.md](COMBAT.md) for exact ability rules.
 
@@ -90,7 +90,7 @@ See [COMBAT.md](COMBAT.md) for exact ability rules.
 | Move / initials | Left stick or D-pad | Arrows or WASD |
 | Aim weapons | Right stick | Mouse movement or IJKL |
 | Primary fire / confirm | R2 or Cross | Space or Enter |
-| Charge laser | Hold L2 for 3 seconds | Hold F |
+| Charge laser | Hold L2 for 1.5 seconds | Hold F |
 | Precision movement | Hold R1 + L1 together | Hold Shift |
 | Arm stored shield | Tap L1 alone (activates on release) | Tap Q alone |
 | Pause / resume | Options | Escape or P |
@@ -99,7 +99,7 @@ See [COMBAT.md](COMBAT.md) for exact ability rules.
 Connect by USB or Bluetooth, focus the game, and press a controller button.
 Standard mapping is checked before accepting input. Unmapped devices show a
 keyboard fallback message. Axes retain the firmware deadzone and normalization;
-fire retains its 20 ms press/release debounce. Holding never repeats. Losing
+browser fire uses fresh press edges without mechanical debounce. Holding never repeats. Losing
 focus or disconnecting the active controller pauses a live run. Sound starts
 muted and uses the original buzzer frequency sequences via Web Audio.
 
@@ -120,7 +120,7 @@ sh tests/run_host.sh
 ```
 
 The test command builds both the original 128×64 WASM baseline and the HD
-variant. Twenty-eight integration checks cover existing game flow, controller input,
+variant. Integration checks cover existing game flow, controller input,
 rapid fire, multishot, shield, persistence, and new world bounds, native sprite sizes,
 projectile origins, collision radii, scaled wave speed, entrance timing,
 paused scene/animation data, leaderboard isolation, actual aimed bullet paths,
@@ -200,12 +200,14 @@ drift sampling, actual bounded movement/precision, multishot spread/pool limits,
 practice isolation,
 actual destruction counts, multiplier peaks, and laser audio event timing.
 
-## Attract demo
+## Manual Home demo
 
-Leave the title idle for ten seconds to watch the shared right-facing demo
-controller. Move or press fire to return to the title, then release and press
-fire again to play. Demo runs never save leaderboard entries. The HD demo uses
-the shared primary-fire gameplay; player runs retain the browser combat abilities.
+Choose **Watch demo** on Home. The browser never launches it after idle time.
+Any key/controller menu action or **Return to Home** stops it; the exit action
+is consumed and a fresh action is needed to play. `web/demo/engine.mjs` owns a
+separate WASM instance without storage or audio. `web/demo/controller.cpp` holds
+the shared autopilot; `src/demo.cpp` forwards to it for firmware builds.
+Firmware idle-demo behavior is unchanged.
 
 ## Tasks 1–2 validation (2026-10-21)
 
@@ -302,3 +304,117 @@ held and diagnostic classification of full-pool versus laser rejection. The
 production build passed. This addresses a reproducible input-combination flaw;
 the reported physical missed-tap problem remains under live diagnosis until
 controller observations establish its cause and the player confirms behavior.
+
+## Stats and personal bests (tasks 5–6)
+
+The HUD shows rolling active-game CPS, primary projectile accuracy with hit/shot
+counts, longest kill chain, and remaining 2× fire time. The run summary adds
+score, highest wave, peak CPS, accuracy, longest chain, and separate laser stats.
+Use Practice → Try 2× fire to try the pickup without losing lives.
+
+`asteroids.web.personal-bests-v1` stores independent records for Player 1 and
+Player 2 input profiles. A run keeps the profile selected at its start even
+if controls switch while paused. Records save automatically at final death;
+practice saves when End practice is chosen. The Personal bests disclosure lets
+you browse either profile and normal/practice runs after reload. Best accuracy
+requires at least 50 spawned projectiles in a run and shows its hit/shot sample.
+Other records take each metric's best value independently. Reset needs a
+second click, clears only the selected profile's personal bests, and preserves
+all existing top-five leaderboards. Storage failures show a status and keep
+records for the current visit; the next completed run retries saving.
+
+Record keys separate mode, friendly-fire setting, sorted run modifiers, and
+practice. Only solo with no modifiers and friendly fire off exists today;
+multiplayer attribution/contexts remain part of the multiplayer tasks.
+
+Validation on 2026-10-23: all 73 web tests passed, along with the production HD
+build, UBSan host gameplay checks using Xcode's SDK, and `pio run` for ESP32.
+The default host script still encounters the installed CommandLineTools SDK's
+malformed `.tbd` linker error; explicitly selecting Xcode's compiler/SDK works.
+Safari checks covered the practice HUD, boosted fire and pause, final practice
+summary, persisted practice records after reload, record selectors, and browser
+zoom through the responsive breakpoint. The design detector flagged compact
+text sizes consistent with the existing HUD; the existing visual style was
+retained. Physical controller feel/balance and two-player acceptance remain
+unverified. No firmware upload or physical-device acceptance was performed.
+
+## End-of-run screen order
+
+After the final death animation, results fill the gameplay panel. Review score,
+peak CPS, primary accuracy, longest chain, highest wave, survival time, kills,
+best multiplier, and separate laser stats there. Choose **Continue to score
+saving** (or release fire and press again) to enter initials if the score
+qualifies. Other runs continue to the leaderboard. Practice shows the same
+in-game results layout and returns to the menu on Continue.
+
+Results freeze simulation and native score-entry input until continued. The
+Continue press is consumed; held fire cannot skip results or save initials.
+The initials screen still requires release and a new press to save. Personal
+bests continue saving automatically at final death or End practice.
+
+Validation: 76 automated checks pass, including qualifying/non-qualifying
+results ordering, frozen state, held-fire/Continue guards, exactly-once score
+saving, and practice results without idle-demo progression. The production
+web build passes; Safari visually confirmed the panel inside the playfield.
+
+
+## Focused navigation shell
+
+Home now opens Play, Practice, Records, Settings, or How to Play as separate
+views. Records, Settings, Help, and developer tools have stable hash links;
+reloading a live-play URL returns safely to Home. Browser history never
+restores a serialized run.
+
+Pause keeps the same runtime alive. Settings and Help return to Pause without
+advancing bullets, effects, or timers. Unapplied settings offer Apply, Discard,
+or Stay; leaving an active run asks before quitting. Resume requires fresh
+input. Controller menus reserve Cross for selection and Circle for Back; the
+configured pause button resumes from Pause after release.
+
+The playfield fits available space at 16:9 with the existing 480×270 simulation
+and mouse mapping. Practice tools appear only during practice. Longer utility
+views scroll internally; Home and desktop gameplay fit the window. Hidden
+views are inert, and only a manually started Home demo advances. The first demo
+exit action is consumed. Developer tools hold diagnostics and the asset gallery.
+
+The Home poster is an unchanged frame from the approved blue-moon preview.
+Animated Home and warp integration are scheduled separately in task 4.
+
+Validation on 2026-10-23: 86 automated web checks and the production HD build
+pass. Navigation tests compare complete runtime snapshots, scene buffers,
+and stats across utility visits; they also cover draft/quit decisions, safe
+routes, sizing, and held controller inputs. Safari visually confirmed the
+focused Home/Records/Settings/Help views, practice pause, Help returning to
+Pause, draft discard, and explicit quit. Physical controller feel and the
+full device/viewport acceptance matrix remain unverified.
+
+
+## Task 3 utility screens and post-run flow
+
+Settings has Controls, Calibration, Audio, and Display categories. Profile,
+category navigation, and Apply/Reset remain visible while category content
+scrolls. One draft spans categories and both profiles; only Apply persists it.
+Back offers Apply, Discard, or Stay. The shared sound shortcut is disabled while
+editing; Audio edits belong to the same draft.
+
+Records separates the initials leaderboard from per-profile normal/practice
+personal bests, with individual metric values, accuracy samples, rules context,
+empty states, storage feedback, and a retry action for failed personal-best saves.
+Help shows current bindings for the connected controller or keyboard/mouse,
+plus short ability explanations. Practice is available from Home and Help;
+paused Help keeps the active run intact.
+
+Results remain first, followed by qualifying initials entry (including failed
+save/retry), then the leaderboard with Play Again and Home. Leaving unsaved
+score review through browser history asks explicitly. Sound and fullscreen
+have stable positions in the shared top bar. Menu release/reconnection gates
+prevent held controller input from resuming or firing into a run.
+
+Validation: all 88 web tests, the production HD build, and Xcode-SDK UBSan host
+gameplay checks pass. New tests cover manual-only demos, independent demo/player
+state and storage, freezing after Stop, and leaving unsaved results/initials.
+Safari checks covered Watch demo/exit, Settings categories and cross-category
+draft discard, current keyboard help, practice launch/results, and Records.
+The design scan had one static padding finding; the rendered utility panels
+were inspected. Physical controller reconnection and the full viewport matrix
+still require acceptance.

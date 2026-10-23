@@ -11,7 +11,7 @@ async function game(scenario=9) {
   return g;
 }
 function ticks(g,count=1,input={}) {for(let i=0;i<count;i++)g.step(input);}
-function charge(g,input={}) {g.step({laser:true,...input});ticks(g,150,{laser:true,...input});}
+function charge(g,input={}) {g.step({laser:true,...input});ticks(g,75,{laser:true,...input});}
 function near(actual,expected) {assert(Math.abs(actual-expected)<.0001,`${actual} != ${expected}`);}
 const pad=()=>({connected:true,mapping:'standard',axes:[0,0,0,0],buttons:Array.from({length:17},()=>({pressed:false}))});
 
@@ -73,14 +73,14 @@ test('precision halves straight and diagonal speed and stays unchanged after rep
   g.step({x:4095,precision:true});near(g.scene()[4]-before[4],3.65625*.5);
 });
 
-test('laser winds up for exactly 3000ms, fires once, and cools for exactly 7000ms',async()=>{
+test('laser winds up for exactly 1500ms, fires once, and cools for exactly 5000ms',async()=>{
   const g=await game();g.step({laser:true,aimX:1});
   assert.equal(g.scene()[47],1);assert.equal(g.scene()[48],0);
-  ticks(g,149,{laser:true});assert.equal(g.scene()[48],2980);assert.equal(g.scene()[50],0);
+  ticks(g,74,{laser:true});assert.equal(g.scene()[48],1480);assert.equal(g.scene()[50],0);
   g.step({laser:true});let s=g.scene();
-  assert.equal(s[47],0);assert.equal(s[49],7000);assert.equal(s[50],400);
+  assert.equal(s[47],0);assert.equal(s[49],5000);assert.equal(s[50],400);
   assert.equal(s[9],0);
-  ticks(g,349,{laser:true});assert.equal(g.scene()[49],20);assert.equal(g.scene()[47],0);
+  ticks(g,249,{laser:true});assert.equal(g.scene()[49],20);assert.equal(g.scene()[47],0);
   g.step({laser:true});assert.equal(g.scene()[49],0);assert.equal(g.scene()[47],0);
   ticks(g,200,{laser:true});assert.equal(g.scene()[47],0);
   g.step();g.step({laser:true});assert.equal(g.scene()[47],1);
@@ -101,7 +101,7 @@ test('laser destroys every intersected target without fragments',async()=>{
 });
 
 test('laser uses its firing-time aim and freezes its visual ray after discharge',async()=>{
-  const g=await game();g.step({laser:true,aimX:1});ticks(g,149,{laser:true});
+  const g=await game();g.step({laser:true,aimX:1});ticks(g,74,{laser:true});
   g.step({laser:true,aimY:-1});let s=g.scene();
   near(s[53],0);near(s[54],-1);near(s[51],240);near(s[52],122);
   g.step({aimX:-1});s=g.scene();near(s[45],-1);near(s[53],0);near(s[54],-1);
@@ -111,9 +111,9 @@ test('pause freezes charge and cooldown; triggers pressed during pause are not q
   const g=await game();g.step({laser:true});ticks(g,40,{laser:true});
   g.step({laser:true,pause:true});const progress=g.scene()[48];
   ticks(g,400,{laser:true,aimY:1});assert.equal(g.scene()[48],progress);near(g.scene()[46],0);
-  g.step({laser:true,pause:true});ticks(g,110,{laser:true});
-  assert.equal(g.scene()[49],7000);
-  g.step({laser:true,pause:true});ticks(g,400,{laser:true});assert.equal(g.scene()[49],7000);
+  g.step({laser:true,pause:true});ticks(g,35,{laser:true});
+  assert.equal(g.scene()[49],5000);
+  g.step({laser:true,pause:true});ticks(g,400,{laser:true});assert.equal(g.scene()[49],5000);
   const menu=await game();menu.step({pause:true});ticks(menu,2,{laser:true});
   menu.step({pause:true,laser:true});menu.step({laser:true});assert.equal(menu.scene()[47],0);
 });

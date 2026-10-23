@@ -1,8 +1,8 @@
 #pragma once
 
 // Web combat remains separate from the fixed-facing OLED game.
-static const unsigned long LASER_WINDUP_MS = 3000;
-static const unsigned long LASER_COOLDOWN_MS = 7000;
+static const unsigned long LASER_WINDUP_MS = 1500;
+static const unsigned long LASER_COOLDOWN_MS = 5000;
 static const unsigned long LASER_BEAM_MS = 400;
 static const float PRECISION_SPEED_SCALE = 0.5f;
 static const float AIM_DEADZONE = 0.25f;
@@ -19,6 +19,15 @@ struct CombatState {
     uint32_t primary_volleys = 0;
     uint32_t primary_pool_blocked = 0;
     uint32_t primary_laser_blocked = 0;
+    // One input event per 20ms tick: 64 slots cover a full active second.
+    unsigned long press_times[64] = {};
+    unsigned press_cursor = 0;
+    unsigned cps = 0, peak_cps = 0;
+    unsigned spawned = 0, hits = 0, laser_shots = 0, laser_kills = 0;
+    unsigned chain = 0, longest_chain = 0, highest_wave = 1;
+    unsigned long last_scoring_kill = 0;
+    // At most four events can be waiting for the 80ms gap at 50Hz.
+    unsigned long pending_shots[8] = {};
     float aim_x = 1;
     float aim_y = 0;
     bool laser_was_held = false;
@@ -98,6 +107,7 @@ static bool combat_fire_volley() {
                            ship.effects.multishot_left_ms > 0);
     for (int i = 0; i < BULLET_MAX; i++) {
         if (free_before[i] && bullets[i].active) {
+            combat.spawned++;
             float old_x = bullets[i].velocity_x;
             float old_y = bullets[i].velocity_y;
             bullets[i].velocity_x = old_x * combat.aim_x - old_y * combat.aim_y;
@@ -105,6 +115,47 @@ static bool combat_fire_volley() {
         }
     }
     return fired;
+}
+
+static void combat_award(uint32_t points) {
+    if (points) {
+        if (!combat.chain || game_ms - combat.last_scoring_kill >= CHAIN_WINDOW_MS) {
+            combat.chain = 0;
+        }
+        combat.chain++;
+        combat.longest_chain = max(combat.longest_chain, combat.chain);
+        combat.last_scoring_kill = game_ms;
+    }
+    award_asteroid_score(points);
+}
+
+static void combat_primary_hit(uint32_t points) {
+    // Shared collision code calls this once per consumed projectile.
+    combat.hits++;
+    combat_award(points);
+}
+
+static void combat_update_cps(bool pressed) {
+    if (pressed) {
+        combat.press_times[combat.press_cursor++ % 64] = game_ms;
+    }
+    combat.cps = 0;
+    for (unsigned long time : combat.press_times) {
+        if (time && game_ms - time < 1000) combat.cps++;
+    }
+    combat.peak_cps = max(combat.peak_cps, combat.cps);
+}
+
+static void combat_primary_event() {
+    if (combat_fire_volley()) {
+        combat.primary_volleys++;
+        if (practice_mode) practice_goals |= 4;
+        weapon_shot_succeeded(ship.weapon, game_ms);
+        sound_play(SFX_SHOOT);
+    } else {
+        // A full pool drops this event; it is never retried later.
+        combat.primary_pool_blocked++;
+    }
 }
 
 static bool combat_beam_hits(const Asteroid& rock) {
@@ -132,12 +183,14 @@ static void combat_destroy_laser_targets() {
         Asteroid parent = rocks[i];
         rocks[i].active = false;
         particles_spawn(parent.position_x, parent.position_y);
-        award_asteroid_score(asteroid_points(parent.size));
+        combat.laser_kills++;
+        combat_award(asteroid_points(parent.size));
         powerups_drop(parent.position_x, parent.position_y);
     }
 }
 
 static void combat_fire_laser() {
+    combat.laser_shots++;
     combat.charging = false;
     combat.cooldown_left_ms = LASER_COOLDOWN_MS;
     combat.beam_left_ms = LASER_BEAM_MS;
@@ -190,6 +243,8 @@ static void combat_collisions() {
         return;
     }
     ship_die(ship);
+    memset(combat.pending_shots, 0, sizeof(combat.pending_shots));
+    combat.chain = 0;
     combat.charging = false;
     combat.beam_left_ms = 0;
     combat.shield_stored = false;
@@ -235,23 +290,30 @@ static void combat_update_playing(bool laser_pressed) {
         asteroids_update(game_ms);
     }
     bool laser_fired = combat_update_laser(laser_pressed);
+    combat_update_cps(input.fire_pressed);
+    combat.highest_wave = max(combat.highest_wave, unsigned(wave_number));
+    for (unsigned long& due : combat.pending_shots) {
+        if (due && game_ms >= due) {
+            due = 0;
+            if (!combat.charging && !laser_fired) combat_primary_event();
+            else combat.primary_laser_blocked++;
+        }
+    }
     if (input.fire_pressed) {
         combat.primary_presses++;
         if (combat.charging || laser_fired) {
             combat.primary_laser_blocked++;
-        } else if (combat_fire_volley()) {
-            combat.primary_volleys++;
-            if (practice_mode) {
-                practice_goals |= 4;
-            }
-            weapon_shot_succeeded(ship.weapon, game_ms);
-            sound_play(SFX_SHOOT);
         } else {
-            combat.primary_pool_blocked++;
+            combat_primary_event();
+            if (ship.effects.double_fire_left_ms) {
+                for (unsigned long& due : combat.pending_shots) {
+                    if (!due) { due = game_ms + 80; break; }
+                }
+            }
         }
     }
     bullets_update();
-    bullets_check_asteroids(award_asteroid_score, powerups_drop);
+    bullets_check_asteroids(combat_primary_hit, powerups_drop);
     for (Bullet& bullet : bullets) {
         if (bullet.active && bullet.position_x < 0) {
             bullet.active = false;

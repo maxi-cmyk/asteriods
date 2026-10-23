@@ -52,23 +52,23 @@ test('deadzone removes drift and aim response changes turning speed without slow
 });
 
 test('practice offers replenishing targets and shields, unlimited lives, and no leaderboard writes',async()=>{
-  let writes=0;const g=await game({getItem:()=>null,setItem:()=>writes++});
+  let writes=0;const g=await game({getItem:()=>null,setItem:key=>{if(key!=='asteroids.web.personal-bests-v1')writes++;}});
   g.start(true);assert.equal(g.state,'playing');assert.equal(g.scene()[60],1);assert.equal(g.snapshot()[10],3);assert.equal(g.scene()[55],1);
   g.api.web_test_overlap();g.step();assert.equal(g.state,'playing');assert.equal(g.snapshot()[3],3);
   g.step({shield:true});assert.equal(g.scene()[62]&16,16);assert.equal(g.snapshot()[3],3);
   g.multishot();ticks(g,2,{fire:true});assert.equal(g.snapshot()[9],3);
   g.step({x:4095,aimY:1});assert.equal(g.scene()[62]&7,7);
   g.resetTargets();assert.equal(g.snapshot()[10],3);
-  g.api.web_scenario(14);g.step({laser:true});ticks(g,150,{laser:true});
+  g.api.web_scenario(14);g.step({laser:true});ticks(g,75,{laser:true});
   assert.equal(g.snapshot()[10],0);assert.equal(g.scene()[62]&8,8);
   ticks(g,76);assert.equal(g.snapshot()[10],3);
-  g.menu();assert.equal(g.state,'menu');assert.equal(g.scene()[60],0);assert.equal(writes,0);
+  g.menu();assert.equal(g.state,'results');g.continueResults();assert.equal(g.state,'menu');assert.equal(g.scene()[60],0);assert.equal(writes,0);
   g.start(false);assert.equal(g.state,'countdown');assert.equal(g.snapshot()[4],0);assert.equal(g.scene()[57],0);
 });
 
 test('laser destructions update actual run counts and multiplier peaks survive expiry and death',async()=>{
   const g=await game();g.api.web_scenario(14);
-  g.step({laser:true});ticks(g,150,{laser:true});
+  g.step({laser:true});ticks(g,75,{laser:true});
   assert.equal(g.scene()[57],24);assert.equal(g.scene()[58],5);
   ticks(g,160);assert.equal(g.scene()[17],1);assert.equal(g.scene()[58],5);
   g.api.web_test_overlap();g.step();const count=g.scene()[57],time=g.scene()[2];
@@ -79,7 +79,7 @@ test('laser destructions update actual run counts and multiplier peaks survive e
 test('laser audio cues follow discharge and cooldown completion, ignoring paused frames',()=>{
   const audio=new GameAudio(defaults()),events=[];audio.cue=kind=>events.push(kind);
   const scene=new Float32Array(512);scene[0]=2;scene[2]=20;audio.observe(scene);
-  scene[2]=40;scene[49]=7000;scene[50]=400;audio.observe(scene);
+  scene[2]=40;scene[49]=5000;scene[50]=400;audio.observe(scene);
   scene[2]=60;scene[49]=20;scene[50]=0;audio.observe(scene);
   scene[0]=3;audio.observe(scene);assert.deepEqual(events,['discharge']);
   scene[0]=2;scene[2]=80;scene[49]=0;audio.observe(scene);

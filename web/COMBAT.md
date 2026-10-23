@@ -9,7 +9,7 @@ The OLED game retains its original fixed-facing combat and automatic shield.
 - Left stick moves; right stick aims the ship and all weapons through 360°.
 - Aim uses a configurable radial deadzone (25% by default) and keeps the last deliberate direction when
   the right stick returns to neutral. Movement never changes the aim.
-- R2 / Cross fires once per debounced press, without heat or a primary cooldown.
+- R2 / Cross fires once per fresh press, without heat or a primary cooldown.
 - Aimed multishot rotates the complete spread. It retains atomic allocation
   and the single-shot fallback when fewer than three bullet slots are free.
 - Bullet velocities, swept collisions, muzzle position, and left-edge cleanup
@@ -20,7 +20,7 @@ The OLED game retains its original fixed-facing combat and automatic shield.
 
 ## L2 charge laser
 
-Hold L2 (or F / right mouse button) continuously for exactly 3,000 ms of active gameplay. Releasing
+Hold L2 (or F / right mouse button) continuously for exactly 1,500 ms of active gameplay. Releasing
 early cancels the windup without starting the cooldown.
 The right stick can continue aiming during the windup. Normal firing is
 suppressed while charging; rejected primary presses do not queue.
@@ -32,7 +32,7 @@ without fragments, even when the rock pool is full. Beam damage is instantaneous
 the 400 ms pixel beam is its visual after-effect, fixed at the firing position
 and direction. A two-pixel half-width defines the damaging beam.
 
-A fired laser starts a 7,000 ms cooldown measured from discharge. It does not
+A fired laser starts a 5,000 ms cooldown measured from discharge. It does not
 allocate a projectile. Windup cannot start during the laser cooldown.
 Rejected L2 presses do not queue. Holding L2 cannot repeat, even after cooldown: release and press
 again for another charge.
@@ -85,3 +85,41 @@ stored nor armed. Stationary targets replenish 1.5 seconds after the last one is
 destroyed; Reset targets is immediate. Try multishot grants the normal 6-second
 effect. Five goals track movement, aiming, primary fire, laser discharge, and
 shield arming. Practice has no leaderboard entry path and ends at the menu.
+
+## 2× fire pickup
+
+The outlined `2X` pickup doubles primary shot events for six active seconds.
+Each fresh mouse, keyboard, or controller press emits one event now and one
+80 ms later. Holding never repeats. Collecting another refreshes the timer;
+it never adds another multiplier. Each event uses the current muzzle/aim and
+multishot effect, including the existing one-shot fallback with fewer than
+three free slots. The HUD shows remaining active time; practice has a Try 2×
+fire button. The normal drop chance is unchanged; successful drops now choose
+uniformly among multishot, shield, and 2× fire.
+
+There are eight pending slots (at most four are needed with one processed
+press per 20 ms tick). A full bullet pool drops an event without retrying.
+Laser windup/discharge suppresses primary events, including due echoes; shields
+and laser timings remain unchanged. Echoes earned before expiry still finish.
+Pause freezes effect time and pending deadlines. Death, menu exit, and a new
+run clear both effect and pending events. These rules apply only to WEB_HD.
+
+## Run statistics
+
+CPS counts primary input edges in `(active time − 1000 ms, active time]`.
+It includes presses blocked by laser/pool capacity but excludes automatic
+echoes, held repeats, menu actions, and paused input. Queued input edges are
+counted when processed by the simulation (one per tick).
+
+Accuracy counts enemy-hit primary projectiles / actually spawned primary
+projectiles, including each multishot and echo projectile. No shot means `—`.
+Each consumed projectile can count once; laser rays allocate no primary
+projectiles and have separate discharge/kill counters. Final death freezes
+the summary: all existing projectiles are already in the denominator, and
+unresolved in-flight shots add no hits. Pending unspawned echoes add nothing.
+A chain counts consecutive scoring kills within the existing three-second
+combo window, including laser kills, and grows beyond the multiplier cap.
+Death or expiry ends the chain; the longest value survives to the summary.
+
+The current game is solo; simultaneous player attribution and friendly-fire
+exclusion must be integrated when local multiplayer is implemented.

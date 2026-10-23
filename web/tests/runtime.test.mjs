@@ -109,16 +109,16 @@ test('controller standard mapping and keyboard pause edges', () => {
   controls.clear(); assert.equal(controls.sample(null).x,2048);
 });
 
-test('idle demo plays without saving; exit fire is consumed', async () => {
+test('browser OLED demo requires explicit launch; exit fire is consumed', async () => {
   let writes=0;
   const g=await game({getItem:()=>null,setItem:()=>writes++});
-  tick(g,500); assert.equal(g.state,'demo');
+  tick(g,1500); assert.equal(g.state,'menu');g.api.web_demo();assert.equal(g.state,'demo');
   for(let i=0;i<15000;i++) {
     g.step(); assert(!['initials','game-over'].includes(g.state));
   }
   assert.equal(writes,0);
   // Restart idle interval in a known state, then enter again.
-  g.menu(); tick(g,501); assert.equal(g.state,'demo');
+  g.menu(); tick(g,501); assert.equal(g.state,'menu');g.api.web_demo();assert.equal(g.state,'demo');
   tick(g,2,{fire:true}); assert.equal(g.state,'menu');
   tick(g,10,{fire:true}); assert.equal(g.state,'menu');
   tick(g,2); press(g); assert.equal(g.state,'countdown');

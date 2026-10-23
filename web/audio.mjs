@@ -35,7 +35,7 @@ export class GameAudio {
     const old=this.previous;
     if(this.context) {
       const charging=scene[47] && scene[0]===2 && !this.suspended;
-      this.charge.frequency.setTargetAtTime(180+scene[48]/3000*900,this.context.currentTime,.025);
+      this.charge.frequency.setTargetAtTime(180+scene[48]/1500*900,this.context.currentTime,.025);
       this.chargeGain.gain.setTargetAtTime(charging?.07:0,this.context.currentTime,.025);
     }
     if(old && scene[2]>=old[2] && scene[0]===2) {

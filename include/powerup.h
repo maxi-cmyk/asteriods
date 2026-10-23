@@ -6,6 +6,9 @@
 struct PowerupEffects {
     unsigned long multishot_left_ms;
     bool shield;
+#ifdef WEB_HD
+    unsigned long double_fire_left_ms;
+#endif
 };
 
 struct Ship;

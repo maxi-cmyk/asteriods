@@ -104,7 +104,12 @@ export class PixelRenderer {
       if(scene[63])this.text("FAST",WIDTH-8,Math.max(0,y-14),COLOUR.hot,1,"right");
       for (let i=0;i<4;i++) ctx.fillRect(WIDTH-2-i,y-i,1,i*2+1);
     }
-    if (scene[478]) this.sprite(scene[481]===0?'multishot':'shield',scene[479]-6,scene[480]-6);
+    if (scene[478]) {
+      if(scene[481]===2) {
+        this.box(Math.round(scene[479])-8,Math.round(scene[480])-7,17,15,COLOUR.cyan);
+        this.text('2X',scene[479],scene[480]-3,COLOUR.cyan,1,'center');
+      } else this.sprite(scene[481]===0?'multishot':'shield',scene[479]-6,scene[480]-6);
+    }
     if (scene[24]) {
       const radius=8+Math.floor((400-scene[24])/80);
       this.box(Math.round(scene[25])-radius,Math.round(scene[26])-radius,radius*2+1,radius*2+1,COLOUR.cyan);
@@ -143,7 +148,7 @@ export class PixelRenderer {
   }
   laser(scene) {
     if (scene[47] && scene[6]) {
-      const progress=Math.min(1,scene[48]/3000);
+      const progress=Math.min(1,scene[48]/1500);
       const x=scene[4]+scene[45]*13,y=scene[5]+scene[46]*13;
       this.ray(x,y,scene[45],scene[46],560,progress>.8?COLOUR.cyan:'#28536b',1,8);
       this.box(Math.round(x)-2,Math.round(y)-2,5,5,COLOUR.cyan);
@@ -242,7 +247,6 @@ export class PixelRenderer {
         const count=3-Math.floor(scene[3]/500);
         this.text(count>0?count:'GO',WIDTH/2,111,COLOUR.ink,4,'center');
       }
-      if (scene[0]===7) this.text('DEMO · MOVE OR FIRE TO EXIT',WIDTH/2,HEIGHT-12,COLOUR.cyan,1,'center');
       if (scene[0]===3) this.overlay('PAUSED','TAKE A BREATHER',scene);
     }
   }

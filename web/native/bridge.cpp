@@ -29,7 +29,7 @@ WaveDifficulty difficulty_for_wave(uint16_t wave) {
 #include "../../src/powerup.cpp"
 #include "../../src/particle.cpp"
 #include "../../src/highscore.cpp"
-#include "../../src/demo.cpp"
+#include "../demo/controller.cpp"
 #include "../../src/game.cpp"
 
 unsigned long browser_ms = 0;
@@ -105,6 +105,8 @@ void web_fire_press(int pressed) {
 }
 void web_step(int raw_x, int raw_y, int fire, int click, int pause) {
     browser_ms += FRAME_TIME_MS;
+    // Browser demos start only through the explicit Home action.
+    if (state == STATE_MENU) state_entered_ms = browser_ms;
     browser_x = constrain(raw_x, 0, 4095);
     browser_y = constrain(raw_y, 0, 4095);
     browser_fire = fire;
@@ -160,11 +162,18 @@ void web_start(int practice) {
     begin_game();
 #endif
 }
+void web_demo() {
+    begin_game();
+    demo_reset(demo);
+    demo_running = true;
+    set_state(STATE_DEMO);
+}
 void web_menu() {
     demo_running = false;
     menu_input_ready = false;
 #ifdef WEB_HD
     practice_mode = false;
+    ship.effects.double_fire_left_ms = 0;
     combat_reset();
 #endif
     sound_stop();
@@ -176,6 +185,29 @@ void web_practice_targets() {
         practice_targets();
     }
 #endif
+}
+void web_practice_double_fire() {
+#ifdef WEB_HD
+    if (practice_mode) ship.effects.double_fire_left_ms = 6000;
+#endif
+}
+const float *web_stats() {
+    static float values[16] = {};
+#ifdef WEB_HD
+    values[0] = combat.cps;
+    values[1] = combat.peak_cps;
+    values[2] = combat.spawned;
+    values[3] = combat.hits;
+    values[4] = combat.longest_chain;
+    values[5] = combat.highest_wave;
+    values[6] = ship.effects.double_fire_left_ms;
+    values[7] = combat.laser_shots;
+    values[8] = combat.laser_kills;
+    values[9] = combat.primary_presses;
+    values[10] = 0;
+    for (unsigned long due : combat.pending_shots) values[10] += due != 0;
+#endif
+    return values;
 }
 void web_practice_multishot() {
 #ifdef WEB_HD
@@ -357,6 +389,9 @@ const float *web_scene() {
     return scene;
 }
 #ifdef WEB_TEST
+void web_test_pickup(int kind) {
+    pickup = {ship.position_x, ship.position_y, PickupKind(kind), true};
+}
 void web_test_overlap() {
     ship.invincible_left = 0;
     spawn_asteroid(ship.position_x, ship.position_y, AST_SMALL, 0, 0);
@@ -394,11 +429,22 @@ void web_scenario(int scenario) {
         ship.effects.multishot_left_ms = MULTISHOT_DURATION_MS;
     }
 #ifdef WEB_HD
+    if (scenario == 17 || scenario == 18) {
+        pickup = {ship.position_x, ship.position_y, PICKUP_DOUBLE_FIRE, true};
+        if (scenario == 18) ship.effects.multishot_left_ms = MULTISHOT_DURATION_MS;
+    }
+    if (scenario == 19) {
+        spawn_asteroid(320, 135, AST_SMALL, 0, 0);
+    }
     if (scenario >= 9) {
         ship.position_x = 240;
         ship.position_y = 135;
         pending_asteroids = 1;
         next_spawn_ms = game_ms + 1000000;
+        if (scenario == 17 || scenario == 18) {
+            pickup.position_x = ship.position_x;
+            pickup.position_y = ship.position_y;
+        }
     }
     if (scenario == 10) {
         spawn_asteroid(320, 135, AST_SMALL, 0, 0);

@@ -12,8 +12,8 @@ if ((clang.includes('/') && !existsSync(clang)) || (linker.includes('/') && !exi
   throw new Error('Set CLANGXX and WASM_LD, or install LLVM and lld (brew install llvm lld).');
 }
 mkdirSync(resolve(root, 'dist'), { recursive: true });
-const exports = ['__wasm_call_ctors', 'web_init', 'web_fire_press', 'web_fire_diagnostics', 'web_step', 'web_pixels', 'web_offset', 'web_state', 'web_snapshot', 'web_scene', 'web_width', 'web_height', 'web_actions', 'web_start', 'web_menu', 'web_practice_targets', 'web_practice_multishot'];
-if (test) exports.push('web_scenario', 'web_test_overlap');
+const exports = ['__wasm_call_ctors', 'web_init', 'web_fire_press', 'web_fire_diagnostics', 'web_step', 'web_pixels', 'web_offset', 'web_state', 'web_snapshot', 'web_scene', 'web_width', 'web_height', 'web_actions', 'web_start', 'web_demo', 'web_menu', 'web_practice_targets', 'web_practice_multishot', 'web_practice_double_fire', 'web_stats'];
+if (test) exports.push('web_scenario', 'web_test_overlap', 'web_test_pickup');
 const args = ['--target=wasm32', '-std=c++17', '-O2', '-nostdlib', '-ffreestanding',
   '-fno-exceptions', '-fno-rtti', '-fno-threadsafe-statics', '-fno-builtin',
   `-I${root}/native`, `-I${root}/../include`, 
@@ -35,9 +35,11 @@ for (const item of WebAssembly.Module.imports(new WebAssembly.Module(readFileSyn
   }
 }
 if (!test && !oled) {
-  for (const file of ['index.html', 'style.css', 'app.mjs', 'runtime.mjs', 'controls.mjs', 'calibration.mjs', 'renderer.mjs', 'settings.mjs', 'audio.mjs', 'assets.html', 'gallery.mjs']) {
+  for (const file of ['index.html', 'style.css', 'shell.css', 'app.mjs', 'runtime.mjs', 'records.mjs', 'navigation.mjs', 'controls.mjs', 'calibration.mjs', 'renderer.mjs', 'settings.mjs', 'audio.mjs', 'assets.html', 'gallery.mjs']) {
     if (existsSync(resolve(root, file))) copyFileSync(resolve(root, file), resolve(root, 'dist', file));
   }
+  mkdirSync(resolve(root, 'dist/demo'), {recursive:true});
+  copyFileSync(resolve(root, 'demo/engine.mjs'), resolve(root, 'dist/demo/engine.mjs'));
   cpSync(resolve(root, 'assets'), resolve(root, 'dist/assets'), { recursive: true });
   copyFileSync(resolve(root, 'vendor/LICENSE.txt'), resolve(root, 'dist/THIRD-PARTY-LICENSE.txt'));
 }
