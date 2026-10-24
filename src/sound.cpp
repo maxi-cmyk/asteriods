@@ -38,13 +38,14 @@ static const SoundStep PAT_HIGHSCORE[] = {{523, 40},
                                           {0, 0}};
 
 static const SoundStep PAT_GAMEOVER[]
-        = {{200, 200}, {180, 200}, {160, 200}, {140, 200}, {120, 200}, {0, 0}};
+        = {{200, 133}, {180, 133}, {160, 133}, {140, 133}, {120, 133}, {0, 0}};
 
 // ── State ──
 static SoundFX current_effect = SFX_NONE;
 static const SoundStep *current_pattern = nullptr;
 static int current_step = 0;
-static unsigned long step_start_ms = 0;
+static unsigned long last_update_ms = 0;
+static unsigned long step_elapsed_ms = 0;
 
 // Map SFX enum to pattern
 static const SoundStep *get_pattern(SoundFX effect) {
@@ -105,21 +106,22 @@ void sound_play(SoundFX effect) {
     current_effect = effect;
     current_pattern = pattern;
     current_step = 0;
-    step_start_ms = millis();
+    last_update_ms = millis();
+    step_elapsed_ms = 0;
 
     set_buzzer(pattern[0].frequency);
 }
 
-void sound_update() {
+void sound_advance(unsigned long elapsed_ms) {
     if (!current_pattern) {
         return;
     }
 
-    unsigned long now = millis();
+    step_elapsed_ms += elapsed_ms;
     const SoundStep& step = current_pattern[current_step];
 
     // Check if current step duration has elapsed
-    if (now - step_start_ms >= step.duration_ms) {
+    if (step_elapsed_ms >= step.duration_ms) {
         current_step++;
 
         // Check if pattern is finished (terminated by {0, 0})
@@ -132,9 +134,15 @@ void sound_update() {
         }
 
         // Advance to next step
-        step_start_ms = now;
+        step_elapsed_ms = 0;
         set_buzzer(current_pattern[current_step].frequency);
     }
+}
+
+void sound_update() {
+    unsigned long now = millis();
+    sound_advance(now - last_update_ms);
+    last_update_ms = now;
 }
 
 void sound_stop() {

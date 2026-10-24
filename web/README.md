@@ -378,7 +378,7 @@ views are inert, and only a manually started Home demo advances. The first demo
 exit action is consumed. Developer tools hold diagnostics and the asset gallery.
 
 The Home poster is an unchanged frame from the approved blue-moon preview.
-Animated Home and warp integration are scheduled separately in task 4.
+Task 4 adds a separate, pixel-stepped ray/particle overlay and a launch sequence.
 
 Validation on 2026-10-23: 86 automated web checks and the production HD build
 pass. Navigation tests compare complete runtime snapshots, scene buffers,
@@ -418,3 +418,77 @@ draft discard, current keyboard help, practice launch/results, and Records.
 The design scan had one static padding finding; the rendered utility panels
 were inspected. Physical controller reconnection and the full viewport matrix
 still require acceptance.
+
+
+## Task 4 presentation and navigation
+
+Home adds a 20 fps pixel-stepped overlay: stationary moons, outward particles,
+clockwise 5°/second rays, local flicker, and masking to keep rays behind moons.
+Play opens a 3.2-second first-person cockpit warp. Skip launch / Enter / Cross
+advances it, Esc / Circle cancels, and held input cannot leak into the new run.
+The run/countdown begins only after launch; blur freezes the presentation clock.
+Reduced motion uses a calm 250 ms scene change. Background motion and scenery
+brightness are pending-draft Display preferences; essential gameplay remains full
+contrast. Nothing here changes asteroid movement or timing.
+
+Each five-wave region has data-driven art and a distinct 500–650 ms transition.
+Effects stay below player sprites, bullets, pickups, and warnings. Pause/blur
+freeze travel and region identity appears in Results. The existing sprite set is
+retained; optional replacement artwork remains a separate approval/design task.
+
+Menus support D-pad/stick up/down focus, left/right field adjustment, Cross
+selection, Circle Back, and bounded repeats. Cross/Enter edits select fields;
+up/down then changes their options, and Back exits editing first. Rebinding
+cancels before leaving Settings. Controller remaps never change these reserved
+menu actions. Keyboard arrows navigate categories and fields without accidentally
+changing the profile. Shared self-hosted pixel fonts, focus/disabled/destructive
+states, and static reading-screen backdrops are packaged in the production build.
+
+Every fifth wave adds one sentinel with a visible health/core, entrance cue,
+locked lance/fan warnings, and recovery. See `COMBAT.md` for damage, scaling,
+points, shields, and future co-op policy. Multiplayer itself is not implemented.
+
+Developer tools → Pixel assets includes static synthetic transition/boss stress
+fixtures. These use the production renderer, but are not recorded gameplay or
+performance telemetry. Review GIFs are in the root `assets/` folder; the runtime
+uses Canvas drawing rather than continuously decoding full-frame GIFs.
+
+Validation on 2026-10-24: 114 automated checks cover OLED/HD WASM, navigation,
+field adjustment, decoration preference migration, launch monotonicity/freeze,
+region boundaries/reduced motion, boss health/damage/dodging/shields/rewards,
+multishot plus 2× accounting, and demo/record isolation. Production build passes.
+Safari verified Home, launch, keyboard-only category selection, Display controls,
+zoom, fullscreen, and busy synthetic transition/boss frames. Physical controller
+reconnect/feel, co-op/friendly-fire/network acceptance, and representative-device
+performance soaks remain open for task 5 and the later multiplayer milestones.
+
+## Browser record reset and refresh
+
+Records offers a scoped personal-best reset and an explicit **Clear this
+browser’s records** action. Confirming the latter clears this version's top-five
+leaderboard and both profiles' normal/practice personal bests, including the live
+WASM table. Controls, audio, and unrelated/legacy storage keys remain intact.
+Storage failures are shown; a partial write attempts to restore the prior data.
+Tests verify empty records after a new runtime/reload and rollback on failure.
+
+Refresh retains local storage by design. The preview server serves assets with
+`Cache-Control: no-store`; run `npm --prefix web run build` after source changes,
+then refresh to load the new `web/dist` output. Refresh is not a record reset.
+Task 5 implementation is complete. See [architecture](../docs/ARCHITECTURE.md)
+for module ownership, portable C boundaries, coding conventions and formatter
+commands, and [acceptance](../docs/ACCEPTANCE.md) for current evidence and the
+remaining physical-device/performance checks.
+
+## Audio
+
+Sound effects and music have separate, per-profile toggles in the top bar and
+Settings → Audio. Both default off for existing profiles without a preference.
+Volume applies to both. Original procedural Home and flight chiptunes require
+no external files, streamed music, third-party license or network request.
+Music pauses on utility screens, Pause, Results, demo, launch and hidden tabs.
+The warp sound follows the Sound toggle and stops on skip, cancel or blur.
+Audio unlocks after a user gesture; browser autoplay restrictions still apply.
+
+The game-over low-tone tail is 665 ms (about 700 ms on the 20 ms simulation
+cadence). Audio-only ticks allow it to finish on Results without advancing the
+run or changing the displayed statistics.

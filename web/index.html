@@ -1,108 +1,714 @@
 <!doctype html>
 <html lang="en">
-<head>
-  <meta charset="utf-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1">
-  <meta name="theme-color" content="#111310">
-  <title>Asteroids — Pixel flight</title>
-  <link rel="stylesheet" href="./style.css">
-  <link rel="stylesheet" href="./shell.css">
-</head>
-<body>
-  <main class="app-shell">
-    <header class="shell-header"><button id="screenBack" hidden>Back</button><span id="screenTitle">Asteroids</span><div id="demoControls" hidden><strong>Demo flight</strong><button id="stopDemo">Return to Home</button></div><span id="profileLabel">Player 1</span><button id="sound" aria-pressed="false">Sound off</button><button id="fullscreen">Fullscreen</button></header>
-    <section id="homeView" data-view="home" class="home-view">
-      <canvas id="homeDemo" width="480" height="270" hidden aria-hidden="true"></canvas>
-      <div class="home-menu"><h1>ASTEROIDS</h1><nav aria-label="Main menu">
-        <button id="play" class="primary" disabled>Play</button><button id="practice" disabled>Practice</button>
-        <button data-go="records">Records</button><button id="settingsOpen">Settings</button><button data-go="help">How to Play</button><button id="watchDemo" disabled>Watch demo</button>
-      </nav></div>
-      <span id="homeHint">Choose a destination</span>
-    </section>
+    <head>
+        <meta charset="utf-8" />
+        <meta name="viewport" content="width=device-width, initial-scale=1" />
+        <meta name="theme-color" content="#111310" />
+        <title>Asteroids — Pixel flight</title>
+        <link rel="stylesheet" href="./style.css" />
+        <link rel="stylesheet" href="./shell.css" />
+        <link
+            rel="preload"
+            href="./assets/fonts/PressStart2P-Regular.woff2"
+            as="font"
+            type="font/woff2"
+            crossorigin
+        />
+        <link
+            rel="preload"
+            href="./assets/fonts/VT323-Regular.woff2"
+            as="font"
+            type="font/woff2"
+            crossorigin
+        />
+        <link rel="stylesheet" href="./theme.css" />
+    </head>
+    <body>
+        <main class="app-shell">
+            <header class="shell-header">
+                <button id="screenBack" hidden>Back</button
+                ><span id="screenTitle">Asteroids</span>
+                <div id="demoControls" hidden>
+                    <strong>Demo flight</strong
+                    ><button id="stopDemo">Return to Home</button>
+                </div>
+                <span id="profileLabel">Player 1</span
+                ><button id="sound" aria-pressed="false">Sound off</button
+                ><button id="music" aria-pressed="false">Music off</button
+                ><button id="fullscreen">Fullscreen</button>
+            </header>
+            <section id="homeView" data-view="home" class="home-view">
+                <canvas
+                    id="homeFx"
+                    width="480"
+                    height="270"
+                    aria-hidden="true"
+                ></canvas>
+                <canvas
+                    id="homeDemo"
+                    width="480"
+                    height="270"
+                    hidden
+                    aria-hidden="true"
+                ></canvas>
+                <div class="home-menu">
+                    <h1>ASTEROIDS</h1>
+                    <nav aria-label="Main menu">
+                        <button id="play" class="primary" disabled>Play</button
+                        ><button id="practice" disabled>Practice</button>
+                        <button data-go="records">Records</button
+                        ><button id="settingsOpen">Settings</button
+                        ><button data-go="help">How to Play</button
+                        ><button id="watchDemo" disabled>Watch demo</button>
+                    </nav>
+                </div>
+                <span id="homeHint">Choose a destination</span>
+            </section>
 
-    <section class="console" data-view="play" hidden inert aria-label="Asteroids game">
-      <div class="status"><span id="runLabel">Solo flight</span><span id="runDevice" role="status"></span><span id="state">LOADING</span></div>
+            <section
+                class="console"
+                data-view="play"
+                hidden
+                inert
+                aria-label="Asteroids game"
+            >
+                <div class="status">
+                    <span id="runLabel">Solo flight</span
+                    ><span id="runDevice" role="status"></span
+                    ><span id="state">LOADING</span>
+                </div>
 
-      <div class="hud" aria-label="Run status">
-        <div class="hud-group"><span>SHIPS <b id="lives">03</b></span><span>WAVE <b id="wave">01</b></span></div>
-        <div class="score"><b id="score">000000</b><span class="chain"><span id="multiplier">x1</span><span class="track"><i id="chainFill"></i></span></span></div>
-      </div>
-      <div class="screen"><canvas id="game" width="480" height="270" tabindex="0" aria-label="Asteroids game screen. Move with arrow keys or left stick. Aim with mouse, IJKL or right stick. Fire with left click, Space or R2. Hold right click, F or L2 to charge laser. Pause with Escape or Options.">Your browser needs Canvas and WebAssembly to play.</canvas><div id="pauseMenu" class="pause-menu" hidden><h2>Paused</h2><button id="resume" class="primary">Resume</button><button id="pauseSettings">Settings</button><button data-go="help">How to Play</button><button id="quitRun">Quit to Home</button><p id="pauseSettingsHint">Cross: select · Circle: back</p></div>
-      <div id="runSummary" class="run-summary" hidden role="region" aria-labelledby="personalBest" tabindex="-1">
-        <div class="run-summary-content"><h2 id="personalBest"></h2><dl><div><dt>Score</dt><dd id="resultScore"></dd></div><div><dt>Peak CPS</dt><dd id="resultCps"></dd></div><div><dt>Primary accuracy</dt><dd id="resultAccuracy"></dd></div><div><dt>Longest chain</dt><dd id="resultChain"></dd></div><div><dt>Wave reached</dt><dd id="resultWave"></dd></div><div><dt>Survival time</dt><dd id="resultTime"></dd></div><div><dt>Asteroids destroyed</dt><dd id="resultKills"></dd></div><div><dt>Best multiplier</dt><dd id="resultMultiplier"></dd></div></dl><p id="resultLaser"></p><button id="continueResults">Continue to score saving</button><p class="result-hint">Release fire, then press again to continue.</p></div>
-      </div>
-      </div>
-      <div class="combat-hud" aria-label="Weapon abilities">
-        <span>L2 LASER <b id="laserStatus">READY</b><span class="track"><i id="laserFill"></i></span></span>
-        <span>L1 SHIELD <b id="shieldStatus">EMPTY</b></span>
-        <span>2× FIRE <b id="doubleFireStatus">INACTIVE</b></span>
-        <span id="precisionStatus">PRECISION</span>
-      </div>
-      <div class="live-stats" aria-label="Primary-fire statistics">
-        <span>CPS <b id="liveCps">0</b></span><span>ACCURACY <b id="liveAccuracy">—</b></span><span>LONGEST CHAIN <b id="liveChain">0</b></span>
-      </div>
-      <div id="practicePanel" class="practice-panel" hidden>
-        <div><strong>Practice flight</strong><span id="practiceProgress" role="status">No lives lost. Scores stay out of the leaderboard.</span></div>
-        <ol id="practiceGoals"><li>Move</li><li>Aim</li><li>Fire</li><li>Fire laser</li><li>Arm shield</li></ol>
-        <div class="actions"><button id="resetTargets">Reset targets</button><button id="practiceMultishot">Try multishot</button><button id="practiceDoubleFire">Try 2× fire</button><button id="endPractice">End practice</button></div>
-      </div>
+                <div class="hud" aria-label="Run status">
+                    <div class="hud-group">
+                        <span>SHIPS <b id="lives">03</b></span
+                        ><span>WAVE <b id="wave">01</b></span>
+                    </div>
+                    <div class="score">
+                        <b id="score">000000</b
+                        ><span class="chain"
+                            ><span id="multiplier">x1</span
+                            ><span class="track"><i id="chainFill"></i></span
+                        ></span>
+                    </div>
+                </div>
+                <div class="screen">
+                    <canvas
+                        id="game"
+                        width="480"
+                        height="270"
+                        tabindex="0"
+                        aria-label="Asteroids game screen. Move with arrow keys or left stick. Aim with mouse, IJKL or right stick. Fire with left click, Space or R2. Hold right click, F or L2 to charge laser. Pause with Escape or Options."
+                        >Your browser needs Canvas and WebAssembly to
+                        play.</canvas
+                    >
+                    <div id="pauseMenu" class="pause-menu" hidden>
+                        <h2>Paused</h2>
+                        <button id="resume" class="primary">Resume</button
+                        ><button id="pauseSettings">Settings</button
+                        ><button data-go="help">How to Play</button
+                        ><button id="quitRun">Quit to Home</button>
+                        <p id="pauseSettingsHint">
+                            Cross: select · Circle: back
+                        </p>
+                    </div>
+                    <div
+                        id="runSummary"
+                        class="run-summary"
+                        hidden
+                        role="region"
+                        aria-labelledby="personalBest"
+                        tabindex="-1"
+                    >
+                        <div class="run-summary-content">
+                            <h2 id="personalBest"></h2>
+                            <dl>
+                                <div>
+                                    <dt>Score</dt>
+                                    <dd id="resultScore"></dd>
+                                </div>
+                                <div>
+                                    <dt>Peak CPS</dt>
+                                    <dd id="resultCps"></dd>
+                                </div>
+                                <div>
+                                    <dt>Primary accuracy</dt>
+                                    <dd id="resultAccuracy"></dd>
+                                </div>
+                                <div>
+                                    <dt>Longest chain</dt>
+                                    <dd id="resultChain"></dd>
+                                </div>
+                                <div>
+                                    <dt>Wave reached</dt>
+                                    <dd id="resultWave"></dd>
+                                </div>
+                                <div>
+                                    <dt>Survival time</dt>
+                                    <dd id="resultTime"></dd>
+                                </div>
+                                <div>
+                                    <dt>Asteroids destroyed</dt>
+                                    <dd id="resultKills"></dd>
+                                </div>
+                                <div>
+                                    <dt>Best multiplier</dt>
+                                    <dd id="resultMultiplier"></dd>
+                                </div>
+                            </dl>
+                            <p id="resultRegion"></p>
+                            <p id="resultLaser"></p>
+                            <button id="continueResults">
+                                Continue to score saving
+                            </button>
+                            <p class="result-hint">
+                                Release fire, then press again to continue.
+                            </p>
+                        </div>
+                    </div>
+                </div>
+                <div class="combat-hud" aria-label="Weapon abilities">
+                    <span
+                        >L2 LASER <b id="laserStatus">READY</b
+                        ><span class="track"><i id="laserFill"></i></span
+                    ></span>
+                    <span>L1 SHIELD <b id="shieldStatus">EMPTY</b></span>
+                    <span>2× FIRE <b id="doubleFireStatus">INACTIVE</b></span>
+                    <span id="precisionStatus">PRECISION</span>
+                </div>
+                <div class="live-stats" aria-label="Primary-fire statistics">
+                    <span>CPS <b id="liveCps">0</b></span
+                    ><span>ACCURACY <b id="liveAccuracy">—</b></span
+                    ><span>LONGEST CHAIN <b id="liveChain">0</b></span>
+                </div>
+                <div id="practicePanel" class="practice-panel" hidden>
+                    <div>
+                        <strong>Practice flight</strong
+                        ><span id="practiceProgress" role="status"
+                            >No lives lost. Scores stay out of the
+                            leaderboard.</span
+                        >
+                    </div>
+                    <ol id="practiceGoals">
+                        <li>Move</li>
+                        <li>Aim</li>
+                        <li>Fire</li>
+                        <li>Fire laser</li>
+                        <li>Arm shield</li>
+                    </ol>
+                    <div class="actions">
+                        <button id="resetTargets">Reset targets</button
+                        ><button id="practiceMultishot">Try multishot</button
+                        ><button id="practiceDoubleFire">Try 2× fire</button
+                        ><button id="endPractice">End practice</button>
+                    </div>
+                </div>
 
+                <div class="toolbar">
+                    <span id="hint" role="status">Loading game…</span>
+                    <div class="actions">
+                        <button id="fire" disabled>Start / Fire</button
+                        ><button id="pause" disabled>Pause</button
+                        ><button id="gameHome" hidden>Home</button>
+                    </div>
+                </div>
+            </section>
 
-      <div class="toolbar"><span id="hint" role="status">Loading game…</span><div class="actions"><button id="fire" disabled>Start / Fire</button><button id="pause" disabled>Pause</button><button id="gameHome" hidden>Home</button></div></div>
-    </section>
-
-
-    <section data-view="records" class="utility-view" hidden inert aria-label="Records"><h1 tabindex="-1">Records</h1><div class="records-layout"><div><h2>Top five scores</h2><p>Initials leaderboard · Solo normal runs</p><ol id="leaderboard"></ol><p id="leaderboardStatus" role="status"></p></div>      <div id="recordsPanel" class="records-panel">
-        <h2>Personal bests</h2>
-        <div class="record-filters"><label>Profile <select id="recordsProfile"><option value="0">Player 1</option><option value="1">Player 2</option></select></label><label>Run type <select id="recordsType"><option value="normal">Normal</option><option value="practice">Practice</option></select></label></div>
-        <p id="recordsScope"></p><dl id="recordsValues" class="metric-grid"></dl><p id="recordsAccuracy"></p>
-        <p id="recordsStatus" role="status"></p><button id="retryRecords" hidden>Retry saving personal bests</button>
-        <button id="resetRecords">Reset this profile’s personal bests</button><button id="cancelResetRecords" hidden>Cancel reset</button>
-      </div></div></section>
-    <section data-view="settings" class="utility-view" hidden inert aria-label="Settings"><h1 tabindex="-1">Settings</h1>      <div id="settingsDialog">
-        <p class="settings-intro">Apply saves your changes. Back lets you apply, discard, or stay.</p>
-        <label class="profile-picker" for="inputProfile">Input profile
-          <select id="inputProfile"><option value="0">Player 1</option><option value="1">Player 2</option></select>
-        </label>
-        <p id="settingsProfileNote">Each profile keeps its own controls, audio, and display settings. Unapplied changes stay in this draft.</p>
-<nav class="settings-tabs" aria-label="Settings categories"><button data-category="controls" aria-pressed="true">Controls</button><button data-category="calibration" aria-pressed="false">Calibration</button><button data-category="audio" aria-pressed="false">Audio</button><button data-category="display" aria-pressed="false">Display</button></nav><section data-settings-panel="controls"><h2>Controls</h2><div class="settings-sliders">          <label for="deadzone">Left-stick deadzone <output id="deadzoneValue"></output><input id="deadzone" type="range" min="0.05" max="0.45" step="0.01"></label>
-          <label for="aimDeadzone">Right-stick deadzone <output id="aimDeadzoneValue"></output><input id="aimDeadzone" type="range" min="0.05" max="0.8" step="0.01"></label>
-          <label for="aimSensitivity">Controller / keyboard aim response <output id="aimSensitivityValue"></output><input id="aimSensitivity" type="range" min="0.25" max="2" step="0.05"></label>
-          <label for="mouseAimSensitivity">Mouse aim response <output id="mouseAimSensitivityValue"></output><input id="mouseAimSensitivity" type="range" min="0.25" max="2" step="0.05"></label>
-          <label for="movementSensitivity">Controller movement response <output id="movementSensitivityValue"></output><input id="movementSensitivity" type="range" min="0.25" max="2" step="0.05"></label></div>        <p class="settings-help">Aim response controls how quickly the ship turns toward your target. Higher movement response makes partial stick deflections stronger; top speed stays the same. Raise the right-stick deadzone to suppress aim drift without changing movement. Lower deadzones detect smaller stick movements. Mouse movement sets aim, not ship speed.</p>        <div class="settings-bindings"><section><h3>Keyboard</h3><p>Select a key, then press its replacement. Esc cancels. Arrows, Enter and Esc remain available.</p><div id="keyBindings"></div></section><section><h3>Controller</h3><p>Assign abilities below. Hold Shield + Precision for slow movement; tap Shield alone to arm it.</p><div id="padBindings"></div></section></div>
-</section><section data-settings-panel="calibration" hidden inert>        <section id="calibration" aria-labelledby="calibrationTitle">
-          <h3 id="calibrationTitle">Test your controls</h3>
-          <p id="calibrationController">Connect a controller and press a button.</p>
-          <div class="stick-plots">
-            <figure><svg id="moveStick" viewBox="0 0 100 100" role="img" aria-label="Left stick: raw and adjusted movement">
-              <circle class="stick-bound" cx="50" cy="50" r="44"/><path class="stick-axis" d="M6 50H94M50 6V94"/><circle class="deadzone" cx="50" cy="50" r="11"/><circle class="raw" cx="50" cy="50" r="5"/><circle class="adjusted" cx="50" cy="50" r="2.5"/>
-            </svg><figcaption>Movement <span id="moveValues"></span></figcaption></figure>
-            <figure><svg id="aimStick" viewBox="0 0 100 100" role="img" aria-label="Right stick: raw and adjusted aim">
-              <circle class="stick-bound" cx="50" cy="50" r="44"/><path class="stick-axis" d="M6 50H94M50 6V94"/><circle class="deadzone" cx="50" cy="50" r="11"/><circle class="raw" cx="50" cy="50" r="5"/><circle class="adjusted" cx="50" cy="50" r="2.5"/>
-            </svg><figcaption>Aim <span id="aimValues"></span></figcaption></figure>
-          </div>
-          <p>Outlined dot: raw input. Filled dot: adjusted input. Shaded circle: deadzone.</p>
-          <div class="calibration-actions"><button id="sampleDrift" disabled>Sample stick drift</button><button id="applyDeadzone" disabled>Use suggested deadzone</button></div>
-          <p id="calibrationStatus" role="status">Leave both sticks untouched for a two-second drift sample.</p>
-          <svg id="inputPreview" viewBox="0 0 320 130" tabindex="0" role="img" aria-label="Control preview. Focus to move with your movement keys or arrows; aim with mouse, aim keys, or right stick. No shots are fired." aria-describedby="previewHelp">
-            <g id="previewShip" transform="translate(160 65)"><path class="preview-aim" d="M12 0H48"/><path class="preview-ship" d="M12 0L-9 -7L-5 0L-9 7Z"/></g>
-          </svg>
-          <p id="previewHelp">Click or Tab into the preview to test movement and aim. Controller sticks work here too. Precision slows movement. The game stays paused and no shots are fired.</p>
-        </section>
-</section><section data-settings-panel="audio" hidden inert><h2>Audio</h2><label class="toggle-label"><input id="audioEnabled" type="checkbox"> Sound effects</label><div class="settings-sliders">          <label for="volume">Volume <output id="volumeValue"></output><input id="volume" type="range" min="0" max="1" step="0.05"></label></div><p>Changes take effect when you Apply.</p></section><section data-settings-panel="display" hidden inert><h2>Display</h2><div class="settings-sliders">          <label for="shake">Screen shake <output id="shakeValue"></output><input id="shake" type="range" min="0" max="1" step="0.1"></label></div><p>Reduce shake for a calmer playfield. Fullscreen is available in the top bar.</p></section>        <div class="settings-footer"><button id="applySettings" disabled>Apply</button><button id="resetSettings">Reset this profile</button><span id="settingsStatus" role="status">Saved locally</span></div>
-      </div></section>
-    <section data-view="help" class="utility-view" hidden inert aria-label="How to Play"><h1 tabindex="-1">How to Play</h1>
-      <div class="help-layout"><section><h2>Your controls</h2><p id="helpDevice"></p><dl id="helpBindings" class="binding-list"></dl><p>Change bindings in Settings → Controls.</p></section>
-      <section><h2>Flight essentials</h2><p>Move, aim, and survive each wave. Each press fires once; holding fire never repeats. A 2× fire pickup fires two shots per press for six seconds.</p><h2>Laser</h2><p>Hold for 1.5 seconds to discharge. Release early to cancel. Cooldown: 5 seconds.</p><h2>Shield & precision</h2><p>Shield pickups store one charge. Tap Shield alone to arm it until one hit is absorbed. Hold Precision for slower movement; on a controller hold Shield + Precision. Precision never spends a shield charge.</p><h2>Run statistics</h2><p>Accuracy counts hit projectiles out of spawned projectiles. Laser statistics are separate. Results appear before initials entry; personal bests save automatically. Practice stays out of the initials leaderboard.</p><button id="helpPractice" class="primary">Try in Practice</button><p id="helpPaused" hidden>Your run is paused. Back returns to Pause; finish or quit it before starting Practice.</p></section></div></section>
-    <section data-view="developer" class="utility-view" hidden inert aria-label="Developer tools"><h1 tabindex="-1">Developer tools</h1><p><a href="./assets.html" target="_blank" rel="noopener">View pixel assets</a></p>      <aside id="inputDiagnostics" hidden aria-label="Controller input check">
-        <strong>Controller input check</strong>
-        <p id="inputRaw">Press a controller button to connect it to this tab.</p>
-        <p id="inputCounts"></p>
-        <p id="inputBlocks"></p>
-      </aside></section>
-    <footer class="shell-footer"><span id="demoHint" hidden>Any key or controller action returns Home</span><span id="controller" role="status">Keyboard ready</span><button data-go="developer" class="quiet">Developer tools</button></footer>
-    <dialog id="navigationDecision" aria-labelledby="decisionTitle"><h2 id="decisionTitle"></h2><p id="decisionMessage"></p><div class="actions"><button data-decision="stay">Stay</button><button data-decision="apply">Apply and leave</button><button data-decision="discard">Discard and leave</button><button data-decision="quit">Quit run</button></div></dialog>
-  </main>
-  <script type="module" src="./app.mjs"></script>
-</body>
+            <section
+                data-view="records"
+                class="utility-view"
+                hidden
+                inert
+                aria-label="Records"
+            >
+                <h1 tabindex="-1">Records</h1>
+                <div class="records-layout">
+                    <div>
+                        <h2>Top five scores</h2>
+                        <p>Initials leaderboard · Solo normal runs</p>
+                        <ol id="leaderboard"></ol>
+                        <p id="leaderboardStatus" role="status"></p>
+                    </div>
+                    <div id="recordsPanel" class="records-panel">
+                        <h2>Personal bests</h2>
+                        <div class="record-filters">
+                            <label
+                                >Profile
+                                <select id="recordsProfile">
+                                    <option value="0">Player 1</option>
+                                    <option value="1">Player 2</option>
+                                </select></label
+                            ><label
+                                >Run type
+                                <select id="recordsType">
+                                    <option value="normal">Normal</option>
+                                    <option value="practice">Practice</option>
+                                </select></label
+                            >
+                        </div>
+                        <p id="recordsScope"></p>
+                        <dl id="recordsValues" class="metric-grid"></dl>
+                        <p id="recordsAccuracy"></p>
+                        <p id="recordsStatus" role="status"></p>
+                        <button id="retryRecords" hidden>
+                            Retry saving personal bests
+                        </button>
+                        <button id="resetRecords">
+                            Reset this profile’s personal bests</button
+                        ><button id="cancelResetRecords" hidden>
+                            Cancel reset
+                        </button>
+                        <p>
+                            Refresh keeps saved records. Clearing records does
+                            not change your controls or audio settings.
+                        </p>
+                        <button id="clearBrowserRecords">
+                            Clear this browser’s records</button
+                        ><button id="cancelBrowserReset" hidden>
+                            Cancel clear
+                        </button>
+                        <p id="browserResetStatus" role="status"></p>
+                    </div>
+                </div>
+            </section>
+            <section
+                data-view="settings"
+                class="utility-view"
+                hidden
+                inert
+                aria-label="Settings"
+            >
+                <h1 tabindex="-1">Settings</h1>
+                <div id="settingsDialog">
+                    <p class="settings-intro">
+                        Apply saves your changes. Back lets you apply, discard,
+                        or stay.
+                    </p>
+                    <label class="profile-picker" for="inputProfile"
+                        >Input profile
+                        <select id="inputProfile">
+                            <option value="0">Player 1</option>
+                            <option value="1">Player 2</option>
+                        </select>
+                    </label>
+                    <p id="settingsProfileNote">
+                        Each profile keeps its own controls, audio, and display
+                        settings. Unapplied changes stay in this draft.
+                    </p>
+                    <nav class="settings-tabs" aria-label="Settings categories">
+                        <button data-category="controls" aria-pressed="true">
+                            Controls</button
+                        ><button
+                            data-category="calibration"
+                            aria-pressed="false"
+                        >
+                            Calibration</button
+                        ><button data-category="audio" aria-pressed="false">
+                            Audio</button
+                        ><button data-category="display" aria-pressed="false">
+                            Display
+                        </button>
+                    </nav>
+                    <section data-settings-panel="controls">
+                        <h2>Controls</h2>
+                        <div class="settings-sliders">
+                            <label for="deadzone"
+                                >Left-stick deadzone
+                                <output id="deadzoneValue"></output
+                                ><input
+                                    id="deadzone"
+                                    type="range"
+                                    min="0.05"
+                                    max="0.45"
+                                    step="0.01"
+                            /></label>
+                            <label for="aimDeadzone"
+                                >Right-stick deadzone
+                                <output id="aimDeadzoneValue"></output
+                                ><input
+                                    id="aimDeadzone"
+                                    type="range"
+                                    min="0.05"
+                                    max="0.8"
+                                    step="0.01"
+                            /></label>
+                            <label for="aimSensitivity"
+                                >Controller / keyboard aim response
+                                <output id="aimSensitivityValue"></output
+                                ><input
+                                    id="aimSensitivity"
+                                    type="range"
+                                    min="0.25"
+                                    max="2"
+                                    step="0.05"
+                            /></label>
+                            <label for="mouseAimSensitivity"
+                                >Mouse aim response
+                                <output id="mouseAimSensitivityValue"></output
+                                ><input
+                                    id="mouseAimSensitivity"
+                                    type="range"
+                                    min="0.25"
+                                    max="2"
+                                    step="0.05"
+                            /></label>
+                            <label for="movementSensitivity"
+                                >Controller movement response
+                                <output id="movementSensitivityValue"></output
+                                ><input
+                                    id="movementSensitivity"
+                                    type="range"
+                                    min="0.25"
+                                    max="2"
+                                    step="0.05"
+                            /></label>
+                        </div>
+                        <p class="settings-help">
+                            Aim response controls how quickly the ship turns
+                            toward your target. Higher movement response makes
+                            partial stick deflections stronger; top speed stays
+                            the same. Raise the right-stick deadzone to suppress
+                            aim drift without changing movement. Lower deadzones
+                            detect smaller stick movements. Mouse movement sets
+                            aim, not ship speed.
+                        </p>
+                        <div class="settings-bindings">
+                            <section>
+                                <h3>Keyboard</h3>
+                                <p>
+                                    Select a key, then press its replacement.
+                                    Esc cancels. Arrows, Enter and Esc remain
+                                    available.
+                                </p>
+                                <div id="keyBindings"></div>
+                            </section>
+                            <section>
+                                <h3>Controller</h3>
+                                <p>
+                                    Assign abilities below. Hold Shield +
+                                    Precision for slow movement; tap Shield
+                                    alone to arm it.
+                                </p>
+                                <div id="padBindings"></div>
+                            </section>
+                        </div>
+                    </section>
+                    <section data-settings-panel="calibration" hidden inert>
+                        <section
+                            id="calibration"
+                            aria-labelledby="calibrationTitle"
+                        >
+                            <h3 id="calibrationTitle">Test your controls</h3>
+                            <p id="calibrationController">
+                                Connect a controller and press a button.
+                            </p>
+                            <div class="stick-plots">
+                                <figure>
+                                    <svg
+                                        id="moveStick"
+                                        viewBox="0 0 100 100"
+                                        role="img"
+                                        aria-label="Left stick: raw and adjusted movement"
+                                    >
+                                        <circle
+                                            class="stick-bound"
+                                            cx="50"
+                                            cy="50"
+                                            r="44"
+                                        />
+                                        <path
+                                            class="stick-axis"
+                                            d="M6 50H94M50 6V94"
+                                        />
+                                        <circle
+                                            class="deadzone"
+                                            cx="50"
+                                            cy="50"
+                                            r="11"
+                                        />
+                                        <circle
+                                            class="raw"
+                                            cx="50"
+                                            cy="50"
+                                            r="5"
+                                        />
+                                        <circle
+                                            class="adjusted"
+                                            cx="50"
+                                            cy="50"
+                                            r="2.5"
+                                        />
+                                    </svg>
+                                    <figcaption>
+                                        Movement <span id="moveValues"></span>
+                                    </figcaption>
+                                </figure>
+                                <figure>
+                                    <svg
+                                        id="aimStick"
+                                        viewBox="0 0 100 100"
+                                        role="img"
+                                        aria-label="Right stick: raw and adjusted aim"
+                                    >
+                                        <circle
+                                            class="stick-bound"
+                                            cx="50"
+                                            cy="50"
+                                            r="44"
+                                        />
+                                        <path
+                                            class="stick-axis"
+                                            d="M6 50H94M50 6V94"
+                                        />
+                                        <circle
+                                            class="deadzone"
+                                            cx="50"
+                                            cy="50"
+                                            r="11"
+                                        />
+                                        <circle
+                                            class="raw"
+                                            cx="50"
+                                            cy="50"
+                                            r="5"
+                                        />
+                                        <circle
+                                            class="adjusted"
+                                            cx="50"
+                                            cy="50"
+                                            r="2.5"
+                                        />
+                                    </svg>
+                                    <figcaption>
+                                        Aim <span id="aimValues"></span>
+                                    </figcaption>
+                                </figure>
+                            </div>
+                            <p>
+                                Outlined dot: raw input. Filled dot: adjusted
+                                input. Shaded circle: deadzone.
+                            </p>
+                            <div class="calibration-actions">
+                                <button id="sampleDrift" disabled>
+                                    Sample stick drift</button
+                                ><button id="applyDeadzone" disabled>
+                                    Use suggested deadzone
+                                </button>
+                            </div>
+                            <p id="calibrationStatus" role="status">
+                                Leave both sticks untouched for a two-second
+                                drift sample.
+                            </p>
+                            <svg
+                                id="inputPreview"
+                                viewBox="0 0 320 130"
+                                tabindex="0"
+                                role="img"
+                                aria-label="Control preview. Focus to move with your movement keys or arrows; aim with mouse, aim keys, or right stick. No shots are fired."
+                                aria-describedby="previewHelp"
+                            >
+                                <g
+                                    id="previewShip"
+                                    transform="translate(160 65)"
+                                >
+                                    <path class="preview-aim" d="M12 0H48" />
+                                    <path
+                                        class="preview-ship"
+                                        d="M12 0L-9 -7L-5 0L-9 7Z"
+                                    />
+                                </g>
+                            </svg>
+                            <p id="previewHelp">
+                                Click or Tab into the preview to test movement
+                                and aim. Controller sticks work here too.
+                                Precision slows movement. The game stays paused
+                                and no shots are fired.
+                            </p>
+                        </section>
+                    </section>
+                    <section data-settings-panel="audio" hidden inert>
+                        <h2>Audio</h2>
+                        <label class="toggle-label"
+                            ><input id="audioEnabled" type="checkbox" /> Sound
+                            effects</label
+                        ><label class="toggle-label"
+                            ><input id="musicEnabled" type="checkbox" /> Theme
+                            music</label
+                        >
+                        <div class="settings-sliders">
+                            <label for="volume"
+                                >Volume <output id="volumeValue"></output
+                                ><input
+                                    id="volume"
+                                    type="range"
+                                    min="0"
+                                    max="1"
+                                    step="0.05"
+                            /></label>
+                        </div>
+                        <p>Changes take effect when you Apply.</p>
+                    </section>
+                    <section data-settings-panel="display" hidden inert>
+                        <h2>Display</h2>
+                        <div class="settings-sliders">
+                            <label for="shake"
+                                >Screen shake <output id="shakeValue"></output
+                                ><input
+                                    id="shake"
+                                    type="range"
+                                    min="0"
+                                    max="1"
+                                    step="0.1"
+                            /></label>
+                        </div>
+                        <div class="settings-sliders">
+                            <label for="backgroundMotion"
+                                >Background motion
+                                <output id="backgroundMotionValue"></output
+                                ><input
+                                    id="backgroundMotion"
+                                    type="range"
+                                    min="0"
+                                    max="1"
+                                    step="0.1" /></label
+                            ><label for="backgroundBrightness"
+                                >Scenery brightness
+                                <output id="backgroundBrightnessValue"></output
+                                ><input
+                                    id="backgroundBrightness"
+                                    type="range"
+                                    min="0.25"
+                                    max="1"
+                                    step="0.05"
+                            /></label>
+                        </div>
+                        <p>
+                            Background motion affects decoration only;
+                            brightness dims gameplay scenery. Reduce shake for a
+                            calmer playfield. Fullscreen is available in the top
+                            bar.
+                        </p>
+                    </section>
+                    <div class="settings-footer">
+                        <button id="applySettings" disabled>Apply</button
+                        ><button id="resetSettings">Reset this profile</button
+                        ><span id="settingsStatus" role="status"
+                            >Saved locally</span
+                        >
+                    </div>
+                </div>
+            </section>
+            <section
+                data-view="help"
+                class="utility-view"
+                hidden
+                inert
+                aria-label="How to Play"
+            >
+                <h1 tabindex="-1">How to Play</h1>
+                <div class="help-layout">
+                    <section>
+                        <h2>Your controls</h2>
+                        <p id="helpDevice"></p>
+                        <dl id="helpBindings" class="binding-list"></dl>
+                        <p>Change bindings in Settings → Controls.</p>
+                    </section>
+                    <section>
+                        <h2>Flight essentials</h2>
+                        <p>
+                            Move, aim, and survive each wave. Each press fires
+                            once; holding fire never repeats. A 2× fire pickup
+                            fires two shots per press for six seconds.
+                        </p>
+                        <h2>Laser</h2>
+                        <p>
+                            Hold for 1.5 seconds to discharge. Release early to
+                            cancel. Cooldown: 5 seconds.
+                        </p>
+                        <h2>Shield & precision</h2>
+                        <p>
+                            Shield pickups store one charge. Tap Shield alone to
+                            arm it until one hit is absorbed. Hold Precision for
+                            slower movement; on a controller hold Shield +
+                            Precision. Precision never spends a shield charge.
+                        </p>
+                        <h2>Run statistics</h2>
+                        <p>
+                            Accuracy counts hit projectiles out of spawned
+                            projectiles. Laser statistics are separate. Results
+                            appear before initials entry; personal bests save
+                            automatically. Practice stays out of the initials
+                            leaderboard.
+                        </p>
+                        <button id="helpPractice" class="primary">
+                            Try in Practice
+                        </button>
+                        <p id="helpPaused" hidden>
+                            Your run is paused. Back returns to Pause; finish or
+                            quit it before starting Practice.
+                        </p>
+                    </section>
+                </div>
+            </section>
+            <section
+                data-view="developer"
+                class="utility-view"
+                hidden
+                inert
+                aria-label="Developer tools"
+            >
+                <h1 tabindex="-1">Developer tools</h1>
+                <p>
+                    <a href="./assets.html" target="_blank" rel="noopener"
+                        >View pixel assets</a
+                    >
+                </p>
+                <aside
+                    id="inputDiagnostics"
+                    hidden
+                    aria-label="Controller input check"
+                >
+                    <strong>Controller input check</strong>
+                    <p id="inputRaw">
+                        Press a controller button to connect it to this tab.
+                    </p>
+                    <p id="inputCounts"></p>
+                    <p id="inputBlocks"></p>
+                </aside>
+            </section>
+            <footer class="shell-footer">
+                <span id="demoHint" hidden
+                    >Any key or controller action returns Home</span
+                ><span id="shellStatus" role="status"></span
+                ><span id="controller" role="status">Keyboard ready</span
+                ><button data-go="developer" class="quiet">
+                    Developer tools
+                </button>
+            </footer>
+            <dialog id="navigationDecision" aria-labelledby="decisionTitle">
+                <h2 id="decisionTitle"></h2>
+                <p id="decisionMessage"></p>
+                <div class="actions">
+                    <button data-decision="stay">Stay</button
+                    ><button data-decision="apply">Apply and leave</button
+                    ><button data-decision="discard">Discard and leave</button
+                    ><button data-decision="quit">Quit run</button>
+                </div>
+            </dialog>
+        </main>
+        <div
+            id="launch"
+            hidden
+            aria-hidden="true"
+            role="dialog"
+            aria-modal="true"
+            aria-label="Launching flight"
+        >
+            <canvas id="launchCanvas" width="480" height="270"></canvas>
+            <div id="launchHint">
+                <button id="skipLaunch">Skip launch</button>
+                <p>Enter / Cross skips · Esc / Circle cancels</p>
+            </div>
+        </div>
+        <script type="module" src="./app.mjs"></script>
+    </body>
 </html>

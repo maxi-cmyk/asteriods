@@ -119,7 +119,7 @@ static bool combat_fire_volley() {
 
 static void combat_award(uint32_t points) {
     if (points) {
-        if (!combat.chain || game_ms - combat.last_scoring_kill >= CHAIN_WINDOW_MS) {
+        if (!combat.chain || game_ms - combat.last_scoring_kill >= SCORE_CHAIN_WINDOW_MS) {
             combat.chain = 0;
         }
         combat.chain++;
@@ -229,9 +229,8 @@ static bool combat_update_laser(bool pressed) {
     return false;
 }
 
-static void combat_collisions() {
-    if (ship.invincible_left
-        || !asteroid_hits_ship(ship.position_x, ship.position_y)) {
+static void combat_ship_hit() {
+    if (ship.invincible_left) {
         return;
     }
     if (ship.effects.shield) {
@@ -255,6 +254,11 @@ static void combat_collisions() {
     display_shake(DEATH_SHAKE_FRAMES);
     set_state(STATE_DEATH_ANIM);
 }
+
+static void combat_collisions() {
+    if (asteroid_hits_ship(ship.position_x, ship.position_y)) combat_ship_hit();
+}
+#include "boss.h"
 
 static void combat_update_playing(bool laser_pressed) {
     const InputState& input = input_get();
@@ -287,7 +291,8 @@ static void combat_update_playing(bool laser_pressed) {
             }
         }
     } else {
-        asteroids_update(game_ms);
+        if (!boss_controls_wave()) asteroids_update(game_ms);
+        boss_controls_wave();
     }
     bool laser_fired = combat_update_laser(laser_pressed);
     combat_update_cps(input.fire_pressed);
@@ -321,6 +326,7 @@ static void combat_update_playing(bool laser_pressed) {
     }
     particles_update();
     combat_collisions();
+    if (state == STATE_PLAYING && !practice_mode) boss_update(laser_fired);
 }
 
 static void combat_game_update() {
@@ -335,6 +341,7 @@ static void combat_game_update() {
         game_update();
         if (state == STATE_COUNTDOWN && previous != STATE_COUNTDOWN) {
             combat_reset();
+            boss = {};
         }
         if (state == STATE_PAUSED && !combat_input.laser) {
             combat.charging = false;

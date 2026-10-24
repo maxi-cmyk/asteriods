@@ -63,13 +63,14 @@ export class Navigation {
 // A newly visible menu cannot inherit a held confirm/back/stick input.
 export class MenuInput {
   constructor() { this.reset(); }
-  reset() { this.armed = false; this.lastDirection = 0; this.nextRepeat = 0; this.held = new Set(); }
+  reset() { this.armed = false; this.lastDirection = 0; this.nextRepeat = 0; this.held = new Set(); this.lastHorizontal = 0; this.nextHorizontal = 0; }
   sample(pad, now, pauseButton = 9) {
     const down = i => !!pad?.buttons?.[i]?.pressed || (pad?.buttons?.[i]?.value || 0) > .2;
     const direction = down(12) || (pad?.axes?.[1] || 0) < -.55 ? -1 : down(13) || (pad?.axes?.[1] || 0) > .55 ? 1 : 0;
+    const horizontal = down(14) || (pad?.axes?.[0] || 0) < -.55 ? -1 : down(15) || (pad?.axes?.[0] || 0) > .55 ? 1 : 0;
     const confirm = down(0), back = down(1), pause = down(pauseButton);
     if (!this.armed) {
-      if (!confirm && !back && !direction && !(pad?.buttons || []).some(b => b?.pressed || b?.value > .2)) this.armed = true;
+      if (!confirm && !back && !direction && !horizontal && !(pad?.buttons || []).some(b => b?.pressed || b?.value > .2)) this.armed = true;
       return {};
     }
     const result = {};
@@ -80,6 +81,11 @@ export class MenuInput {
     if (direction && (direction !== this.lastDirection || now >= this.nextRepeat)) {
       result.direction = direction; this.nextRepeat = now + (direction !== this.lastDirection ? 350 : 140);
     }
+    if (horizontal && (horizontal !== this.lastHorizontal || now >= this.nextHorizontal)) {
+      result.horizontal = horizontal;
+      this.nextHorizontal = now + (horizontal !== this.lastHorizontal ? 350 : 140);
+    }
+    this.lastHorizontal = horizontal;
     this.lastDirection = direction;
     return result;
   }

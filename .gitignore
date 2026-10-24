@@ -10,3 +10,8 @@
 /.clang-format
 /inspo/
 /assets/
+/docs/ACCEPTANCE.md 
+/docs/ARCHITECTURE.md
+/docs/SETUP.md 
+/docs/UI-NAVIGATION.md
+/tools/

@@ -1,4 +1,4 @@
-import { PersonalBests } from './records.mjs';
+import { PersonalBests, clearBrowserRecords } from './records.mjs';
 export const STATES = ['menu', 'countdown', 'playing', 'paused', 'death', 'initials', 'game-over', 'demo'];
 export const SCORE_KEY = 'asteroids.web.scores-v3';
 
@@ -52,18 +52,29 @@ export async function createRuntime(bytes, { storage, random, tone = () => {}, s
     result = {...run, score: scene[16], wave: stats.highestWave, peakCps: stats.peakCps,
       longestChain: stats.longestChain, shots: stats.spawned, hits: stats.hits,
       laserShots: stats.laserShots, laserKills: stats.laserKills,
-      elapsedMs: scene[2], destroyed: scene[57], bestMultiplier: scene[58]};
+      bossKills: scene[523], elapsedMs: scene[2], destroyed: scene[57], bestMultiplier: scene[58]};
     records.record(run.profile, run.rules, result);
     run = null;
   }
   const runtime = {
     records,
     get scoreStatus() { return scoreStatus; },
+    clearRecords() {
+      const reset = clearBrowserRecords(storage, scoreKey);
+      scoreStatus = reset.message;
+      records.status = reset.message;
+      if (reset.ok) {
+        records.profiles = [{}, {}];
+        api.web_reload_scores();
+      }
+      return reset.ok;
+    },
     get result() { return result; },
     get runProfile() { return run?.profile ?? result?.profile ?? (profile() === 1 ? 1 : 0); },
     api,
     step({ x = 2048, y = 2048, fire = false, firePressed = false, click = false, pause = false, aimX = 0, aimY = 0, laser = false, precision = false, shield = false } = {}) {
       if (resultsVisible) {
+        api.web_audio_step();
         // Consume the ending press/hold before accepting a separate Continue.
         if (!fire && !firePressed) resultsReady = true;
         else if (resultsReady) runtime.continueResults();
@@ -111,7 +122,7 @@ export async function createRuntime(bytes, { storage, random, tone = () => {}, s
     get width() { return api.web_width(); },
     get height() { return api.web_height(); },
     fireDiagnostics() { return [...new Uint32Array(api.memory.buffer,api.web_fire_diagnostics(),4)]; },
-    scene() { return new Float32Array(api.memory.buffer, api.web_scene(), 512); },
+    scene() { return new Float32Array(api.memory.buffer, api.web_scene(), 576); },
     pixels() { return new Uint8Array(api.memory.buffer, api.web_pixels(), 128 * 64); },
     snapshot() { return [...new Float32Array(api.memory.buffer, api.web_snapshot(), 16)]; },
     pause() { if (runtime.state === 'playing') runtime.step({ pause: true }); },

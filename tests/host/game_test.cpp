@@ -618,10 +618,10 @@ static void test_score_versioning() {
     assert(highscore_count() == 0);
     Preferences::fail_read = false;
     // A valid score in the wrong order must also reject the whole table.
-    for (int byte = 0; byte < ENTRY_BYTES; byte++) {
-        std::swap(Preferences::blobs[TABLE_KEY][RECORD_HEADER + byte],
+    for (int byte = 0; byte < SCORE_ENTRY_BYTES; byte++) {
+        std::swap(Preferences::blobs[TABLE_KEY][SCORE_RECORD_HEADER + byte],
                   Preferences::blobs[TABLE_KEY]
-                                    [RECORD_HEADER + ENTRY_BYTES + byte]);
+                                    [SCORE_RECORD_HEADER + SCORE_ENTRY_BYTES + byte]);
     }
     highscore_init();
     assert(highscore_count() == 0);

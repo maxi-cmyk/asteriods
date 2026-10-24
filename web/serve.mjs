@@ -4,7 +4,7 @@ import { dirname, resolve, extname, sep } from 'node:path';
 import { fileURLToPath } from 'node:url';
 const directory = resolve(dirname(fileURLToPath(import.meta.url)), 'dist');
 const port = Number(process.env.PORT || 4173);
-const types = { '.html':'text/html; charset=utf-8', '.mjs':'text/javascript; charset=utf-8', '.css':'text/css', '.wasm':'application/wasm', '.txt':'text/plain' };
+const types = { '.html':'text/html; charset=utf-8', '.mjs':'text/javascript; charset=utf-8', '.css':'text/css', '.wasm':'application/wasm', '.txt':'text/plain', '.woff2':'font/woff2', '.png':'image/png', '.json':'application/json' };
 createServer(async (request, response) => {
   try {
     const path = decodeURIComponent(new URL(request.url,'http://localhost').pathname);

@@ -144,12 +144,16 @@ void web_step(int raw_x, int raw_y, int fire, int click, int pause) {
 #endif
     sound_update();
 }
+void web_audio_step() {
+    sound_advance(FRAME_TIME_MS);
+}
 void web_start(int practice) {
 #ifdef WEB_HD
     practice_mode = practice != 0;
     practice_goals = 0;
     begin_game();
     combat_reset();
+    boss = {};
     if (practice_mode) {
         pending_asteroids = 0;
         practice_targets();
@@ -168,6 +172,10 @@ void web_demo() {
     demo_running = true;
     set_state(STATE_DEMO);
 }
+void web_reload_scores() {
+    highscore_init();
+    saved_rank = -1;
+}
 void web_menu() {
     demo_running = false;
     menu_input_ready = false;
@@ -175,6 +183,7 @@ void web_menu() {
     practice_mode = false;
     ship.effects.double_fire_left_ms = 0;
     combat_reset();
+    boss = {};
 #endif
     sound_stop();
     set_state(STATE_MENU);
@@ -277,8 +286,8 @@ int web_height() {
     return SCREEN_H;
 }
 const float *web_scene() {
-    // Version 1: 64 header floats, then fixed-capacity entity records.
-    static float scene[512];
+    // First 512 floats retain the original layout; 64 tail floats expose bosses.
+    static float scene[576];
     memset(scene, 0, sizeof(scene));
     scene[0] = state;
     scene[1] = browser_ms;
@@ -379,16 +388,43 @@ const float *web_scene() {
     scene[479] = pickup.position_x;
     scene[480] = pickup.position_y;
     scene[481] = pickup.kind;
+#ifdef WEB_HD
+    scene[512] = boss.active;
+    scene[513] = BOSS_X;
+    scene[514] = BOSS_Y;
+    scene[515] = boss.health;
+    scene[516] = boss.maximum;
+    scene[517] = boss.phase;
+    scene[518] = game_ms - boss.phase_started;
+    scene[519] = boss.target_y;
+    scene[520] = boss.cycle % 2;
+    scene[521] = boss.players;
+    scene[522] = boss.wave;
+    scene[523] = boss.kills;
+    scene[524] = boss.target_x;
+    for (int i = 0; i < 6; i++) {
+        scene[528 + i * 4] = boss.shots[i].active;
+        scene[529 + i * 4] = boss.shots[i].x;
+        scene[530 + i * 4] = boss.shots[i].y;
+    }
+#endif
     for (int i = 0; i < HIGHSCORE_CAPACITY; i++) {
         int offset = 486 + i * 5;
-        scene[offset] = table[i].score;
+        scene[offset] = highscore_entries()[i].score;
         for (int j = 0; j < 3; j++) {
-            scene[offset + 1 + j] = table[i].initials[j];
+            scene[offset + 1 + j] = highscore_entries()[i].initials[j];
         }
     }
     return scene;
 }
 #ifdef WEB_TEST
+void web_test_boss(int wave, int players, int health) {
+#ifdef WEB_HD
+    wave_number = wave;
+    boss_begin(players);
+    if (health > 0) boss.health = health;
+#endif
+}
 void web_test_pickup(int kind) {
     pickup = {ship.position_x, ship.position_y, PickupKind(kind), true};
 }
@@ -404,6 +440,7 @@ void web_scenario(int scenario) {
     ship.invincible_left = 0;
 #ifdef WEB_HD
     combat_reset();
+    boss = {};
 #endif
     if (scenario == 1) {
         ship.effects.multishot_left_ms = MULTISHOT_DURATION_MS;

@@ -21,3 +21,9 @@ eight rotation frames each; pickups 12×12; bullets 6×2; explosions 32×32.
 All sprites have transparent backgrounds. Colours: light hull, blue-grey rock,
 cyan shield/multishot fire, amber heat/fire/explosions. Light comes from above
 and left. Exhaust and explosion animation are decorative, without hitboxes.
+
+`fonts/` holds Press Start 2P (display) and VT323 (reading text), both SIL Open Font
+License 1.1, subset to Latin and converted to WOFF2. The license texts are alongside
+(`OFL-*.txt`) and ship in `dist/assets/fonts/`.
+
+Background art for each five-wave region is original and procedural; see `ART.md`.

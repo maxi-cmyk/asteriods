@@ -65,3 +65,32 @@ export class PersonalBests {
 export function accuracyText(hits, shots) {
   return shots ? `${(100 * hits / shots).toFixed(1)}% (${hits}/${shots})` : '—';
 }
+
+// Reset only this game's records; controls and unrelated origin data survive.
+export function clearBrowserRecords(storage, scoreKey) {
+  const emptyScores = Array(42).fill(0);
+  emptyScores[0] = 1;
+  const emptyBests = JSON.stringify({version: 1, profiles: [{}, {}]});
+  const changes = [
+    [scoreKey, JSON.stringify(emptyScores)],
+    [RECORDS_KEY, emptyBests],
+  ];
+  const previous = [];
+  try {
+    if (!storage) throw new Error('Storage unavailable');
+    for (const [key] of changes) previous.push([key, storage.getItem(key)]);
+    for (const [key, value] of changes) storage.setItem(key, value);
+    return {ok: true, message: 'Leaderboard and both profiles cleared in this browser.'};
+  } catch {
+    let restored = true;
+    for (const [key, value] of previous) {
+      try {
+        if (value === null || value === undefined) storage.removeItem(key);
+        else storage.setItem(key, value);
+      } catch { restored = false; }
+    }
+    return {ok: false, message: restored
+      ? 'Could not clear records. Browser storage is unavailable; try again.'
+      : 'Record reset could not finish. Reload to check stored records before retrying.'};
+  }
+}

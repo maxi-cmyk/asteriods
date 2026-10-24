@@ -123,3 +123,36 @@ Death or expiry ends the chain; the longest value survives to the summary.
 
 The current game is solo; simultaneous player attribution and friendly-fire
 exclusion must be integrated when local multiplayer is implemented.
+
+
+## Region-closing sentinel (browser solo)
+
+Every fifth wave (5, 10, 15, ...) replaces ordinary asteroid pressure with one
+sentinel. Its 1.2-second entrance is harmless. The orange core becomes vulnerable
+when the entrance finishes. A locked lane/fan warns for 900 ms, attacks for
+320 ms, then rests for 950 ms; the two patterns alternate. The lance has a
+9-pixel half-width matching its rendered 18-pixel beam. Three fan projectiles
+travel at 2.2 pixels/tick with ±0.28-radian spread. Movement bounds are unchanged.
+Boss phase clocks freeze with gameplay, including Pause and utility visits.
+
+Health is `(18 + 6 * (min(10, wave / 5) - 1)) * latched_players`; today's solo
+runtime supplies one player. Tests exercise the two-player scaling input, but
+there is no co-op implementation or network authority yet. A future co-op run
+will latch its roster at entry; a disconnect must not resize the boss mid-fight.
+
+A primary projectile deals one damage and counts once toward primary accuracy;
+laser discharge deals eight damage once, without inflating primary statistics.
+Shield protection and invulnerability use the existing collision path. Multishot
+and 2× fire retain their projectile pools and 80 ms echo accounting.
+
+Defeat awards `1500 + 250 * min(10, wave / 5)` base points as one scoring event
+through the existing multiplier, capped at ×5. No per-hit farming. Boss defeats
+are separate from asteroid kills and appear in Results. The defeat recovery is
+at least 1.2 seconds, followed by the ordinary wave recovery. Since bosses close
+regions, their entrance never overlaps the following region reveal.
+
+Future co-op policy: one team award per boss; an assist records participation
+without creating another point award. Attribution, friendly-fire interactions,
+and host-authoritative replication are acceptance work for tasks 6–8, not
+features of this solo release. Existing browser record keys are preserved;
+old records are retained, with the new boss balance documented here.

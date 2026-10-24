@@ -1,0 +1,714 @@
+/* Pixel identity, component theme, and presentation. Layout lives in shell.css. */
+@font-face {
+    font-family: 'Press Start 2P';
+    src: url('./assets/fonts/PressStart2P-Regular.woff2') format('woff2');
+    font-weight: 400;
+    font-display: swap;
+}
+@font-face {
+    font-family: 'VT323';
+    src: url('./assets/fonts/VT323-Regular.woff2') format('woff2');
+    font-weight: 400;
+    font-display: swap;
+}
+
+:root {
+    --font-display:
+        'Press Start 2P', ui-monospace, 'SFMono-Regular', Consolas, monospace;
+    --font-body: 'VT323', ui-monospace, 'SFMono-Regular', Consolas, monospace;
+    /* Display sizes are multiples of the font's 8px grid so edges stay crisp. */
+    --size-label: 8px;
+    --size-menu: 16px;
+    --size-heading: 24px;
+    --size-body: 19px;
+    --size-small: 17px;
+    --space-1: 4px;
+    --space-2: 8px;
+    --space-3: 16px;
+    --space-4: 24px;
+    --space-5: 32px;
+    --background: #080d1c;
+    --surface: #0f1830;
+    --surface-raised: #16224a;
+    --ink: #eef2ff;
+    --muted: #aab6dc;
+    --edge: #33447f;
+    --accent: #6ef0ff;
+    --accent-fill: #173a6e;
+    --danger: #ff8a9a;
+    --danger-fill: #4a1830;
+    --focus: #ffe66d;
+    font-family: var(--font-body);
+    font-size: var(--size-body);
+}
+body {
+    letter-spacing: 0.03em;
+    font-family: var(--font-body);
+    font-size: var(--size-body);
+    line-height: 1.4;
+    font-variant-ligatures: none;
+    font-feature-settings:
+        'liga' 0,
+        'clig' 0;
+}
+button,
+input,
+select,
+textarea {
+    font-family: inherit;
+}
+p,
+dd,
+dt,
+label,
+li,
+figcaption,
+output {
+    font-size: var(--size-body);
+}
+
+/* Headings and identity use the display face. */
+h1,
+h2,
+h3,
+#screenTitle,
+dialog h2 {
+    font-family: var(--font-display);
+    font-weight: 400;
+    letter-spacing: 0;
+    text-transform: none;
+    line-height: 1.5;
+}
+h1 {
+    font-size: var(--size-heading);
+}
+.utility-view > h1 {
+    font-size: var(--size-heading);
+    margin: 0 0 var(--space-4);
+    color: var(--accent);
+}
+h2,
+.settings-heading h2,
+[data-settings-panel] > h2,
+.help-layout h2,
+.records-panel h2,
+.pause-menu h2,
+#navigationDecision h2,
+dialog h2 {
+    font-size: var(--size-menu);
+    color: var(--ink);
+    margin: 0 0 var(--space-3);
+}
+h3,
+.settings-bindings h3 {
+    font-size: var(--size-label);
+    color: var(--accent);
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    margin: var(--space-4) 0 var(--space-2);
+}
+#screenTitle {
+    font-size: var(--size-menu);
+    color: var(--ink);
+}
+.home-menu h1 {
+    font-family: var(--font-display);
+    line-height: 1.3;
+    letter-spacing: 0;
+    color: var(--ink);
+    text-shadow: 3px 3px 0 #1a2a63;
+}
+.home-menu h1 {
+    font-size: 24px;
+}
+@media (min-width: 900px) and (min-height: 700px) {
+    .home-menu h1 {
+        font-size: 32px;
+    }
+}
+
+/* Body text reads at one comfortable size; status and notes are slightly smaller. */
+.utility-view p,
+.help-layout p,
+.settings-help,
+.settings-bindings p,
+#calibration p,
+.settings-intro,
+#settingsProfileNote,
+.binding-note,
+.records-panel p,
+.utility-view .controls p,
+dialog p {
+    font-size: var(--size-body);
+    line-height: 1.3;
+    color: var(--muted);
+}
+.settings-intro,
+#settingsProfileNote,
+.result-hint,
+#pauseSettingsHint,
+#homeHint,
+#demoHint,
+.status,
+.toolbar,
+.practice-panel span,
+.binding-note {
+    font-size: var(--size-small);
+}
+.hud,
+.combat-hud,
+.live-stats {
+    font-size: var(--size-small);
+}
+.hud b,
+.combat-hud b,
+.live-stats b {
+    font-family: var(--font-display);
+    font-size: var(--size-label);
+    font-weight: 400;
+}
+#score {
+    font-family: var(--font-display);
+    font-size: var(--size-menu);
+    letter-spacing: 0;
+}
+.status,
+.toolbar {
+    font-size: var(--size-small);
+}
+#state {
+    font-family: var(--font-display);
+    font-size: var(--size-label);
+}
+.metric-grid dt,
+.binding-list dt {
+    font-size: var(--size-small);
+    color: var(--muted);
+}
+.metric-grid dd {
+    font-family: var(--font-display);
+    font-size: var(--size-menu);
+    font-weight: 400;
+    line-height: 1.5;
+}
+.metric-grid > .empty-record {
+    font-family: var(--font-body);
+    font-size: var(--size-body);
+    color: var(--muted);
+}
+.binding-list {
+    font-size: var(--size-body);
+}
+.run-summary dd {
+    font-family: var(--font-display);
+    font-size: clamp(8px, 1.6cqw, 16px);
+    line-height: 1.5;
+}
+.run-summary dt {
+    font-size: var(--size-small);
+}
+.run-summary h2 {
+    font-size: clamp(8px, 1.6cqw, 16px);
+}
+#leaderboard {
+    font-size: 24px;
+    line-height: 2.2;
+    color: var(--ink);
+}
+.record-filters label,
+.profile-picker,
+.settings-sliders label,
+#keyBindings label,
+#padBindings label,
+.settings-bindings label,
+.toggle-label {
+    font-size: var(--size-body);
+}
+.settings-sliders output {
+    font-family: var(--font-display);
+    font-size: var(--size-label);
+}
+
+/* Controls: one set of states shared by every button, tab, and field. */
+button {
+    font-family: var(--font-body);
+    font-size: var(--size-body);
+    min-height: 40px;
+    padding: 8px 14px;
+    color: var(--ink);
+    background: transparent;
+    border: 2px solid var(--edge);
+    border-radius: 0;
+    transition:
+        background-color 0.12s ease-out,
+        border-color 0.12s ease-out,
+        color 0.12s ease-out,
+        transform 0.06s ease-out;
+}
+button:hover:not(:disabled) {
+    background: var(--surface-raised);
+    border-color: var(--muted);
+}
+button:active:not(:disabled) {
+    background: var(--accent-fill);
+    transform: translateY(1px);
+}
+button:disabled {
+    opacity: 0.45;
+    cursor: not-allowed;
+}
+button:focus-visible,
+a:focus-visible,
+input:focus-visible,
+select:focus-visible,
+summary:focus-visible,
+canvas:focus-visible,
+#inputPreview:focus-visible {
+    outline: 3px solid var(--focus);
+    outline-offset: 2px;
+}
+button[aria-pressed='true'] {
+    color: var(--accent);
+    border-color: var(--accent);
+    background: var(--accent-fill);
+}
+.primary,
+#applySettings:not(:disabled) {
+    color: var(--accent);
+    background: var(--accent-fill);
+    border-color: var(--accent);
+}
+.primary:hover:not(:disabled),
+#applySettings:hover:not(:disabled) {
+    background: #21508f;
+}
+.home-menu button,
+.pause-menu button,
+.settings-tabs button,
+.settings-footer button,
+#screenBack,
+.shell-header #sound,
+.shell-header #music,
+.shell-header #fullscreen,
+#stopDemo,
+#continueResults {
+    font-family: var(--font-display);
+    font-size: var(--size-label);
+    line-height: 1.6;
+}
+.home-menu button {
+    font-size: var(--size-menu);
+    min-height: 48px;
+    padding: 10px 16px;
+    border-color: transparent;
+}
+.home-menu button:hover:not(:disabled),
+.home-menu button:focus-visible {
+    border-color: var(--accent);
+    background: var(--accent-fill);
+    color: var(--accent);
+    outline: none;
+}
+.home-menu button:focus-visible::before,
+.home-menu button:hover:not(:disabled)::before {
+    content: '> ';
+}
+.home-menu button:focus-visible {
+    box-shadow: 0 0 0 3px var(--focus);
+}
+.pause-menu button {
+    font-size: var(--size-label);
+    min-height: 40px;
+}
+.settings-tabs button {
+    font-size: var(--size-label);
+    min-height: 44px;
+}
+.settings-tabs button[aria-pressed='true'] {
+    box-shadow: inset 0 -4px 0 var(--accent);
+}
+.settings-footer button {
+    font-size: var(--size-label);
+}
+.quiet {
+    font-family: var(--font-body);
+    font-size: var(--size-small);
+}
+.destructive,
+#resetRecords,
+#clearBrowserRecords,
+#quitRun,
+#resetSettings {
+    color: var(--danger);
+    border-color: #7a3550;
+}
+.destructive:hover:not(:disabled),
+#resetRecords:hover:not(:disabled),
+#clearBrowserRecords:hover:not(:disabled),
+#quitRun:hover:not(:disabled),
+#resetSettings:hover:not(:disabled) {
+    background: var(--danger-fill);
+    border-color: var(--danger);
+}
+input[type='range'] {
+    accent-color: var(--accent);
+}
+select,
+.profile-picker select,
+.record-filters select,
+.settings-bindings select {
+    font-family: var(--font-body);
+    font-size: var(--size-body);
+    min-height: 40px;
+    color: var(--ink);
+    background: var(--background);
+    border: 2px solid var(--edge);
+    border-radius: 0;
+    padding: 6px 8px;
+}
+select:hover {
+    border-color: var(--muted);
+}
+
+/* Panels: raised, square cards on the space-blue surface. */
+.utility-view,
+.home-menu,
+.pause-menu,
+dialog {
+    border: 2px solid var(--edge);
+    border-radius: 0;
+}
+.home-menu {
+    background: #070c1fe6;
+    border-color: var(--edge);
+    box-shadow: 6px 6px 0 #040716;
+}
+.pause-menu {
+    background: #0a1230f7;
+    box-shadow: 6px 6px 0 #040716;
+    padding: var(--space-4);
+}
+.records-layout > div,
+.help-layout > section,
+[data-settings-panel] {
+    background: var(--background);
+    border: 2px solid var(--edge);
+    padding: var(--space-4);
+}
+[data-settings-panel] {
+    padding-right: var(--space-4);
+}
+.help-layout > section > h2:first-child,
+.records-layout > div > h2:first-child {
+    margin-top: 0;
+}
+.help-layout h2 {
+    margin-top: var(--space-4);
+    padding-top: var(--space-3);
+    border-top: 2px dashed var(--edge);
+}
+.help-layout h2:first-child {
+    border-top: 0;
+    padding-top: 0;
+}
+.records-panel {
+    background: var(--background);
+}
+.records-panel .record-filters {
+    margin-bottom: var(--space-3);
+}
+#resetRecords,
+#clearBrowserRecords,
+#retryRecords,
+#cancelResetRecords,
+#cancelBrowserReset {
+    margin: var(--space-1) var(--space-2) var(--space-1) 0;
+}
+.settings-tabs {
+    gap: var(--space-2);
+}
+.settings-footer {
+    align-items: center;
+}
+#settingsStatus {
+    font-size: var(--size-small);
+    margin-left: auto;
+}
+.shell-footer,
+.settings-footer,
+.settings-tabs {
+    border-color: var(--edge);
+}
+.shell-header {
+    border-bottom: 0;
+}
+#profileLabel {
+    font-size: var(--size-small);
+}
+#controller {
+    font-size: var(--size-small);
+}
+
+@media (max-width: 600px) {
+    .settings-tabs button {
+        font-size: 8px;
+        padding: 6px 2px;
+    }
+    .utility-view > h1 {
+        font-size: 16px;
+    }
+    .home-menu h1 {
+        font-size: 16px;
+    }
+    .home-menu button {
+        font-size: var(--size-label);
+        min-height: 40px;
+    }
+    .records-layout > div,
+    .help-layout > section,
+    [data-settings-panel] {
+        padding: var(--space-3);
+    }
+    #screenTitle {
+        font-size: var(--size-label);
+    }
+}
+@media (max-height: 650px) {
+    .home-menu h1 {
+        font-size: 16px;
+    }
+    .home-menu button {
+        font-size: var(--size-label);
+        min-height: 34px;
+    }
+    .pause-menu {
+        padding: var(--space-3);
+    }
+}
+@media (prefers-reduced-motion: reduce) {
+    *,
+    *::before,
+    *::after {
+        transition: none !important;
+        animation: none !important;
+    }
+    button:active:not(:disabled) {
+        transform: none;
+    }
+}
+
+/* Gameplay fills the window: no bezels, header, or footer. The HUD, ability
+   readouts, and actions float over the 16:9 playfield instead of shrinking it. */
+body[data-screen='play'] .app-shell,
+body[data-screen='pause'] .app-shell {
+    max-width: none;
+    padding: 0;
+    gap: 0;
+    grid-template-rows: minmax(0, 1fr);
+}
+body[data-screen='play'] .shell-header,
+body[data-screen='pause'] .shell-header {
+    position: absolute;
+    top: 8px;
+    right: 10px;
+    z-index: 6;
+    width: auto;
+    gap: 8px;
+}
+body[data-screen='play'] #screenTitle,
+body[data-screen='pause'] #screenTitle,
+body[data-screen='play'] #profileLabel,
+body[data-screen='pause'] #profileLabel,
+body[data-screen='play'] #screenBack,
+body[data-screen='pause'] #screenBack {
+    display: none;
+}
+body[data-screen='play'] .shell-header button,
+body[data-screen='pause'] .shell-header button {
+    background: #050a1ab3;
+    min-height: 28px;
+    padding: 4px 8px;
+}
+body[data-screen='play'] .console,
+body[data-screen='pause'] .console {
+    position: relative;
+    padding: 0;
+    gap: 0;
+    border: 0;
+    background: #03060f;
+    justify-content: center;
+}
+body[data-screen='play'] .console > :not(.screen),
+body[data-screen='pause'] .console > :not(.screen) {
+    position: absolute;
+    z-index: 3;
+    margin: 0;
+}
+body[data-screen='play'] .console .status,
+body[data-screen='pause'] .console .status {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    overflow: hidden;
+    clip: rect(0 0 0 0);
+    white-space: nowrap;
+}
+.console .hud {
+    top: 10px;
+    left: 16px;
+    right: 470px;
+    padding: 0;
+}
+.console .live-stats {
+    top: 46px;
+    left: 16px;
+    right: auto;
+    justify-content: flex-start;
+    padding: 0;
+    gap: 4px 18px;
+}
+.console .combat-hud {
+    bottom: 48px;
+    left: 16px;
+    right: 16px;
+    padding: 0;
+    justify-content: flex-start;
+}
+.console .practice-panel {
+    bottom: 84px;
+    left: 16px;
+    right: 16px;
+    padding: 8px 12px;
+    background: #050a1acc;
+    border: 1px solid var(--edge);
+}
+.console .toolbar {
+    bottom: 8px;
+    left: 16px;
+    right: 16px;
+    flex-wrap: nowrap;
+}
+.console .hud,
+.console .live-stats,
+.console .combat-hud,
+.console .toolbar {
+    text-shadow: 0 1px 0 #000;
+}
+body[data-screen='play'] .console,
+body[data-screen='pause'] .console {
+    grid-row: 1;
+}
+body[data-screen='play'] canvas,
+body[data-screen='pause'] canvas {
+    outline: 0;
+}
+.pause-menu {
+    box-shadow:
+        0 0 0 100vmax #02040bb3,
+        6px 6px 0 #040716;
+}
+.console .combat-hud,
+.console .live-stats {
+    font-size: var(--size-small) !important;
+}
+/* Letterbox bars match the playfield so wide or tall windows show no seam. */
+body[data-screen='play'] .console,
+body[data-screen='pause'] .console,
+body[data-screen='play'] .app-shell,
+body[data-screen='pause'] .app-shell {
+    background: #080f19;
+}
+body[data-screen='play'] .screen,
+body[data-screen='pause'] .screen {
+    background: #080f19;
+    border: 0;
+    outline: 0;
+    box-shadow: none;
+}
+
+/* Animated Home layer sits between the backdrop image and the menu panel. */
+#homeFx {
+    background: transparent;
+    outline: 0;
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    z-index: 0;
+    pointer-events: none;
+    image-rendering: pixelated;
+}
+/* Reading screens keep the same backdrop, dimmed and static. */
+.utility-view {
+    background:
+        linear-gradient(#0b1328f0, #0b1328f2),
+        url('./assets/home-scene.png') center/cover;
+}
+/* First-person launch overlay. */
+#launch {
+    position: fixed;
+    inset: 0;
+    z-index: 50;
+    background: #03060f;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+#launchCanvas {
+    width: 100vw;
+    height: 100dvh;
+    object-fit: contain;
+    image-rendering: pixelated;
+    background: #03060f;
+}
+#launchHint {
+    position: absolute;
+    bottom: 18px;
+    left: 0;
+    right: 0;
+    text-align: center;
+    margin: 0;
+    font-size: var(--size-small);
+    color: var(--muted);
+}
+
+#calibrationController,
+#inputRaw,
+#runDevice {
+    overflow-wrap: anywhere;
+    min-width: 0;
+}
+#backgroundMotion,
+#backgroundBrightness {
+    width: 100%;
+}
+#launchHint {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 12px;
+}
+#launchHint p {
+    margin: 0;
+    padding: 4px 12px;
+    background: #03060fe8;
+}
+
+/* Header actions stay reachable on compact windows. */
+@media (max-width: 720px) {
+    .shell-header {
+        flex-wrap: wrap;
+    }
+    .app-shell {
+        grid-template-rows: auto minmax(0, 1fr) 38px;
+    }
+    #profileLabel {
+        display: none;
+    }
+    body[data-screen='play'] .shell-header,
+    body[data-screen='pause'] .shell-header {
+        top: 6px;
+        right: 8px;
+    }
+}

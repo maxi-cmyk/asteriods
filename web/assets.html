@@ -5,12 +5,15 @@
   <meta name="viewport" content="width=device-width,initial-scale=1">
   <title>Asteroids — Pixel assets</title>
   <link rel="stylesheet" href="./style.css">
-</head>
+<style>.review-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:20px}.review-grid figure{margin:0}.review-grid canvas{width:100%;height:auto;image-rendering:pixelated}.review-grid figcaption{margin:10px 0 20px;font-size:14px}@media(max-width:700px){.review-grid{grid-template-columns:1fr}}</style></head>
 <body>
 <main class="gallery">
   <header><h1>Pixel assets</h1><a href="./index.html">Back to flight</a></header>
   <p class="description">The flight set at its real scale within a 480×270 field: small ships, three rock sizes, two pickups, and brief impact effects.</p>
   <canvas id="comparison" width="480" height="270" aria-label="Pixel-art comparison: ship 24 by 16 pixels; asteroids 32, 20, and 12 pixels; multishot and shield 12 pixels; eight explosion frames."></canvas>
+  <h2>Presentation review</h2>
+  <p>Static synthetic scenes for checking transition midpoints, warnings, and boss cues. These are visual fixtures, not recorded gameplay.</p>
+  <div id="presentationReview" class="review-grid"></div>
   <h2>Sprite atlas</h2>
   <p class="sheet-note">Sixteen ship aiming directions. Three rock variants per size, each with eight rotation frames. Original artwork; the bitmap font retains its Adafruit attribution.</p>
   <img class="sprite-sheet" src="./assets/sprites.png" width="256" height="448" alt="Original pixel sprite sheet: ship, exhaust, rotating asteroids, pickups, projectiles, explosions.">

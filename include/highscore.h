@@ -1,14 +1,6 @@
 #pragma once
 
-#include <Arduino.h>
-
-static const int HIGHSCORE_CAPACITY = 5;
-static const uint32_t HIGHSCORE_MAX = 999999;
-
-struct HighScoreEntry {
-    uint32_t score;
-    char initials[4];
-};
+#include "core/score_table.h"
 
 void highscore_init();
 uint32_t highscore_best();
