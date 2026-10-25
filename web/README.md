@@ -30,14 +30,13 @@ Set `CLANGXX` and `WASM_LD` to use another compatible toolchain.
 
 `renderer.mjs` reads a versioned scene buffer exported by `native/bridge.cpp`.
 It renders entity state directly; it does not enlarge the old OLED framebuffer.
-`assets/sprites.png` and `assets/sprites.json` contain 105 original sprite cells:
+`assets/sprites.png` and `assets/sprites.json` contain 99 original sprite cells:
 
 | Asset | Native size | Animation / variation |
 | --- | --- | --- |
-| Ship | 24×16 core, 32×32 aiming cells | Sixteen aiming directions; pixel exhaust |
+| Ship | 24×16 core, 32×32 aiming cells | Sixteen aiming directions; exhaust drawn in code. Six more hulls in `ships.png` |
 | Large / medium / small rock | 32×32 / 20×20 / 12×12 | Three variants, eight rotation frames each |
 | Multishot / shield pickup | 12×12 | Different symbols and colours |
-| Bullet | 6×2 | Amber normal / cyan powered |
 | Explosion | 32×32 | Eight frames over 320 ms |
 
 The palette uses light hulls, blue-grey rock, cyan shields and powered shots,
@@ -324,8 +323,9 @@ all existing top-five leaderboards. Storage failures show a status and keep
 records for the current visit; the next completed run retries saving.
 
 Record keys separate mode, friendly-fire setting, sorted run modifiers, and
-practice. Only solo with no modifiers and friendly fire off exists today;
-multiplayer attribution/contexts remain part of the multiplayer tasks.
+practice. Solo and local co-op now have separate record contexts; co-op also isolates
+friendly-fire on/off and stores team leaderboards separately. Network and versus
+modes remain planned.
 
 Validation on 2026-10-23: all 73 web tests passed, along with the production HD
 build, UBSan host gameplay checks using Xcode's SDK, and `pio run` for ESP32.
@@ -446,7 +446,7 @@ states, and static reading-screen backdrops are packaged in the production build
 
 Every fifth wave adds one sentinel with a visible health/core, entrance cue,
 locked lance/fan warnings, and recovery. See `COMBAT.md` for damage, scaling,
-points, shields, and future co-op policy. Multiplayer itself is not implemented.
+points, shields, and local co-op policy. LAN/server multiplayer remains planned.
 
 Developer tools → Pixel assets includes static synthetic transition/boss stress
 fixtures. These use the production renderer, but are not recorded gameplay or
@@ -492,3 +492,23 @@ Audio unlocks after a user gesture; browser autoplay restrictions still apply.
 The game-over low-tone tail is 665 ms (about 700 ms on the 20 ms simulation
 cadence). Audio-only ticks allow it to finish on Results without advancing the
 run or changing the displayed statistics.
+
+## Two-player local co-op (2026-10-25)
+
+Choose Play → Local Co-op. Assign different devices and profiles, ready both
+pilots, then Launch together. Supported combinations are keyboard/mouse +
+controller and two standard-mapped controllers. Both ships use one fixed arena;
+P1/P2 labels and diamond/square markers match the cyan/amber HUD strips.
+
+Each pilot starts with three lives and owns their weapons, pickups, score,
+combo and statistics. Friendly fire defaults off and is fixed for the run.
+Death affects only that pilot; a remaining life respawns them with protection,
+otherwise they spectate. No revives. Either pilot pauses the whole game. A lost
+assigned controller pauses and requires explicit reassignment before Resume.
+
+Results show individual statistics and team total. A separate team initials
+leaderboard supports the full sum of both individual scores and separates
+friendly-fire rules. Records offers Solo / Co-op FF off / Co-op FF on. Existing
+solo scores/settings are preserved. Controls and detailed combat rules are in
+`COMBAT.md`; implementation/evidence are in `../docs/ARCHITECTURE.md` and
+`../docs/ACCEPTANCE.md`. Physical two-person acceptance remains open.

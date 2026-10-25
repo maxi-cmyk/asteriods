@@ -6,12 +6,9 @@
 *.elf
 .tests/
 .c_cpp_properties.json
-/nextSteps.md
+/nextSteps*.md
 /.clang-format
 /inspo/
 /assets/
-/docs/ACCEPTANCE.md 
-/docs/ARCHITECTURE.md
-/docs/SETUP.md 
-/docs/UI-NAVIGATION.md
+/docs/
 /tools/

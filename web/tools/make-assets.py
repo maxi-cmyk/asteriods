@@ -75,14 +75,6 @@ for direction in range(16):
             if 0<=sx<24 and 0<=sy<16: rotated.p[y*32+x]=ship.p[sy*24+sx]
     add(f'ship-aim-{direction}',rotated)
 
-for frame in range(4):
-    flame=Sprite(9,6)
-    lengths=[7,5,8,6]
-    for y in range(1,5):
-        for x in range(9-lengths[frame]+abs(y-2),9): flame.put(x,y,'amber0')
-    flame.rect(5,2,4,2,'amber');flame.rect(7,2,2,2,'white')
-    add(f'thruster-{frame}',flame)
-
 for size,diameter in enumerate([32,20,12]):
     for variant in range(3):
         for frame in range(8):
@@ -125,9 +117,6 @@ for kind in ['multishot','shield']:
             for x in range(6-half,6+half): s.put(x,y,'cyan')
         s.rect(4,3,2,3,'white')
     add(kind,s)
-
-for name,color in [('bullet','amber'),('powered-bullet','cyan')]:
-    s=Sprite(6,2);s.rect(0,0,6,2,color);s.rect(3,0,3,1,'white');add(name,s)
 
 for frame in range(8):
     s=Sprite(32,32)

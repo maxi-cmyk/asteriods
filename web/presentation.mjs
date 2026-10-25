@@ -1,52 +1,116 @@
 // Menu-time presentation: the animated Home overlay and the Play launch
 // sequence. Both are pure functions of a presentation clock, so they hold no
 // gameplay state, never touch the simulation RNG, and freeze when not drawn.
+import { glow } from './fx.mjs';
+import { hullSprite } from './hangar.mjs';
 export const WIDTH = 480;
 export const HEIGHT = 270;
 const TAU = Math.PI * 2;
 const hash = n => { const x = Math.sin(n * 127.1 + 311.7) * 43758.5453; return x - Math.floor(x); };
 
-// Rays turn slowly clockwise (5 degrees a second), particles stream outward,
-// and individual rays flicker irregularly. The moons live in the static
-// backdrop image underneath and never move; the menu panel sits above.
-export const HOME_SPIN = 5 * Math.PI / 180;
-const CENTER = [WIDTH / 2, HEIGHT * .496];
-export function drawHome(ctx, ms, { reduced = false } = {}) {
+// Home overlay over the static violet backdrop: stars twinkle, a few flare
+// crosses pulse, dust drifts toward the planet and a shooting star crosses the
+// sky every few seconds. Everything is closed-form in `ms`, so it holds no
+// state and freezes when not drawn. Reduced motion draws nothing.
+const SKY = [
+  [60, 40], [150, 22], [210, 70], [290, 18], [340, 54], [395, 30], [452, 78], [24, 120], [110, 160], [196, 128],
+  [262, 96], [300, 150], [30, 210], [90, 244], [170, 200], [330, 236], [410, 214], [460, 168], [240, 22], [128, 96],
+];
+export function drawHome(ctx, ms, { reduced = false, art = null, hull = 'vanguard' } = {}) {
   ctx.clearRect(0, 0, WIDTH, HEIGHT);
   if (reduced) return;
-  const t = Math.floor(ms / 50) * .05, spin = t * HOME_SPIN;
-  const [cx, cy] = CENTER;
-  for (let i = 0; i < 40; i++) {
-    const angle = i * TAU / 40 + hash(i) * .1 + spin;
-    const flicker = .55 + .45 * Math.sin(t * (.7 + hash(i + 9) * 1.6) + i * 2.3) * Math.sin(t * (.31 + hash(i + 4)) + i);
-    const alpha = Math.max(0, .05 + .1 * flicker);
-    ctx.fillStyle = `rgba(90, 140, 255, ${alpha.toFixed(3)})`;
-    for (let d = 26; d < 330; d += 2) {
-      const x = Math.round(cx + Math.cos(angle) * d), y = Math.round(cy + Math.sin(angle) * d * .98);
-      if (x < 0 || y < 0 || x >= WIDTH || y >= HEIGHT) break;
-      ctx.fillRect(x, y, 1, 1);
+  const t = Math.floor(ms / 50) * .05;
+  // Twinkling stars: each fades on its own slow period.
+  for (let i = 0; i < 90; i++) {
+    const x = Math.floor(hash(i + 1) * WIDTH), y = Math.floor(hash(i + 2) * (HEIGHT - 30));
+    const pulse = .5 + .5 * Math.sin(t * (.6 + hash(i + 3) * 1.4) + hash(i + 4) * TAU);
+    ctx.fillStyle = `rgba(${hash(i + 5) > .5 ? '220,210,255' : '255,225,200'}, ${(.1 + .7 * pulse * pulse).toFixed(3)})`;
+    ctx.fillRect(x, y, 1, 1);
+  }
+  // Flare crosses on a few bright stars.
+  for (const [i, [x, y]] of SKY.entries()) {
+    if (i % 3) continue;
+    const k = .5 + .5 * Math.sin(t * (.5 + hash(i) * .8) + i * 1.7);
+    if (k < .35) continue;
+    ctx.fillStyle = `rgba(255,255,255,${(.5 + .5 * k).toFixed(3)})`; ctx.fillRect(x, y, 1, 1);
+    ctx.fillStyle = `rgba(150,170,255,${(.7 * k).toFixed(3)})`;
+    ctx.fillRect(x - 1, y, 1, 1); ctx.fillRect(x + 1, y, 1, 1); ctx.fillRect(x, y - 1, 1, 1); ctx.fillRect(x, y + 1, 1, 1);
+  }
+  // Dust drifts right and slightly down, wrapping at the edges.
+  for (let i = 0; i < 36; i++) {
+    const speed = 6 + hash(i + 11) * 18;
+    const x = (hash(i + 12) * WIDTH + t * speed) % WIDTH, y = (hash(i + 13) * HEIGHT + t * speed * .22) % HEIGHT;
+    ctx.fillStyle = `rgba(255,200,170,${(.12 + .22 * hash(i + 14)).toFixed(3)})`;
+    ctx.fillRect(Math.floor(x), Math.floor(y), 1, 1);
+  }
+  if (art) { sunGlare(ctx, t); flyby(ctx, art, hull, t); }
+  // Shooting star: an 11 second loop, visible for the first 0.9 s.
+  const phase = (t % 11) / .9;
+  if (phase < 1) {
+    const loop = Math.floor(t / 11), startX = 40 + hash(loop + 70) * 260, startY = 10 + hash(loop + 71) * 70;
+    for (let k = 0; k < 14; k++) {
+      const p = phase * 1.2 - k * .03;
+      if (p < 0 || p > 1) continue;
+      ctx.fillStyle = `rgba(255,${240 - k * 8},${210 - k * 10},${(1 - k / 14).toFixed(3)})`;
+      ctx.fillRect(Math.round(startX + p * 150), Math.round(startY + p * 70), 1 + (k < 2 ? 1 : 0), 1);
     }
   }
-  // Particles are placed in closed form: no state, so nothing to reset or leak.
-  for (let i = 0; i < 110; i++) {
-    const speed = 16 + hash(i + 31) * 74, span = 150 + hash(i + 57) * 200;
-    const travelled = (t * speed + hash(i) * span) % span;
-    const angle = hash(i + 3) * TAU + spin;
-    const d = 22 + travelled, fade = 1 - travelled / span;
-    const x = Math.round(cx + Math.cos(angle) * d), y = Math.round(cy + Math.sin(angle) * d);
-    ctx.fillStyle = `rgba(200, 220, 255, ${(.15 + .6 * fade * Math.min(1, travelled / 12)).toFixed(3)})`;
-    ctx.fillRect(x, y, 1 + (hash(i + 5) > .8 ? 1 : 0), 1);
+}
+
+// Sunlight skimming the planet's limb: a soft bloom that breathes, a thin
+// anamorphic streak and a few faint lens ghosts along the line from the sun
+// (off-screen upper left) through the planet. Additive, so it only brightens.
+const GLARE = [262, 150];
+function sunGlare(ctx, t) {
+  const breathe = .5 + .5 * Math.sin(t * .7), flutter = .5 + .5 * Math.sin(t * 2.3 + 1);
+  const [x, y] = GLARE;
+  glow(ctx, x, y, 78, '255,160,110', .26 + .12 * breathe);
+  glow(ctx, x, y, 30, '255,232,196', .34 + .2 * breathe);
+  glow(ctx, x, y, 9, '255,255,246', .55 + .3 * flutter);
+  ctx.save();
+  ctx.globalCompositeOperation = 'lighter';
+  const streak = ctx.createLinearGradient(x - 120, 0, x + 120, 0);
+  streak.addColorStop(0, 'rgba(255,190,140,0)');
+  streak.addColorStop(.5, `rgba(255,236,206,${(.55 + .25 * breathe).toFixed(2)})`);
+  streak.addColorStop(1, 'rgba(255,190,140,0)');
+  ctx.fillStyle = streak;
+  ctx.fillRect(x - 120, y, 240, 1);
+  ctx.globalAlpha = .5;
+  ctx.fillRect(x - 70, y - 1, 140, 3);
+  ctx.restore();
+  // Ghosts: reflections of the sun spaced along the sun-to-planet line.
+  const [sx, sy, px, py] = [30, 10, 372, 214];
+  for (const [f, r, a] of [[.3, 14, .1], [.56, 7, .14], [.8, 22, .07]]) {
+    glow(ctx, sx + (px - sx) * f, sy + (py - sy) * f, r, '255,200,160', a * (.7 + .3 * breathe));
   }
-  const glow = .1 + .06 * Math.sin(t * 2.1) * Math.sin(t * .83 + 1);
-  ctx.fillStyle = `rgba(190, 210, 255, ${glow.toFixed(3)})`;
-  ctx.fillRect(Math.round(cx) - 14, Math.round(cy) - 14, 28, 28);
-  if (ctx.arc) {
-    ctx.save();ctx.globalCompositeOperation='destination-out';ctx.fillStyle='#000';
-    for(const [x,y,radius] of [[7,7,34],[365,62,29],[94,145,12],[39,248,44],[452,247,29],[cx,cy,17]]){
-      ctx.beginPath();ctx.arc(x,y,radius,0,TAU);ctx.fill();
+}
+
+// A ship crosses the sky every 17 seconds, diving in from the top and passing in
+// front of the planet, clear of the menu column on the left. It flies the hull equipped for the active profile.
+const FLYBY_MS = 17000, FLYBY_SPAN = 12000;
+function flyby(ctx, art, hull, t) {
+  const cycle = (t * 1000) % FLYBY_MS;
+  if (cycle > FLYBY_SPAN) return;
+  const p = cycle / FLYBY_SPAN, path = q => [150 + q * 410, -34 + q * 304 + Math.sin(q * TAU) * 6];
+  const [x, y] = path(p), [nx, ny] = path(Math.min(1, p + .01));
+  const angle = Math.atan2(ny - y, nx - x);
+  const direction = ((Math.round(angle * 8 / Math.PI) % 16) + 16) % 16;
+  const cell = art.sprites[hullSprite(hull, direction)];
+  if (!cell) return;
+  const scale = 2, dx = Math.cos(angle), dy = Math.sin(angle), tail = 10 * scale;
+  glow(ctx, x - dx * tail * 1.5, y - dy * tail * 1.5, 22, '255,130,60', .65);
+  glow(ctx, x - dx * tail, y - dy * tail, 10, '120,220,255', .5);
+  const flick = 1 + Math.floor(t * 12) % 3;
+  for (const [colour, length, size] of [['#9d502e', 9, 5], ['#efb963', 6, 3], ['#fff5d2', 3, 2]]) {
+    ctx.fillStyle = colour;
+    for (let i = 0; i < (length + flick) * scale; i += 2) {
+      ctx.fillRect(Math.round(x - dx * (tail + i) - size / 2), Math.round(y - dy * (tail + i) - size / 2), size, size);
     }
-    ctx.restore();
   }
+  ctx.drawImage(art.atlas, cell.x, cell.y, cell.w, cell.h, Math.round(x - 16 * scale), Math.round(y - 16 * scale), cell.w * scale, cell.h * scale);
+  // Passing the glare, the hull catches a brief highlight.
+  const near = 1 - Math.min(1, Math.hypot(x - GLARE[0], y - GLARE[1]) / 95);
+  if (near > 0) glow(ctx, x, y, 26, '255,236,200', .35 * near);
 }
 
 // First-person launch: a restrained cockpit window frames blue-white stars
@@ -72,7 +136,15 @@ export function warpDistance(ms) {
 export function drawWarp(ctx, ms) {
   ms = Math.floor(ms / 40) * 40;
   const speed = warpSpeed(ms), cx = WIDTH / 2, cy = HEIGHT / 2;
-  ctx.fillStyle = '#03060f';
+  ctx.fillStyle = '#07031a';
+  ctx.fillRect(0, 0, WIDTH, HEIGHT);
+  // Violet nebula glow at the vanishing point, brightening as speed builds.
+  const glowRadius = 150 + speed * 70;
+  const glow = ctx.createRadialGradient(cx, cy, 0, cx, cy, glowRadius);
+  glow.addColorStop(0, `rgba(255, 150, 110, ${(.1 + speed * .28).toFixed(3)})`);
+  glow.addColorStop(.35, `rgba(150, 70, 190, ${(.14 + speed * .12).toFixed(3)})`);
+  glow.addColorStop(1, 'rgba(7, 3, 26, 0)');
+  ctx.fillStyle = glow;
   ctx.fillRect(0, 0, WIDTH, HEIGHT);
   const travel = warpDistance(ms);
   for (let i = 0; i < 150; i++) {
@@ -83,20 +155,29 @@ export function drawWarp(ctx, ms) {
     const tail = 1 + speed * (r * .22);
     const x1 = cx + Math.cos(angle) * r, y1 = cy + Math.sin(angle) * r * .9;
     const x0 = cx + Math.cos(angle) * (r - tail), y0 = cy + Math.sin(angle) * (r - tail) * .9;
-    ctx.strokeStyle = `rgba(${170 + Math.round(60 * lane)}, ${200 + Math.round(40 * lane)}, 255, ${(.2 + .7 * base).toFixed(2)})`;
+    // Streaks run from violet in the distance to warm white up close; a few are amber.
+    const warm = hash(i + 7) > .82;
+    const red = warm ? 255 : 170 + Math.round(85 * lane), green = warm ? 190 + Math.round(40 * lane) : 150 + Math.round(86 * lane), blue = warm ? 120 : 255 - Math.round(40 * lane);
+    ctx.strokeStyle = `rgba(${red}, ${green}, ${blue}, ${(.2 + .7 * base).toFixed(2)})`;
     ctx.lineWidth = base > .75 ? 2 : 1;
     ctx.beginPath(); ctx.moveTo(Math.round(x0) + .5, Math.round(y0) + .5); ctx.lineTo(Math.round(x1) + .5, Math.round(y1) + .5); ctx.stroke();
   }
-  // Fixed perspective window and instrument sill, matching the approved POV.
-  ctx.fillStyle = '#05080f';
+  // Fixed perspective window and instrument sill: dark violet with an amber rim light.
+  ctx.fillStyle = '#0a0518';
   ctx.beginPath();ctx.moveTo(0,0);ctx.lineTo(5,0);ctx.lineTo(18,202);ctx.lineTo(31,244);ctx.lineTo(0,244);ctx.fill();
   ctx.beginPath();ctx.moveTo(WIDTH,0);ctx.lineTo(WIDTH-5,0);ctx.lineTo(WIDTH-18,202);ctx.lineTo(WIDTH-31,244);ctx.lineTo(WIDTH,244);ctx.fill();
   ctx.fillRect(0,244,WIDTH,26);
-  ctx.strokeStyle='#304e72';ctx.lineWidth=1;
+  ctx.strokeStyle='#5a3c98';ctx.lineWidth=1;
   ctx.beginPath();ctx.moveTo(5.5,0);ctx.lineTo(18.5,202);ctx.lineTo(31.5,244);ctx.lineTo(WIDTH-31.5,244);ctx.lineTo(WIDTH-18.5,202);ctx.lineTo(WIDTH-5.5,0);ctx.stroke();
-  for(const x of [95,230,355]){ctx.fillStyle='#101f31';ctx.fillRect(x,251,28,10);ctx.fillStyle='#4bb4d2';ctx.fillRect(x+4,254,16,1);ctx.fillRect(x+4,257,10,1);}
+  ctx.strokeStyle=`rgba(255, 190, 110, ${(.25 + speed * .5).toFixed(2)})`;
+  ctx.beginPath();ctx.moveTo(31.5,243.5);ctx.lineTo(WIDTH-31.5,243.5);ctx.stroke();
+  const lights=['#ffbe6e','#be96e6','#78ebff'];
+  [95,230,355].forEach((x,i)=>{
+    ctx.fillStyle='#160a34';ctx.fillRect(x,251,28,10);
+    ctx.fillStyle=lights[i];ctx.fillRect(x+4,254,16,1);ctx.fillRect(x+4,257,10,1);
+  });
   if (ms >= WARP_ACTION_MS - 300) {
-    ctx.fillStyle = '#9ac8ff';
+    ctx.fillStyle = '#fff0d0';
     ctx.globalAlpha = Math.min(1, (ms - (WARP_ACTION_MS - 300)) / 300);
     ctx.fillRect(WIDTH / 2 - 1, HEIGHT / 2 - 1, 2, 2);
     ctx.globalAlpha = 1;

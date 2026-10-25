@@ -1,9 +1,14 @@
+import {CoopInput, supportedPad} from './coop-input.mjs';
+import {createCoopScreen} from './screens/coop.mjs';
 import { renderDiagnostics } from './screens/diagnostics.mjs';
 import { renderPractice } from './screens/practice.mjs';
 import { renderPlayChrome } from './screens/play-chrome.mjs';
 import { element } from './dom.mjs';
 import { createSettingsScreen } from './screens/settings.mjs';
 import { createHelpScreen } from './screens/help.mjs';
+import { createHangarScreen } from './screens/hangar.mjs';
+import { createModeScreen } from './screens/mode.mjs';
+import { loadHangar } from './hangar.mjs';
 import { createRecordsActions } from './screens/records-actions.mjs';
 import { renderPlayHud } from './screens/play.mjs';
 import { renderResultsScreen } from './screens/results.mjs';
@@ -50,6 +55,8 @@ try {
     storage = localStorage;
 } catch {}
 const profileStore = loadProfiles(storage);
+const hangarStore = loadHangar(storage);
+let gameArt = null;
 const settings = sanitizeSettings(
     profileStore.profiles[profileStore.activeProfile],
 );
@@ -63,6 +70,11 @@ try {
     }
 } catch {}
 const controls = new Controls(settings);
+const coopInput = new CoopInput(profileStore.profiles);
+function connectedPads() { try { return Array.from(navigator.getGamepads?.() || []); } catch { return []; } }
+function keyboardControls() { return runtime?.coop ? coopInput.keyboard() : controls; }
+const coopScreen = createCoopScreen({input:coopInput,getPads:connectedPads,
+    getRuntime:()=>runtime,getNavigation:()=>navigation,launch:beginLaunch,profiles:()=>profileStore.profiles});
 const settingsDraft = new SettingsDraft(profileStore, settings);
 const applyButton = element('applySettings');
 const audio = new GameAudio(settings);
@@ -78,6 +90,7 @@ let menuEditing = false,
 const menuInput = new MenuInput();
 const physicalKeys = new Set(),
     pointerButtons = new Set();
+let coopResumeReady = false;
 let gameplayReady = false,
     routeFromHistory = false,
     lastMenuPad = null;
@@ -153,6 +166,19 @@ const settingsScreen = createSettingsScreen({
     calibration,
 });
 const helpScreen = createHelpScreen(settings);
+const hangarScreen = createHangarScreen({
+    getArt: () => gameArt,
+    store: hangarStore,
+    storage,
+    activeProfile: () => profileStore.activeProfile,
+    reduced: () => matchMedia('(prefers-reduced-motion: reduce)').matches,
+});
+const modeScreen = createModeScreen({
+    getArt: () => gameArt,
+    store: hangarStore,
+    activeProfile: () => profileStore.activeProfile,
+    reduced: () => matchMedia('(prefers-reduced-motion: reduce)').matches,
+});
 function renderSettings() {
     settingsScreen.render();
 }
@@ -192,18 +218,17 @@ practiceButton.addEventListener('click', () => {
     if (consumeDemo()) return;
     navigation.start(true);
 });
-element('resetTargets').addEventListener('click', () => {
-    runtime.resetTargets();
-    canvas.focus();
-});
-element('practiceDoubleFire').addEventListener('click', () => {
-    runtime.doubleFire();
-    canvas.focus();
-});
-element('practiceMultishot').addEventListener('click', () => {
-    runtime.multishot();
-    canvas.focus();
-});
+// Practice tools run from the Pause menu and drop you straight back into the flight.
+for (const [id, action] of [
+    ['resetTargets', () => runtime.resetTargets()],
+    ['practiceDoubleFire', () => runtime.doubleFire()],
+    ['practiceMultishot', () => runtime.multishot()],
+]) {
+    element(id).addEventListener('click', () => {
+        action();
+        navigation.resume();
+    });
+}
 element('endPractice').addEventListener('click', () => {
     controls.clear();
     pointerPosition = null;
@@ -213,6 +238,7 @@ element('endPractice').addEventListener('click', () => {
     fitCanvas();
 });
 element('continueResults').addEventListener('click', () => {
+    coopInput.clear();
     runtime.continueResults();
     controls.clear();
     gameplayReady = false;
@@ -227,6 +253,10 @@ const recordsActions = createRecordsActions({
     draw,
 });
 function findController() {
+    if (runtime?.coop) {
+        const owner=isSettingsOpen()?Math.max(0,coopInput.profileIds.indexOf(profileStore.activeProfile)):coopInput.menuOwner;
+        return coopInput.pad(owner,connectedPads());
+    }
     let pads = [];
     try {
         pads = [...(navigator.getGamepads?.() || [])];
@@ -246,7 +276,7 @@ function findController() {
         ? `${pad.id} · connected`
         : pads.some(Boolean)
           ? 'Controller mapping unavailable · keyboard ready'
-          : 'Keyboard ready · connect a controller and press a button';
+          : '';
     const compact = pad ? 'Controller connected' : 'Keyboard + mouse';
     controllerLabel.textContent = pad ? compact : label;
     element('runDevice').textContent = pad ? compact : 'Keyboard + mouse';
@@ -263,7 +293,12 @@ function draw() {
         ['play', 'pause'].includes(navigation.screen) &&
         runtime.state !== 'results'
     )
-        renderer.render(scene);
+    {
+        renderer.hulls = runtime.coop
+            ? [0, 1].map((slot) => hangarStore.profiles[coopInput.profileIds?.[slot] ?? slot])
+            : [hangarStore.profiles[profileStore.activeProfile]];
+        renderer.render(scene, runtime.coop ? runtime.coopPlayers() : null);
+    }
     renderHomeScreen({
         demoEngine,
         navigation,
@@ -289,7 +324,7 @@ function draw() {
               : 'off',
         suspended,
     );
-    const practicePanel = renderPractice({
+    renderPractice({
         scene,
         navigation,
         runtime,
@@ -307,6 +342,7 @@ function draw() {
             ? `${(stats.doubleFireMs / 1000).toFixed(1)}s`
             : 'INACTIVE',
     );
+    element('doubleFireStatus').closest('.ability')?.setAttribute('data-state', stats.doubleFireMs ? 'active' : 'empty');
     update(element('liveCps'), String(stats.cps));
     update(element('liveAccuracy'), accuracyText(stats.hits, stats.spawned));
     update(element('liveChain'), String(stats.longestChain));
@@ -330,7 +366,6 @@ function draw() {
     const nextState = renderPlayChrome({
         runtime,
         navigation,
-        practicePanel,
         showResults,
         canvas,
         fireButton,
@@ -345,7 +380,8 @@ function draw() {
         update,
         isSettingsOpen,
     });
-    if (nextState !== lastState) gameplayReady = false;
+    coopScreen.render();
+    if (nextState !== lastState) { gameplayReady = false; if(runtime.coop && nextState==='game-over')fireButton.focus(); }
     lastState = nextState;
 }
 // Preserve brief controller releases between the fixed simulation ticks.
@@ -368,7 +404,8 @@ setInterval(() => {
             (p) => p?.index === activePadIndex && p.connected,
         ) ||
         Array.from(pads).find((p) => p?.connected && p.mapping === 'standard');
-    controls.observeController(pad);
+    if(runtime.coop)coopInput.observe(connectedPads());
+    else controls.observeController(pad);
 }, 4);
 const homeFx = element('homeFx').getContext('2d'),
     launchCanvas = element('launchCanvas').getContext('2d');
@@ -403,7 +440,7 @@ function beginLaunch(go) {
         pointerPosition = null;
         audio.stopWarp();
         if (started) go();
-        else element('play').focus();
+        else { coopInput.live=false; if(navigation.screen==='lobby')element('coopStart').focus();else element('play').focus(); }
     });
 }
 element('skipLaunch').addEventListener('click', () => launch.skip());
@@ -428,6 +465,7 @@ function frame(now) {
     presentationLast = now;
     if (!suspended) presentationTime += elapsed;
     if (launch.active) {
+        if(coopInput.live && !coopInput.valid(connectedPads())) { launch.cancel();coopScreen.reset(); }
         if (!suspended) {
             if (launch.reduced) {
                 launchCanvas.fillStyle = '#03060f';
@@ -452,11 +490,20 @@ function frame(now) {
         if (frame !== lastHomeFrame) {
             drawHome(homeFx, presentationTime * settings.backgroundMotion, {
                 reduced: reducedQuery.matches,
+                art: gameArt,
+                hull: hangarStore.profiles[profileStore.activeProfile],
             });
             lastHomeFrame = frame;
         }
     }
-    const pad = findController();
+    if (navigation?.screen === 'hangar') hangarScreen.draw(presentationTime);
+    else if (navigation?.screen === 'mode') modeScreen.draw(presentationTime);
+    if(runtime?.coop && navigation.screen==='pause') {
+        const sampled=coopInput.sample(connectedPads(),now);
+        runtime.releaseCoopLasers(sampled.players);
+    }
+    if(runtime?.coop && navigation.screen==='pause' && coopInput.neutral(connectedPads(),physicalKeys.size,pointerButtons.size))coopResumeReady=true;
+    const pad = runtime?.coop ? coopInput.pad(coopInput.menuOwner,connectedPads()) : findController();
     diagnosticPad = pad;
     if (
         gameplayReady &&
@@ -464,7 +511,8 @@ function frame(now) {
         runtime.state !== 'results' &&
         !suspended
     )
-        controls.observeController(pad);
+        if(runtime.coop)coopInput.observe(connectedPads());
+        else controls.observeController(pad);
     const padId = pad?.index ?? null;
     if (padId !== lastMenuPad) {
         menuInput.reset();
@@ -477,10 +525,11 @@ function frame(now) {
     if (
         !suspended &&
         (navigation?.screen !== 'play' ||
-            runtime?.state === 'results' ||
+            runtime?.state === 'results' || (runtime?.coop && runtime.state==='game-over') ||
             navigation.pending)
     )
-        handleMenuPad(pad, now);
+        if(navigation.screen==='lobby' && !navigation.pending)coopScreen.handlePads(connectedPads(),now);
+        else handleMenuPad(pad, now);
     // Cross confirms the focused menu action; gameplay bindings stay separate.
     if (isSettingsOpen() && settingsUi.category === 'calibration')
         calibration.update(now);
@@ -506,8 +555,8 @@ function advanceSimulation(now, pad) {
         }
         if (pointerPosition) {
             const rect = canvas.getBoundingClientRect(),
-                scene = runtime.scene();
-            controls.aimAt(
+                scene = runtime.coop ? runtime.coopPlayers()[Math.max(0,coopInput.keyboardSlot())].scene : runtime.scene();
+            keyboardControls()?.aimAt(
                 ((pointerPosition[0] - rect.left) * WIDTH) / rect.width -
                     scene[4],
                 ((pointerPosition[1] - rect.top) * HEIGHT) / rect.height -
@@ -517,6 +566,17 @@ function advanceSimulation(now, pad) {
         if (navigation.screen === 'home') demoEngine?.step();
         else if (runtime.state === 'results') runtime.step();
         else {
+            if (runtime.coop) {
+                const pads=connectedPads();
+                if(!coopInput.valid(pads)) { navigation.pause();accumulator=0;break; }
+                if(!gameplayReady && coopInput.neutral(pads,physicalKeys.size,pointerButtons.size)) {
+                    coopInput.clear();gameplayReady=true;
+                }
+                runtime.step(gameplayReady?coopInput.sample(pads,now):{players:[{},{}]});
+                navigation.sync();
+                accumulator-=20;
+                continue;
+            }
             const held =
                 physicalKeys.size ||
                 pointerButtons.size ||
@@ -663,7 +723,7 @@ window.addEventListener('keydown', (event) => {
     }
     if (
         navigation?.screen !== 'play' ||
-        runtime?.state === 'results' ||
+        runtime?.state === 'results' || (runtime?.coop && runtime.state==='game-over') ||
         navigation.pending
     ) {
         if (event.repeat && ['Enter', 'Space'].includes(event.code)) {
@@ -722,12 +782,13 @@ window.addEventListener('keydown', (event) => {
     }
     if (
         navigation.live &&
-        ['Escape', settings.keys.pause].includes(event.code)
+        ['Escape', keyboardControls()?.settings.keys.pause ?? settings.keys.pause].includes(event.code)
     ) {
         event.preventDefault();
-        if (!event.repeat) navigation.pause();
+        if (!event.repeat) { if(runtime.coop && coopInput.keyboardSlot()>=0)coopInput.menuOwner=coopInput.keyboardSlot(); navigation.pause(); }
         return;
     }
+    const keySettings = keyboardControls()?.settings ?? settings;
     const accepted = [
         'ArrowLeft',
         'ArrowRight',
@@ -735,7 +796,7 @@ window.addEventListener('keydown', (event) => {
         'ArrowDown',
         'Enter',
         'Escape',
-        ...Object.values(settings.keys),
+        ...Object.values(keySettings.keys),
     ];
     if (
         !accepted.includes(event.code) ||
@@ -744,12 +805,12 @@ window.addEventListener('keydown', (event) => {
         return;
     event.preventDefault();
     unlockAudio();
-    controls.keyDown(event.code, event.repeat);
+    keyboardControls()?.keyDown(event.code, event.repeat);
 });
 canvas.addEventListener('pointermove', (event) => {
     if (navigation.screen === 'play' && event.pointerType === 'mouse') {
         pointerPosition = [event.clientX, event.clientY];
-        controls.activateMouseAim();
+        keyboardControls()?.activateMouseAim();
     }
 });
 canvas.addEventListener('pointerdown', (event) => {
@@ -761,13 +822,13 @@ canvas.addEventListener('pointerdown', (event) => {
         return;
     event.preventDefault();
     canvas.focus();
-    controls.activateMouseAim();
+    keyboardControls()?.activateMouseAim();
     pointerPosition = [event.clientX, event.clientY];
-    controls.pointerDown(event.button, performance.now());
+    keyboardControls()?.pointerDown(event.button, performance.now());
     canvas.setPointerCapture(event.pointerId);
 });
 window.addEventListener('pointerup', (event) =>
-    controls.pointerUp(event.button),
+    keyboardControls()?.pointerUp(event.button),
 );
 canvas.addEventListener('pointercancel', () => {
     controls.clear();
@@ -776,7 +837,7 @@ canvas.addEventListener('pointercancel', () => {
 canvas.addEventListener('contextmenu', (event) => event.preventDefault());
 window.addEventListener('keyup', (event) => {
     physicalKeys.delete(event.code);
-    controls.keyUp(event.code);
+    keyboardControls()?.keyUp(event.code);
 });
 window.addEventListener('pointerdown', (event) => {
     menuDevice = 'mouse';
@@ -787,6 +848,8 @@ window.addEventListener('pointerup', (event) =>
 );
 window.addEventListener('pointerdown', unlockAudio);
 function suspend() {
+    coopScreen.resetMenu();
+    coopInput.clear();
     presentationLast = null;
     controls.clear();
     physicalKeys.clear();
@@ -814,7 +877,13 @@ document.addEventListener('visibilitychange', () => {
         audio.suspend(isSettingsOpen());
     }
 });
-window.addEventListener('gamepaddisconnected', () => {
+window.addEventListener('gamepaddisconnected', (event) => {
+    if(runtime?.coop) {
+        if(coopInput.lost(event.gamepad.index)) {
+            navigation.pause();coopInput.clear();menuInput.reset();gameplayReady=false;draw();
+        }
+        return;
+    }
     findController();
     controls.clear();
     menuInput.reset();
@@ -823,6 +892,8 @@ window.addEventListener('gamepaddisconnected', () => {
         'Controller disconnected. Reconnect and release controls, or continue with keyboard.';
 });
 fireButton.addEventListener('click', () => {
+    if(runtime?.coop && runtime.state==='game-over') { runtime.abandon();coopScreen.reset();navigation.set('lobby');return; }
+    if(runtime?.coop && runtime.state==='initials') { runtime.step({firePressed:true});draw();return; }
     if (runtime?.state === 'results') {
         runtime.continueResults();
         controls.discardFirePresses();
@@ -892,6 +963,10 @@ function fitCanvas() {
     );
     field.style.width = `${size.width}px`;
     field.style.height = `${size.height}px`;
+    // Share the letterbox height so the HUD can move into tall bars.
+    const bar = Math.max(0, (panel.clientHeight - size.height) / 2);
+    document.body.style.setProperty('--bar', `${bar}px`);
+    document.body.dataset.bars = String(bar >= 78);
 }
 window.addEventListener('resize', fitCanvas);
 document.addEventListener('fullscreenchange', fitCanvas);
@@ -919,6 +994,7 @@ function menuScope() {
     if (runtime?.state === 'results' && navigation.screen === 'play')
         return element('runSummary');
     if (navigation.screen === 'pause') return element('pauseMenu');
+    if (runtime?.coop && runtime.state==='game-over')return document.querySelector('.toolbar');
     return document.querySelector(`[data-view="${navigation.screen}"]`);
 }
 function moveMenuFocus(direction) {
@@ -935,15 +1011,75 @@ function moveMenuFocus(direction) {
     const current = nodes.indexOf(document.activeElement);
     nodes[(current + direction + nodes.length) % nodes.length].focus();
 }
+// Moves focus toward the nearest control in a direction, so a grid (the Hangar
+// bay, a pair of mode cards) works with the d-pad as it looks, not as the DOM
+// is ordered. Falls back to wrapping through the list when nothing lies that way.
+function scrollerOf(el) {
+    for (let node = el.parentElement; node; node = node.parentElement) {
+        const { overflowY } = getComputedStyle(node);
+        if (/(auto|scroll)/.test(overflowY) && node.scrollHeight > node.clientHeight + 1) return node;
+    }
+    return document.scrollingElement;
+}
+function onScreen(el) {
+    const box = el.getBoundingClientRect(), scroller = scrollerOf(el);
+    const clip = scroller === document.scrollingElement ? { top: 0, bottom: innerHeight } : scroller.getBoundingClientRect();
+    const middle = box.top + box.height / 2;
+    return middle >= Math.max(0, clip.top) && middle <= Math.min(innerHeight, clip.bottom);
+}
+function moveMenuFocusToward(dx, dy) {
+    const nodes = [...menuScope().querySelectorAll('button,a,input,select')].filter(
+        (el) => !el.disabled && !el.hidden && !el.closest('[inert]') && el.getClientRects().length,
+    );
+    const current = nodes.indexOf(document.activeElement);
+    if (current < 0) { nodes[0]?.focus(); return; }
+    // From the Settings rail, Right enters the panel at its first control.
+    if (dx > 0 && nodes[current].closest('.settings-tabs')) {
+        const first = nodes.find((el) => el.closest('[data-settings-panel]'));
+        if (first) { first.focus(); return; }
+    }
+    const from = nodes[current].getBoundingClientRect(), home = scrollerOf(nodes[current]);
+    const fx = from.left + from.width / 2, fy = from.top + from.height / 2;
+    const options = [];
+    for (const [index, node] of nodes.entries()) {
+        if (index === current) continue;
+        const box = node.getBoundingClientRect();
+        const along = ((box.left + box.width / 2) - fx) * dx + ((box.top + box.height / 2) - fy) * dy;
+        if (along <= 2) continue;
+        const across = Math.abs(((box.left + box.width / 2) - fx) * dy + ((box.top + box.height / 2) - fy) * dx);
+        options.push({ node, rank: along + across * 2.5, same: scrollerOf(node) === home, shown: onScreen(node) });
+    }
+    const nearest = (list) => list.sort((a, b) => a.rank - b.rank)[0]?.node;
+    // Sideways: the nearest visible control, wherever it lives. Up and down: walk
+    // the current scrolling area in order (revealing hidden rows) before leaving it.
+    const target = dx
+        ? nearest(options.filter((o) => o.shown)) || nearest(options)
+        : nearest(options.filter((o) => o.same)) || nearest(options.filter((o) => o.shown)) || nearest(options);
+    if (target) target.focus();
+    else moveMenuFocus(dx + dy > 0 ? 1 : -1);
+}
+// L1 / R1 step through the active tab strip (Settings categories, Hangar pilots).
+function stepMenuTab(direction) {
+    const tabs = [...menuScope().querySelectorAll('.settings-tabs button, .hangar-pilots button')].filter(
+        (el) => !el.disabled && !el.closest('[inert]') && el.getClientRects().length,
+    );
+    if (tabs.length < 2) return false;
+    const active = tabs.findIndex((el) => el.getAttribute('aria-pressed') === 'true');
+    const target = tabs[(Math.max(0, active) + direction + tabs.length) % tabs.length];
+    target.click();
+    return true;
+}
 function handleMenuPad(pad, now) {
     if (!navigation) return;
-    const input = menuInput.sample(pad, now, settings.buttons.pause);
+    const menuPause=runtime?.coop?coopInput.controls[coopInput.menuOwner].settings.buttons.pause:settings.buttons.pause;
+    const input = menuInput.sample(pad, now, menuPause);
     if (
         !input.direction &&
         !input.horizontal &&
         !input.confirm &&
         !input.back &&
-        !input.pause
+        !input.pause &&
+        !input.tab
     )
         return;
     menuDevice = 'controller';
@@ -953,14 +1089,15 @@ function handleMenuPad(pad, now) {
         return;
     }
     const field = document.activeElement;
+    if (input.tab && !navigation.pending) stepMenuTab(input.tab);
     if (input.horizontal && !adjustField(field, input.horizontal))
-        moveMenuFocus(input.horizontal);
+        moveMenuFocusToward(input.horizontal, 0);
     if (input.direction) {
         if (menuEditing && field.matches('select'))
             adjustField(field, input.direction);
         else {
             menuEditing = false;
-            moveMenuFocus(input.direction);
+            moveMenuFocusToward(0, input.direction);
         }
     }
     if (input.back) {
@@ -994,6 +1131,10 @@ function handleMenuPad(pad, now) {
     }
 }
 function screenChanged(screen, previous) {
+    coopScreen.resetMenu();
+    coopInput.clear();
+    coopResumeReady=false;
+    if(screen==='home' && !runtime?.coop) {coopInput.live=false; element('resume').disabled=false;}
     if (screen !== 'home') demoEngine?.stop();
     if (previous === 'records' && screen !== 'records')
         recordsActions.cancelBrowserReset();
@@ -1006,6 +1147,7 @@ function screenChanged(screen, previous) {
     menuInput.reset();
     if (previous === 'settings' && screen !== 'settings') {
         settingsDraft.discard();
+        if(runtime?.coop) {coopInput.profiles=profileStore.profiles;coopInput.refresh();}
         syncSettingsEffects();
         settingsUi.rebinding = null;
         calibration.reset();
@@ -1014,7 +1156,8 @@ function screenChanged(screen, previous) {
         selectCategory('controls');
         settingsDraft.begin();
         applyButton.disabled = true;
-        settingsStatus.textContent = 'No pending changes';
+        settingsStatus.textContent = '';
+        if(runtime?.coop)element('settingsProfileNote').textContent='Profile 1 / 2 selects the matching co-op pilot’s controls and calibration. Audio and display are shared during this run.';
         calibration.reset();
         renderSettings();
     }
@@ -1032,6 +1175,9 @@ function screenChanged(screen, previous) {
         settings: 'Settings',
         help: 'How to Play',
         developer: 'Developer tools',
+        mode: 'Choose flight',
+        hangar: 'Hangar',
+        lobby: 'Local co-op',
     };
     element('screenTitle').textContent = titles[screen];
     element('screenBack').hidden = ['home', 'play', 'pause'].includes(screen);
@@ -1043,6 +1189,8 @@ function screenChanged(screen, previous) {
         draw();
         fitCanvas();
     }
+    if (screen === 'hangar') hangarScreen.open();
+    if (screen === 'mode') modeScreen.render();
     const decision = element('navigationDecision');
     if (navigation.pending) {
         const draft = navigation.pending.kind === 'draft',
@@ -1099,8 +1247,10 @@ element('retryRecords').addEventListener('click', () => {
 });
 element('play').addEventListener('click', () => {
     if (!navigation || launch.active || consumeDemo()) return;
-    beginLaunch(() => navigation.start());
+    navigation.request('mode');
 });
+element('soloPlay').addEventListener('click',()=>{coopInput.live=false;beginLaunch(()=>navigation.start());});
+element('localPlay').addEventListener('click',()=>{coopScreen.reset();navigation.request('lobby');});
 element('resume').addEventListener('click', () => navigation.resume());
 element('quitRun').addEventListener('click', () => navigation.request('home'));
 element('gameHome').addEventListener('click', () => navigation.request('home'));
@@ -1133,14 +1283,13 @@ window.addEventListener('beforeunload', (event) => {
         event.returnValue = '';
     }
 });
-new ResizeObserver(() => fitCanvas()).observe(
-    document.querySelector('.console'),
-);
+new ResizeObserver(() => fitCanvas()).observe(document.querySelector('.console'));
+new ResizeObserver(() => fitCanvas()).observe(element('coopHud'));
 try {
     const response = await fetch('./game.wasm');
     if (!response.ok)
         throw new Error(`Game download failed (${response.status})`);
-    const art = await loadArt(),
+    const art = (gameArt = await loadArt()),
         bytes = await response.arrayBuffer();
     renderer = new PixelRenderer(canvas, art);
     demoEngine = await createDemo(
@@ -1160,6 +1309,22 @@ try {
         apply: applyDraft,
         discard: () => settingsDraft.discard(),
         changed: screenChanged,
+        canResume:()=>{
+            if(!runtime.coop)return true;
+            const pads=connectedPads();
+            const confirmKeys=new Set(['Enter','Space']);
+            const ready=coopResumeReady && coopInput.valid(pads) &&
+                [...physicalKeys].every(key=>confirmKeys.has(key)) &&
+                coopInput.devices.every((device,i)=>{
+                    if(device==='keyboard')return true;
+                    const pad=coopInput.pad(i,pads);
+                    const allowed=i===coopInput.menuOwner?[0,coopInput.controls[i].settings.buttons.pause]:[];
+                    return !(pad.axes||[]).some(v=>Math.abs(v)>.55) &&
+                        !(pad.buttons||[]).some((b,index)=>(b.pressed||b.value>.2)&&!allowed.includes(index));
+                });
+            if(!ready)element('pauseSettingsHint').textContent='Assign both inputs and release sticks, triggers and keys before Resume.';
+            return ready;
+        },
     });
     fireButton.disabled = false;
     element('play').disabled = false;

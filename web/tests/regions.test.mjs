@@ -1,7 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { REGIONS, regionIndexForWave, RegionTimeline, envelope, CUE_MS } from '../regions.mjs';
-import { LaunchSequence, warpSpeed, WARP_ACTION_MS, HOME_SPIN, drawHome } from '../presentation.mjs';
+import { LaunchSequence, warpSpeed, WARP_ACTION_MS, drawHome } from '../presentation.mjs';
 
 const run = (timeline, wave, time, extra = {}) => timeline.observe({ wave, time, run:true, ...extra });
 
@@ -126,8 +126,7 @@ test('warp accelerates, then settles to rest by the end of the action', () => {
   assert.equal(warpSpeed(WARP_ACTION_MS), 0);
 });
 
-test('Home overlay turns clockwise at 5°/s and draws nothing under reduced motion', () => {
-  assert.ok(Math.abs(HOME_SPIN * 180 / Math.PI - 5) < 1e-9);
+test('Home overlay twinkles and drifts, and draws nothing under reduced motion', () => {
   const calls = [];
   const ctx = { clearRect() { calls.push('clear'); }, fillRect() { calls.push('rect'); }, set fillStyle(v) {} };
   drawHome(ctx, 1000, { reduced:true });
@@ -135,4 +134,8 @@ test('Home overlay turns clockwise at 5°/s and draws nothing under reduced moti
   calls.length = 0;
   drawHome(ctx, 1000);
   assert.ok(calls.filter(c => c === 'rect').length > 100);
+  // It is a pure function of the clock: the same time draws the same frame.
+  const again = [];
+  drawHome({ ...ctx, fillRect() { again.push('rect'); } }, 1000);
+  assert.equal(again.length, calls.filter(c => c === 'rect').length);
 });

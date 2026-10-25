@@ -41,7 +41,7 @@ export function setupCalibration({settings,findController,persist,render}) {
   function reset() {
     sampling=null;suggestion=null;previous=null;elapsed=0;x=160;y=65;angle=0;pointer=null;
     previewControls.clear();plotState.clear();applyButton.disabled=true;
-    status.textContent='Leave both sticks untouched for a two-second drift sample.';
+    status.textContent='Release both sticks, then sample.';
   }
   sampleButton.addEventListener('click',()=>{
     const pad=findController();

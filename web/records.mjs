@@ -1,3 +1,4 @@
+import { COOP_SCORE_KEYS } from './coop-records.mjs';
 export const RECORDS_KEY = 'asteroids.web.personal-bests-v1';
 export const MIN_ACCURACY_SHOTS = 50;
 const metrics = ['score', 'wave', 'peakCps', 'longestChain'];
@@ -74,6 +75,7 @@ export function clearBrowserRecords(storage, scoreKey) {
   const changes = [
     [scoreKey, JSON.stringify(emptyScores)],
     [RECORDS_KEY, emptyBests],
+    ...COOP_SCORE_KEYS.map(key => [key, JSON.stringify({version:1,entries:[]})]),
   ];
   const previous = [];
   try {

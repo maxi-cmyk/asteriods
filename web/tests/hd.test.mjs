@@ -71,7 +71,7 @@ test('release geometry and sprite atlas have explicit native dimensions', async(
     assert.equal(sprite.w,[32,20,12][size]);assert.equal(sprite.h,sprite.w);
   }
   const png=await readFile(new URL('../assets/sprites.png',import.meta.url));
-  assert.equal(png.readUInt32BE(16),256);assert.equal(png.readUInt32BE(20),448);
+  assert.equal(png.readUInt32BE(16),256);assert.equal(png.readUInt32BE(20),416);
 });
 
 

@@ -11,13 +11,28 @@ export function renderRecordsScreen({
     const recordProfile = Number(element('recordsProfile').value);
     if (resetRecordsArmed && resetProfile !== recordProfile)
         disarmRecordsReset();
-    const recordRules = {
-        practice: element('recordsType').value === 'practice',
-    };
+    const mode=element('recordsMode').value;
+    const coOp=mode!=='solo';
+    element('recordsType').disabled=coOp;
+    const recordRules = {mode:coOp?'co-op':'solo', friendlyFire:mode==='coop-on',
+        practice: !coOp && element('recordsType').value === 'practice'};
+    update(element('leaderboardContext'),coOp?'Team initials leaderboard':'Initials leaderboard · Solo normal runs');
+    if(coOp) {
+        const board=runtime.teamLeaderboard(recordRules.friendlyFire);
+        const list=element('leaderboard');
+        const signature=JSON.stringify(board.entries);
+        if(list.dataset.rows!==signature) {
+            list.dataset.rows=signature;list.replaceChildren();
+            for(const entry of board.entries.length?board.entries:[null]) {
+                const li=document.createElement('li');li.textContent=entry?`${entry.initials}    ${entry.score}`:'No team scores saved yet.';list.append(li);
+            }
+        }
+        update(element('leaderboardStatus'),board.status);
+    }
     const best = runtime.records.get(recordProfile, recordRules);
     update(
         element('recordsScope'),
-        `Player ${recordProfile + 1} · Solo · ${recordRules.practice ? 'Practice' : 'Normal'} · Friendly fire off · No modifiers`,
+        `Profile ${recordProfile + 1} · ${coOp?'Co-op':'Solo'} · ${recordRules.practice ? 'Practice' : 'Normal'} · Friendly fire ${recordRules.friendlyFire?'on':'off'} · No modifiers`,
     );
     const metrics = element('recordsValues'),
         signature = JSON.stringify(best);
@@ -49,7 +64,7 @@ export function renderRecordsScreen({
     }
     element('retryRecords').hidden =
         !runtime.records.status.startsWith('Could not save');
-    update(element('leaderboardStatus'), runtime.scoreStatus);
+    if(!coOp)update(element('leaderboardStatus'), runtime.scoreStatus);
     update(
         element('recordsAccuracy'),
         best?.accuracy

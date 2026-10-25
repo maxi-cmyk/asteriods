@@ -121,8 +121,9 @@ A chain counts consecutive scoring kills within the existing three-second
 combo window, including laser kills, and grows beyond the multiplier cap.
 Death or expiry ends the chain; the longest value survives to the summary.
 
-The current game is solo; simultaneous player attribution and friendly-fire
-exclusion must be integrated when local multiplayer is implemented.
+Local co-op now attributes every projectile/laser and statistic to a player.
+Friendly hits do not count as enemy accuracy or scoring progress. See the
+local co-op rules below.
 
 
 ## Region-closing sentinel (browser solo)
@@ -135,8 +136,8 @@ when the entrance finishes. A locked lane/fan warns for 900 ms, attacks for
 travel at 2.2 pixels/tick with ±0.28-radian spread. Movement bounds are unchanged.
 Boss phase clocks freeze with gameplay, including Pause and utility visits.
 
-Health is `(18 + 6 * (min(10, wave / 5) - 1)) * latched_players`; today's solo
-runtime supplies one player. Tests exercise the two-player scaling input, but
+Health is `(18 + 6 * (min(10, wave / 5) - 1)) * latched_players`; solo
+runs supply one player and local co-op supplies its two-player starting roster. Tests exercise the two-player scaling input, but
 there is no co-op implementation or network authority yet. A future co-op run
 will latch its roster at entry; a disconnect must not resize the boss mid-fight.
 
@@ -151,8 +152,40 @@ are separate from asteroid kills and appear in Results. The defeat recovery is
 at least 1.2 seconds, followed by the ordinary wave recovery. Since bosses close
 regions, their entrance never overlaps the following region reveal.
 
-Future co-op policy: one team award per boss; an assist records participation
-without creating another point award. Attribution, friendly-fire interactions,
-and host-authoritative replication are acceptance work for tasks 6–8, not
-features of this solo release. Existing browser record keys are preserved;
+Local co-op awards the destroying player once and includes the points once in
+the team total. Other participants receive a non-scoring participation count.
+Network authority remains task 8 work. Existing browser record keys are preserved;
 old records are retained, with the new boss balance documented here.
+
+## Local co-op
+
+Play → Local Co-op opens device/profile assignment and ready checks. Use one
+keyboard/mouse plus a standard-mapped controller, or two standard controllers.
+Each player chooses a different local profile. Both ships share the fixed arena
+and have independent three-life, weapon, pickup, combo and score state. Ships
+pass through each other. P1 uses cyan/diamond cues, P2 amber/square cues.
+
+Friendly fire is off by default and locks at launch. Enabled bullets hit the
+first intersected enemy or teammate; protected teammates still intercept shots.
+Lasers pierce and damage each intersected target once per discharge. Self-hits
+are excluded. Friendly damage can consume shields/lives and reset the victim's
+combo, but earns no points or enemy-hit accuracy.
+
+A death clears only that pilot's bullets/echoes/effects and chain. Existing
+spawned shots stay in the accuracy denominator. The shared world keeps moving;
+a pilot with lives respawns after 500 active ms with two seconds of protection.
+Eliminated players spectate. There are no revives; the run ends when both have
+zero lives, and results are frozen/saved once.
+
+Exact simultaneous impacts use rotating player priority, then entity identity.
+New split fragments enter collision eligibility next tick. If splitting has no
+capacity, the rock intercepts the bullet without damage/points/accuracy credit.
+A shared pickup moves once and goes to the nearest overlapping living ship,
+with rotating priority for ties. Ordinary kills credit their destroying player;
+assist point splits and maximum-combo bonuses remain task 7 work.
+
+Either player pauses everyone. Assigned-controller loss pauses and requires
+explicit reassignment and a fresh Resume action; an unrelated controller loss
+does not pause. Never auto-swap or auto-resume. Settings select the matching
+profile for controls/calibration. Results show both players and team score;
+team initials/records are separate from solo and from the other FF setting.

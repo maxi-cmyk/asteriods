@@ -1,5 +1,10 @@
 # Web UI: task 1 screen and navigation specification
 
+> The layout sketches and animation studies this document first linked were
+> removed once the screens shipped (2026-10-26). Home is now a violet scene with
+> a bare menu, and Play → mode select → (Hangar) is the launch path; see the
+> addendum at the end.
+
 Task 1 delivers the screen map, static rough layouts, and transition/state table.
 It does not install a new navigation shell or change gameplay. Tasks 2–5 implement
 and verify this design. The illustrations are layout studies, not live screenshots
@@ -13,10 +18,10 @@ Launch into a game-style Home menu with **Play**, **Practice**, **Records**,
 requires one activation to launch; no solo setup screen intervenes. Keep future
 multiplayer, modifiers, and hosting choices absent until they work.
 
-Home uses the approved [jittery blue-moon v2 loop](../assets/home-blue-moons-preview-v2.gif):
+Home uses the approved jittery blue-moon v2 loop:
 20 fps, outward particles, slowly clockwise rays, stationary moons. Stable dark
 space behind the menu and footer protects readability. A run launches through
-the [first-person warp v2 study](../assets/start-game-warp-pov-v2.gif), then the
+the first-person warp v2 study, then the
 existing countdown. The 3.2-second GIF includes review hold time; the runtime
 cutscene should finish at arrival, roughly 2.4–2.5 seconds, or accept Skip.
 
@@ -26,19 +31,19 @@ records remain intact. Browser presentation state sits above the WASM runtime.
 
 ## Layout studies
 
-[Open the full overview](../assets/task1-layouts/overview.png).
+Open the full overview.
 Each view has a full-size **1440×900 desktop** sketch and a **960×540 short-window**
 sketch. Compact layouts preserve essential actions without shrinking a desktop
 page to unreadable text. They are desktop window targets, not touch layouts.
 
 | Screen | Desktop | Short window | Composition |
 | --- | --- | --- | --- |
-| Home | [1440×900](../assets/task1-layouts/home-desktop.png) | [960×540](../assets/task1-layouts/home-compact.png) | Left-aligned title and five-item menu on a quiet surface; visual center stays visible; profile upper right; device/menu prompts in stable footer. |
-| Play/Pause | [1440×900](../assets/task1-layouts/play-pause-desktop.png) | [960×540](../assets/task1-layouts/play-pause-compact.png) | Essential HUD above fitted field, short ability strip below; Pause is a focused overlay over the same run. Remove the overlay for ordinary play. |
-| Settings | [1440×900](../assets/task1-layouts/settings-desktop.png) | [960×540](../assets/task1-layouts/settings-compact.png) | Desktop category rail becomes a compact horizontal selector; selected category body has one draft and stable Apply/Back actions. |
-| Records | [1440×900](../assets/task1-layouts/records-desktop.png) | [960×540](../assets/task1-layouts/records-compact.png) | Leaderboard and Personal bests are distinct tabs; profile/type filters precede content; reset is secondary. Sketch shows Personal bests. |
-| How to Play | [1440×900](../assets/task1-layouts/help-desktop.png) | [960×540](../assets/task1-layouts/help-compact.png) | One selected input-device view; current bindings plus short rules. Compact uses a Flight rules subview instead of stacking another long help column. |
-| Results | [1440×900](../assets/task1-layouts/results-desktop.png) | [960×540](../assets/task1-layouts/results-compact.png) | Full game-area summary, two rows of four statistics, laser line, one Continue action. It precedes initials entry and leaderboard. |
+| Home | 1440×900 | 960×540 | Left-aligned title and five-item menu on a quiet surface; visual center stays visible; profile upper right; device/menu prompts in stable footer. |
+| Play/Pause | 1440×900 | 960×540 | Essential HUD above fitted field, short ability strip below; Pause is a focused overlay over the same run. Remove the overlay for ordinary play. |
+| Settings | 1440×900 | 960×540 | Desktop category rail becomes a compact horizontal selector; selected category body has one draft and stable Apply/Back actions. |
+| Records | 1440×900 | 960×540 | Leaderboard and Personal bests are distinct tabs; profile/type filters precede content; reset is secondary. Sketch shows Personal bests. |
+| How to Play | 1440×900 | 960×540 | One selected input-device view; current bindings plus short rules. Compact uses a Flight rules subview instead of stacking another long help column. |
+| Results | 1440×900 | 960×540 | Full game-area summary, two rows of four statistics, laser line, one Continue action. It precedes initials entry and leaderboard. |
 
 ### Shared placement and content rules
 
@@ -217,3 +222,51 @@ between two new runs. The runtime retains that run context explicitly.
 - No implementation decision should reopen the confirmed Home menu topology,
   the Home v2 background, first-person warp POV, or Results-before-saving order
   without an explicit design change. Layout details can be refined during UI work.
+
+
+## Addendum: mode select and Hangar (2026-10-26)
+
+- **Mode select** (`#mode`): two art-led cards, Solo flight and Local co-op, each
+  previewing the hulls you will fly. A footer chip shows the equipped ship and
+  opens the Hangar. Back returns Home.
+- **Hangar** (`#hangar`): a utility screen reachable from Home and from mode
+  select; Back returns to whichever opened it. A Player 1 / Player 2 toggle picks
+  whose hull to change. Focusing or hovering a hull previews it on the stage;
+  activating it equips and saves immediately, per profile, under its own storage
+  key (`asteroids.web.hangar-v1`), so it never counts as an unapplied Settings
+  change. Hulls are cosmetic; every hull flies, shoots and scores the same.
+- It is not offered from Pause: changing hulls mid-run is not supported.
+
+### Controller menus (2026-10-26)
+
+- D-pad and left stick move focus toward the nearest control in that direction,
+  so grids (Hangar bay, mode cards) work as drawn. Up/down walk the current
+  scrolling panel in order before leaving it. Left/right adjust a focused slider
+  or select instead of moving.
+- **L1 / R1** step the tab strip: Settings categories, Hangar pilots. From the
+  Settings rail, Right enters the panel at its first control.
+- Focus highlights use `:focus`, not `:focus-visible`, so they stay visible
+  after the mouse was last used.
+- Settings lists are single-column so every control sits in one up/down line.
+- Key rebinding still needs a keyboard; Circle cancels it.
+
+### Practice (2026-10-26)
+
+- The on-field practice panel, the skills checklist and the progress sentence are
+  gone. Practice shows a `PRACTICE` tag in place of lives, wave and score, plus one
+  note ("No lives lost · scores aren't saved") that fades after a few seconds.
+- Reset targets, Try multishot, Try 2× fire and End practice are in the Pause menu.
+  The three tools apply and return straight to the flight; End practice goes to
+  results. This also makes them reachable by controller.
+- The ship's `L READY` / `S STORED` labels are removed in every mode; the HUD
+  ability strip carries that state. A brief `LASER READY` flash remains.
+
+### Results (2026-10-26)
+
+- One column over a violet scrim: run/practice label, a large glowing score, a
+  single context line (wave, region, sentinels, and time in co-op), six stats on
+  thin rules (accuracy, longest chain, multiplier, asteroids, time survived, peak
+  CPS), the laser line when the laser was used, and one Continue button.
+- Everything is sized in container units so it fits the playfield without
+  scrolling. The HUD is hidden while results show.
+- Co-op shows the team score, then one card per pilot in that pilot's colour.

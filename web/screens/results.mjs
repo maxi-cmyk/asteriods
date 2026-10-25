@@ -18,41 +18,43 @@ export function renderResultsScreen({
         if (showResults) results.focus({ preventScroll: true });
         else if (lastState === 'results') canvas.focus({ preventScroll: true });
     }
+    document.body.dataset.results = String(showResults);
     if (showResults) {
+        const coop = !!result.players;
+        results.querySelector('dl').hidden = coop;
+        element('resultLaser').hidden = coop || !result.laserShots;
+        const seconds = Math.floor(result.elapsedMs / 1000);
+        const clock = `${Math.floor(seconds / 60)}:${String(seconds % 60).padStart(2, '0')}`;
+        const sentinels = result.bossKills
+            ? ` · ${result.bossKills} sentinel${result.bossKills === 1 ? '' : 's'}`
+            : '';
+        update(element('resultScore'), String(result.score));
+        update(
+            element('resultRegion'),
+            `Wave ${result.wave} · ${regionForWave(result.wave).name}${coop ? ` · ${clock}` : ''}${sentinels}`,
+        );
+        if (coop) {
+            update(element('continueResults'), 'Continue');
+            update(element('personalBest'), 'Team complete');
+            return;
+        }
         update(
             element('continueResults'),
-            result.rules.practice
-                ? 'Return to Home'
-                : scene[0] === 5
-                  ? 'Continue to score saving'
-                  : 'Continue to leaderboard',
+            result.rules.practice ? 'Return home' : 'Continue',
         );
         update(
             element('personalBest'),
             `${result.rules.practice ? 'Practice complete' : 'Run complete'} · Player ${result.profile + 1}`,
         );
-        update(element('resultScore'), String(result.score));
         update(element('resultCps'), String(result.peakCps));
-        update(
-            element('resultAccuracy'),
-            accuracyText(result.hits, result.shots),
-        );
+        update(element('resultAccuracy'), accuracyText(result.hits, result.shots));
         update(element('resultChain'), String(result.longestChain));
-        update(
-            element('resultRegion'),
-            `Location: ${regionForWave(result.wave).name} · Sentinels defeated: ${result.bossKills || 0}`,
-        );
-        update(
-            element('resultLaser'),
-            `Laser: ${result.laserShots} discharges · ${result.laserKills} kills`,
-        );
-        update(element('resultWave'), String(result.wave));
-        const seconds = Math.floor(result.elapsedMs / 1000);
-        update(
-            element('resultTime'),
-            `${Math.floor(seconds / 60)}:${String(seconds % 60).padStart(2, '0')}`,
-        );
+        update(element('resultTime'), clock);
         update(element('resultKills'), String(result.destroyed));
         update(element('resultMultiplier'), `×${result.bestMultiplier}`);
+        update(
+            element('resultLaser'),
+            `Laser · ${result.laserShots} shot${result.laserShots === 1 ? '' : 's'} · ${result.laserKills} kill${result.laserKills === 1 ? '' : 's'}`,
+        );
     }
 }

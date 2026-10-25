@@ -8,7 +8,7 @@ export function createRecordsActions({ getRuntime, profileStore, draw }) {
         element('cancelResetRecords').hidden = true;
     }
     element('cancelResetRecords').addEventListener('click', disarmRecordsReset);
-    for (const id of ['recordsProfile', 'recordsType'])
+    for (const id of ['recordsProfile', 'recordsType', 'recordsMode'])
         element(id).addEventListener('change', () => {
             disarmRecordsReset();
             draw();
@@ -48,7 +48,7 @@ export function createRecordsActions({ getRuntime, profileStore, draw }) {
                 'Confirm: clear all browser records';
             element('cancelBrowserReset').hidden = false;
             status.textContent =
-                'Clears the top-five leaderboard and all personal bests ' +
+                'Clears solo and co-op team leaderboards and all personal bests ' +
                 'for both profiles, including practice. This cannot be undone.';
             return;
         }

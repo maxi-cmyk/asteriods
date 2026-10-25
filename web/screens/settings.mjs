@@ -23,8 +23,8 @@ export function createSettingsScreen({
         const dirty = settingsDraft.changed();
         applyButton.disabled = !dirty;
         settingsStatus.textContent = dirty
-            ? 'Changes pending — press Apply'
-            : 'No pending changes';
+            ? 'Unapplied changes'
+            : '';
     }
     function render() {
         element('inputProfile').value = profileStore.activeProfile;

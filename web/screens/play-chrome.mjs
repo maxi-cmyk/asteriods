@@ -2,7 +2,6 @@ import { element } from '../dom.mjs';
 export function renderPlayChrome({
     runtime,
     navigation,
-    practicePanel,
     showResults,
     canvas,
     fireButton,
@@ -19,7 +18,6 @@ export function renderPlayChrome({
 }) {
     const state = runtime.state;
     element('pauseMenu').hidden = navigation.screen !== 'pause';
-    practicePanel.inert = navigation.screen !== 'play' || showResults;
     document.querySelector('.toolbar').inert =
         navigation.screen === 'pause' || showResults;
     if (!showResults) canvas.inert = navigation.screen !== 'play';
@@ -42,7 +40,7 @@ export function renderPlayChrome({
         return `${String.fromCharCode(...scene.subarray(at + 1, at + 4))}    ${scene[at]}`;
     });
     const text = rows.join('|');
-    if (leaderboard.dataset.rows !== text) {
+    if (!(navigation.screen==='records' && element('recordsMode').value!=='solo') && leaderboard.dataset.rows !== text) {
         leaderboard.dataset.rows = text;
         leaderboard.replaceChildren(
             ...(rows.length ? rows : ['No scores saved yet.']).map((value) => {
@@ -66,12 +64,12 @@ export function renderPlayChrome({
             navigation.screen === 'pause' ? 'Resume' : 'Pause';
         pauseButton.disabled = !navigation.live;
         const hints = {
-            results: 'Run complete · review your stats, then continue',
+            results: '',
             demo: 'Demo · move or press fire to exit',
             menu: 'Press fire to start',
             countdown: 'Get ready',
-            playing: 'Release fire between shots',
-            paused: 'Paused · choose Resume or press Options · Esc goes back',
+            playing: '',
+            paused: '',
             death: 'Ship lost',
             initials: 'Choose three letters, then press fire to save',
             'game-over': 'Release fire, then press to retry',

@@ -9,14 +9,14 @@
         <link rel="stylesheet" href="./shell.css" />
         <link
             rel="preload"
-            href="./assets/fonts/PressStart2P-Regular.woff2"
+            href="./assets/fonts/Jersey10-Regular.woff2"
             as="font"
             type="font/woff2"
             crossorigin
         />
         <link
             rel="preload"
-            href="./assets/fonts/VT323-Regular.woff2"
+            href="./assets/fonts/PixelifySans-Variable.woff2"
             as="font"
             type="font/woff2"
             crossorigin
@@ -56,6 +56,7 @@
                     <nav aria-label="Main menu">
                         <button id="play" class="primary" disabled>Play</button
                         ><button id="practice" disabled>Practice</button>
+                        <button data-go="hangar">Hangar</button>
                         <button data-go="records">Records</button
                         ><button id="settingsOpen">Settings</button
                         ><button data-go="help">How to Play</button
@@ -65,6 +66,68 @@
                 <span id="homeHint">Choose a destination</span>
             </section>
 
+            <section data-view="mode" class="utility-view flight-mode" hidden inert>
+                <h1 tabindex="-1">Choose your flight</h1>
+                <div class="mode-options">
+                    <button id="soloPlay" class="mode-card primary">
+                        <canvas id="modeArtSolo" width="192" height="108" aria-hidden="true"></canvas>
+                        <em>1 PLAYER</em>
+                        <strong>Solo flight</strong>
+                        <span>One pilot</span>
+                    </button>
+                    <button id="localPlay" class="mode-card">
+                        <canvas id="modeArtCoop" width="192" height="108" aria-hidden="true"></canvas>
+                        <em>2 PLAYERS</em>
+                        <strong>Local co-op</strong>
+                        <span>Two pilots, one field</span>
+                    </button>
+                </div>
+                <div class="mode-foot">
+                    <button id="modeHangar" data-go="hangar">
+                        <canvas id="modeHull" width="24" height="16" aria-hidden="true"></canvas>
+                        <b id="modeHullName">Vanguard</b>
+                        <u>Change ship</u>
+                    </button>
+                    <p>Co-op: two controllers, or keyboard + controller.</p>
+                </div>
+            </section>
+            <section data-view="hangar" class="utility-view hangar" hidden inert aria-label="Hangar">
+                <h1 tabindex="-1">Hangar</h1>
+                <div class="hangar-pilots" role="group" aria-label="Choose for which pilot">
+                    <button type="button" data-pilot="0" aria-pressed="true">Player 1</button>
+                    <button type="button" data-pilot="1" aria-pressed="false">Player 2</button>
+                </div>
+                <div class="hangar-stage">
+                    <canvas id="hangarStage" width="240" height="135" aria-hidden="true"></canvas>
+                    <div class="hangar-info">
+                        <em id="hangarTag">EQUIPPED</em>
+                        <h2 id="hangarName">Vanguard</h2>
+                        <p id="hangarBlurb"></p>
+                        <p class="hangar-note">Cosmetic only.</p>
+                        <p id="hangarStatus" role="status"></p>
+                    </div>
+                </div>
+                <div id="hangarBay" class="hangar-bay" role="radiogroup" aria-label="Hulls"></div>
+            </section>
+            <section data-view="lobby" class="utility-view coop-lobby" hidden inert>
+                <h1 tabindex="-1">Local co-op</h1>
+                <div class="crew-slots">
+                    <fieldset class="crew-slot" data-player="0"><legend>P1 · Diamond</legend>
+                        <label>Input device<select id="coopDevice0"></select></label>
+                        <label>Local profile<select id="coopProfile0"><option value="0">Profile 1</option><option value="1">Profile 2</option></select></label>
+                        <button id="coopReady0" aria-pressed="false">Ready P1</button>
+                    </fieldset>
+                    <fieldset class="crew-slot" data-player="1"><legend>P2 · Square</legend>
+                        <label>Input device<select id="coopDevice1"></select></label>
+                        <label>Local profile<select id="coopProfile1"><option value="0">Profile 1</option><option value="1">Profile 2</option></select></label>
+                        <button id="coopReady1" aria-pressed="false">Ready P2</button>
+                    </fieldset>
+                </div>
+                <label class="friendly-option"><input type="checkbox" id="coopFriendly"> Friendly fire</label>
+                <p>Shots can cost your teammate a life.</p>
+                <p id="coopLobbyStatus" role="status">Assign a different device and profile to each player.</p>
+                <button id="coopStart" class="primary" disabled>Launch together</button>
+            </section>
             <section
                 class="console"
                 data-view="play"
@@ -79,6 +142,8 @@
                 </div>
 
                 <div class="hud" aria-label="Run status">
+                    <span class="practice-tag">Practice</span>
+                    <span class="practice-note" role="status">No lives lost · scores aren’t saved</span>
                     <div class="hud-group">
                         <span>SHIPS <b id="lives">03</b></span
                         ><span>WAVE <b id="wave">01</b></span>
@@ -90,6 +155,11 @@
                             ><span class="track"><i id="chainFill"></i></span
                         ></span>
                     </div>
+                </div>
+                <div id="coopHud" class="coop-hud" hidden aria-label="Two-player run status">
+                    <div id="coopHud0" class="pilot-hud" data-player="0"></div>
+                    <div class="team-hud"><b id="coopTeamScore">0</b><span id="coopWave">WAVE 1</span><span id="coopRules">FRIENDLY FIRE OFF</span></div>
+                    <div id="coopHud1" class="pilot-hud" data-player="1"></div>
                 </div>
                 <div class="screen">
                     <canvas
@@ -103,13 +173,23 @@
                     >
                     <div id="pauseMenu" class="pause-menu" hidden>
                         <h2>Paused</h2>
-                        <button id="resume" class="primary">Resume</button
-                        ><button id="pauseSettings">Settings</button
+                        <button id="resume" class="primary">Resume</button>
+                        <div id="practiceTools" class="practice-tools" hidden>
+                            <button id="resetTargets">Reset targets</button>
+                            <button id="practiceMultishot">Try multishot</button>
+                            <button id="practiceDoubleFire">Try 2× fire</button>
+                            <button id="endPractice" class="primary">End practice</button>
+                        </div>
+                        <button id="pauseSettings">Settings</button
                         ><button data-go="help">How to Play</button
                         ><button id="quitRun">Quit to Home</button>
-                        <p id="pauseSettingsHint">
-                            Cross: select · Circle: back
-                        </p>
+                        <button id="coopReassign" hidden>Reassign inputs</button>
+                        <div id="coopReconnect" hidden>
+                            <p>Assign each player a different input before resuming.</p>
+                            <label>P1 device<select id="reconnectDevice0"></select></label>
+                            <label>P2 device<select id="reconnectDevice1"></select></label>
+                        </div>
+                        <p id="pauseSettingsHint"></p>
                     </div>
                     <div
                         id="runSummary"
@@ -121,17 +201,15 @@
                     >
                         <div class="run-summary-content">
                             <h2 id="personalBest"></h2>
+                            <div class="result-hero">
+                                <span class="result-label">Score</span>
+                                <b id="resultScore"></b>
+                                <p id="resultRegion"></p>
+                            </div>
+                            <div id="coopResults" hidden></div>
                             <dl>
                                 <div>
-                                    <dt>Score</dt>
-                                    <dd id="resultScore"></dd>
-                                </div>
-                                <div>
-                                    <dt>Peak CPS</dt>
-                                    <dd id="resultCps"></dd>
-                                </div>
-                                <div>
-                                    <dt>Primary accuracy</dt>
+                                    <dt>Accuracy</dt>
                                     <dd id="resultAccuracy"></dd>
                                 </div>
                                 <div>
@@ -139,40 +217,40 @@
                                     <dd id="resultChain"></dd>
                                 </div>
                                 <div>
-                                    <dt>Wave reached</dt>
-                                    <dd id="resultWave"></dd>
+                                    <dt>Multiplier</dt>
+                                    <dd id="resultMultiplier"></dd>
                                 </div>
                                 <div>
-                                    <dt>Survival time</dt>
-                                    <dd id="resultTime"></dd>
-                                </div>
-                                <div>
-                                    <dt>Asteroids destroyed</dt>
+                                    <dt>Asteroids</dt>
                                     <dd id="resultKills"></dd>
                                 </div>
                                 <div>
-                                    <dt>Best multiplier</dt>
-                                    <dd id="resultMultiplier"></dd>
+                                    <dt>Survived</dt>
+                                    <dd id="resultTime"></dd>
+                                </div>
+                                <div>
+                                    <dt>Peak CPS</dt>
+                                    <dd id="resultCps"></dd>
                                 </div>
                             </dl>
-                            <p id="resultRegion"></p>
                             <p id="resultLaser"></p>
-                            <button id="continueResults">
-                                Continue to score saving
+                            <button id="continueResults" class="primary">
+                                Continue
                             </button>
-                            <p class="result-hint">
-                                Release fire, then press again to continue.
-                            </p>
                         </div>
                     </div>
                 </div>
                 <div class="combat-hud" aria-label="Weapon abilities">
-                    <span
-                        >L2 LASER <b id="laserStatus">READY</b
+                    <span class="ability" data-ability="laser"
+                        ><kbd>L2</kbd> LASER <b id="laserStatus">READY</b
                         ><span class="track"><i id="laserFill"></i></span
                     ></span>
-                    <span>L1 SHIELD <b id="shieldStatus">EMPTY</b></span>
-                    <span>2× FIRE <b id="doubleFireStatus">INACTIVE</b></span>
+                    <span class="ability" data-ability="shield"
+                        ><kbd>L1</kbd> SHIELD <b id="shieldStatus">EMPTY</b></span
+                    >
+                    <span class="ability" data-ability="double"
+                        ><kbd>2×</kbd> FIRE <b id="doubleFireStatus">INACTIVE</b></span
+                    >
                     <span id="precisionStatus">PRECISION</span>
                 </div>
                 <div class="live-stats" aria-label="Primary-fire statistics">
@@ -180,29 +258,6 @@
                     ><span>ACCURACY <b id="liveAccuracy">—</b></span
                     ><span>LONGEST CHAIN <b id="liveChain">0</b></span>
                 </div>
-                <div id="practicePanel" class="practice-panel" hidden>
-                    <div>
-                        <strong>Practice flight</strong
-                        ><span id="practiceProgress" role="status"
-                            >No lives lost. Scores stay out of the
-                            leaderboard.</span
-                        >
-                    </div>
-                    <ol id="practiceGoals">
-                        <li>Move</li>
-                        <li>Aim</li>
-                        <li>Fire</li>
-                        <li>Fire laser</li>
-                        <li>Arm shield</li>
-                    </ol>
-                    <div class="actions">
-                        <button id="resetTargets">Reset targets</button
-                        ><button id="practiceMultishot">Try multishot</button
-                        ><button id="practiceDoubleFire">Try 2× fire</button
-                        ><button id="endPractice">End practice</button>
-                    </div>
-                </div>
-
                 <div class="toolbar">
                     <span id="hint" role="status">Loading game…</span>
                     <div class="actions">
@@ -224,7 +279,8 @@
                 <div class="records-layout">
                     <div>
                         <h2>Top five scores</h2>
-                        <p>Initials leaderboard · Solo normal runs</p>
+                        <p id="leaderboardContext">Initials leaderboard · Solo normal runs</p>
+                        <label>Mode<select id="recordsMode"><option value="solo">Solo</option><option value="coop-off">Co-op · Friendly fire off</option><option value="coop-on">Co-op · Friendly fire on</option></select></label>
                         <ol id="leaderboard"></ol>
                         <p id="leaderboardStatus" role="status"></p>
                     </div>
@@ -257,10 +313,6 @@
                         ><button id="cancelResetRecords" hidden>
                             Cancel reset
                         </button>
-                        <p>
-                            Refresh keeps saved records. Clearing records does
-                            not change your controls or audio settings.
-                        </p>
                         <button id="clearBrowserRecords">
                             Clear this browser’s records</button
                         ><button id="cancelBrowserReset" hidden>
@@ -279,10 +331,6 @@
             >
                 <h1 tabindex="-1">Settings</h1>
                 <div id="settingsDialog">
-                    <p class="settings-intro">
-                        Apply saves your changes. Back lets you apply, discard,
-                        or stay.
-                    </p>
                     <label class="profile-picker" for="inputProfile"
                         >Input profile
                         <select id="inputProfile">
@@ -290,10 +338,7 @@
                             <option value="1">Player 2</option>
                         </select>
                     </label>
-                    <p id="settingsProfileNote">
-                        Each profile keeps its own controls, audio, and display
-                        settings. Unapplied changes stay in this draft.
-                    </p>
+                    <p id="settingsProfileNote"></p>
                     <nav class="settings-tabs" aria-label="Settings categories">
                         <button data-category="controls" aria-pressed="true">
                             Controls</button
@@ -362,32 +407,14 @@
                                     step="0.05"
                             /></label>
                         </div>
-                        <p class="settings-help">
-                            Aim response controls how quickly the ship turns
-                            toward your target. Higher movement response makes
-                            partial stick deflections stronger; top speed stays
-                            the same. Raise the right-stick deadzone to suppress
-                            aim drift without changing movement. Lower deadzones
-                            detect smaller stick movements. Mouse movement sets
-                            aim, not ship speed.
-                        </p>
                         <div class="settings-bindings">
                             <section>
                                 <h3>Keyboard</h3>
-                                <p>
-                                    Select a key, then press its replacement.
-                                    Esc cancels. Arrows, Enter and Esc remain
-                                    available.
-                                </p>
+                                <p>Select a key, then press its replacement. Esc cancels.</p>
                                 <div id="keyBindings"></div>
                             </section>
                             <section>
                                 <h3>Controller</h3>
-                                <p>
-                                    Assign abilities below. Hold Shield +
-                                    Precision for slow movement; tap Shield
-                                    alone to arm it.
-                                </p>
                                 <div id="padBindings"></div>
                             </section>
                         </div>
@@ -483,10 +510,7 @@
                                     </figcaption>
                                 </figure>
                             </div>
-                            <p>
-                                Outlined dot: raw input. Filled dot: adjusted
-                                input. Shaded circle: deadzone.
-                            </p>
+                            <p>Outlined: raw · Filled: adjusted · Circle: deadzone</p>
                             <div class="calibration-actions">
                                 <button id="sampleDrift" disabled>
                                     Sample stick drift</button
@@ -494,10 +518,7 @@
                                     Use suggested deadzone
                                 </button>
                             </div>
-                            <p id="calibrationStatus" role="status">
-                                Leave both sticks untouched for a two-second
-                                drift sample.
-                            </p>
+                            <p id="calibrationStatus" role="status">Release both sticks, then sample.</p>
                             <svg
                                 id="inputPreview"
                                 viewBox="0 0 320 130"
@@ -517,12 +538,7 @@
                                     />
                                 </g>
                             </svg>
-                            <p id="previewHelp">
-                                Click or Tab into the preview to test movement
-                                and aim. Controller sticks work here too.
-                                Precision slows movement. The game stays paused
-                                and no shots are fired.
-                            </p>
+                            <p id="previewHelp">Move and aim here to test. No shots are fired.</p>
                         </section>
                     </section>
                     <section data-settings-panel="audio" hidden inert>
@@ -545,8 +561,7 @@
                                     step="0.05"
                             /></label>
                         </div>
-                        <p>Changes take effect when you Apply.</p>
-                    </section>
+                                            </section>
                     <section data-settings-panel="display" hidden inert>
                         <h2>Display</h2>
                         <div class="settings-sliders">
@@ -605,47 +620,24 @@
                 aria-label="How to Play"
             >
                 <h1 tabindex="-1">How to Play</h1>
+                <p>Co-op: P1 is the cyan diamond, P2 the amber square. Three lives each, no revives.</p>
                 <div class="help-layout">
                     <section>
                         <h2>Your controls</h2>
                         <p id="helpDevice"></p>
                         <dl id="helpBindings" class="binding-list"></dl>
-                        <p>Change bindings in Settings → Controls.</p>
                     </section>
                     <section>
                         <h2>Flight essentials</h2>
-                        <p>
-                            Move, aim, and survive each wave. Each press fires
-                            once; holding fire never repeats. A 2× fire pickup
-                            fires two shots per press for six seconds.
-                        </p>
+                        <p>Move, aim, survive each wave. One shot per press. 2× fire doubles your shots for six seconds.</p>
                         <h2>Laser</h2>
-                        <p>
-                            Hold for 1.5 seconds to discharge. Release early to
-                            cancel. Cooldown: 5 seconds.
-                        </p>
+                        <p>Hold 1.5 s to fire; release early to cancel. 5 s cooldown.</p>
                         <h2>Shield & precision</h2>
-                        <p>
-                            Shield pickups store one charge. Tap Shield alone to
-                            arm it until one hit is absorbed. Hold Precision for
-                            slower movement; on a controller hold Shield +
-                            Precision. Precision never spends a shield charge.
-                        </p>
-                        <h2>Run statistics</h2>
-                        <p>
-                            Accuracy counts hit projectiles out of spawned
-                            projectiles. Laser statistics are separate. Results
-                            appear before initials entry; personal bests save
-                            automatically. Practice stays out of the initials
-                            leaderboard.
-                        </p>
+                        <p>Tap Shield to arm a stored charge. Hold Precision to move slowly.</p>
                         <button id="helpPractice" class="primary">
                             Try in Practice
                         </button>
-                        <p id="helpPaused" hidden>
-                            Your run is paused. Back returns to Pause; finish or
-                            quit it before starting Practice.
-                        </p>
+                        <p id="helpPaused" hidden>Finish or quit your run before Practice.</p>
                     </section>
                 </div>
             </section>
@@ -706,7 +698,7 @@
             <canvas id="launchCanvas" width="480" height="270"></canvas>
             <div id="launchHint">
                 <button id="skipLaunch">Skip launch</button>
-                <p>Enter / Cross skips · Esc / Circle cancels</p>
+                <p>Enter to skip</p>
             </div>
         </div>
         <script type="module" src="./app.mjs"></script>

@@ -11,7 +11,7 @@ async function setup(options={}) {
 }
 
 test('stable utility links restore only utility destinations; live and invalid links restore Home',()=>{
-  for(const screen of ['records','settings','help','developer'])assert.equal(routeFromHash(`#${screen}`),screen);
+  for(const screen of ['records','settings','help','developer','hangar'])assert.equal(routeFromHash(`#${screen}`),screen);
   for(const hash of ['#play','#pause','#results','#warp','#unknown',''])assert.equal(routeFromHash(hash),'home');
 });
 
@@ -106,4 +106,23 @@ test('leaving results or unsaved initials requires an explicit choice and Stay p
   runtime.continueResults();assert.equal(runtime.state,'initials');
   const scene=[...runtime.scene()];nav.request('home');nav.resolve('stay');assert.deepEqual([...runtime.scene()],scene);
   nav.request('home');nav.resolve('quit');assert.equal(nav.screen,'home');assert.equal(runtime.state,'menu');
+});
+
+test('Hangar opened from the mode screen returns there; opened from Home returns Home',async()=>{
+  const {nav}=await setup();
+  nav.request('mode');nav.request('hangar');
+  assert.equal(nav.screen,'hangar');assert.equal(nav.origin,'mode');
+  nav.back();assert.equal(nav.screen,'mode');
+  nav.request('home');nav.request('hangar');
+  assert.equal(nav.origin,'home');nav.back();assert.equal(nav.screen,'home');
+});
+
+test('L1/R1 step tabs once per press and are ignored while held at entry',()=>{
+  const input=new MenuInput();
+  const pad={buttons:Array.from({length:17},()=>({pressed:false,value:0})),axes:[0,0,0,0]};
+  pad.buttons[5].pressed=true;assert.deepEqual(input.sample(pad,0),{});
+  pad.buttons[5].pressed=false;input.sample(pad,10);
+  pad.buttons[5].pressed=true;assert.equal(input.sample(pad,20).tab,1);assert.equal(input.sample(pad,30).tab,undefined);
+  pad.buttons[5].pressed=false;input.sample(pad,40);
+  pad.buttons[4].pressed=true;assert.equal(input.sample(pad,50).tab,-1);
 });

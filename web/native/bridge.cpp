@@ -76,6 +76,8 @@ long rock_random_range(long lower, long upper) {
 
 #ifdef WEB_HD
 #include "combat.h"
+#include "coop.h"
+extern "C" void web_coop_pause(int pause);
 #endif
 
 extern "C" {
@@ -105,6 +107,20 @@ void web_fire_press(int pressed) {
 }
 void web_step(int raw_x, int raw_y, int fire, int click, int pause) {
     browser_ms += FRAME_TIME_MS;
+#ifdef WEB_HD
+    if (coop_active) {
+        if (pause && (state == STATE_PLAYING || state == STATE_COUNTDOWN)) {
+            web_coop_pause(1);
+        } else if (pause && state == STATE_PAUSED) {
+            web_coop_pause(0);
+        } else {
+            if (state == STATE_PLAYING) visual_ms += FRAME_TIME_MS;
+            coop_update();
+        }
+        sound_update();
+        return;
+    }
+#endif
     // Browser demos start only through the explicit Home action.
     if (state == STATE_MENU) state_entered_ms = browser_ms;
     browser_x = constrain(raw_x, 0, 4095);
@@ -149,6 +165,7 @@ void web_audio_step() {
 }
 void web_start(int practice) {
 #ifdef WEB_HD
+    coop_active = false;
     practice_mode = practice != 0;
     practice_goals = 0;
     begin_game();
@@ -180,6 +197,7 @@ void web_menu() {
     demo_running = false;
     menu_input_ready = false;
 #ifdef WEB_HD
+    coop_active = false;
     practice_mode = false;
     ship.effects.double_fire_left_ms = 0;
     combat_reset();
@@ -417,7 +435,83 @@ const float *web_scene() {
     }
     return scene;
 }
+// Co-op ABI version 1: two independent inputs, legacy read-only player scenes.
+void web_coop_start(int friendly) {
+#ifdef WEB_HD
+    coop_begin(friendly != 0);
+#endif
+}
+void web_coop_pause(int pause) {
+#ifdef WEB_HD
+    if (!coop_active) return;
+    if (pause && (state == STATE_PLAYING || state == STATE_COUNTDOWN)) {
+        coop_pause_state = state;
+        coop_paused_at = browser_ms - state_entered_ms;
+        set_state(STATE_PAUSED);
+    } else if (!pause && state == STATE_PAUSED) {
+        state = coop_pause_state;
+        // Countdown elapsed before pause is stored separately below.
+        state_entered_ms = browser_ms - coop_paused_at;
+    }
+#endif
+}
+void web_coop_input(int owner, float x, float y, int fire, float aim_x,
+                    float aim_y, int laser, int precision, int shield) {
+#ifdef WEB_HD
+    if (owner < 0 || owner > 1 || !coop_active) return;
+    auto finite_axis = [](float value) {
+        return __builtin_isfinite(value) ? constrain(value, -1.0f, 1.0f) : 0.0f;
+    };
+    CoopPlayer& player = coop_players[owner];
+    player.input = {};
+    player.input.joystick_x = finite_axis(x);
+    player.input.joystick_y = finite_axis(y);
+    player.input.fire_pressed = fire != 0;
+    player.actions = {finite_axis(aim_x), finite_axis(aim_y), bool(laser),
+                      bool(precision), bool(shield)};
+    if (state == STATE_PAUSED && !laser) player.weapons.charging = false;
+#endif
+}
+const float *web_coop_player(int owner) {
+    static float snapshot[576];
+#ifdef WEB_HD
+    if (coop_active && owner >= 0 && owner < 2) {
+        coop_load(owner);
+        memcpy(snapshot, web_scene(), sizeof(snapshot));
+        snapshot[552] = 1; // ABI version
+        snapshot[553] = owner;
+        snapshot[554] = coop_players[owner].respawn_at;
+        snapshot[555] = coop_players[owner].boss_participation;
+        snapshot[556] = coop_players[0].points + coop_players[1].points;
+        snapshot[557] = coop_friendly;
+        // Statistics share the existing stats field ordering.
+        memcpy(snapshot + 560, web_stats(), 16 * sizeof(float));
+        coop_load(0);
+    }
+#endif
+    return snapshot;
+}
 #ifdef WEB_TEST
+void web_test_coop(int owner, int field, float value) {
+#ifdef WEB_HD
+    if (owner < 0 || owner > 1) return;
+    CoopPlayer& player = coop_players[owner];
+    if (field == 0) { set_state(STATE_PLAYING); pending_asteroids = 1;
+        next_spawn_ms = game_ms + 1000000; memset(rocks, 0, sizeof(rocks)); }
+    if (field == 1) player.hull.position_x = value;
+    if (field == 2) player.hull.position_y = value;
+    if (field == 3) player.hull.invincible_left = value;
+    if (field == 4) player.hull.lives = value;
+    if (field == 5) player.hull.effects.multishot_left_ms = value;
+    if (field == 6) player.hull.effects.double_fire_left_ms = value;
+    if (field == 7) coop_hit(owner);
+    if (field == 8) player.weapons.shield_stored = value;
+    if (field == 9) pickup = {player.hull.position_x, player.hull.position_y,
+                              PickupKind(int(value)), true};
+    if (field == 10) spawn_asteroid(value, player.hull.position_y, AST_SMALL, 0, 0);
+    coop_load(0);
+#endif
+}
 void web_test_boss(int wave, int players, int health) {
 #ifdef WEB_HD
     wave_number = wave;

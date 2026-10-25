@@ -7,6 +7,7 @@ import {
     copyFileSync,
     readFileSync,
     cpSync,
+    rmSync,
 } from 'node:fs';
 const root = dirname(fileURLToPath(import.meta.url));
 const test = process.argv.includes('--test');
@@ -62,10 +63,15 @@ const exports = [
     'web_practice_multishot',
     'web_practice_double_fire',
     'web_stats',
+    'web_coop_start',
+    'web_coop_pause',
+    'web_coop_input',
+    'web_coop_player',
 ];
 if (test)
     exports.push(
         'web_scenario',
+        'web_test_coop',
         'web_test_overlap',
         'web_test_pickup',
         'web_test_boss',
@@ -147,6 +153,8 @@ for (const item of WebAssembly.Module.imports(
     }
 }
 if (!test && !oled) {
+    // The optional synthetic-controller QA page is never a release artifact.
+    rmSync(resolve(root, 'dist/coop-browser.html'), { force: true });
     for (const file of [
         'index.html',
         'style.css',
@@ -157,6 +165,10 @@ if (!test && !oled) {
         'dom.mjs',
         'music.mjs',
         'runtime.mjs',
+        'coop-records.mjs',
+        'coop-scene.mjs',
+        'coop-input.mjs',
+        'coop-menu.mjs',
         'records.mjs',
         'navigation.mjs',
         'menu-fields.mjs',
@@ -165,6 +177,10 @@ if (!test && !oled) {
         'renderer.mjs',
         'regions.mjs',
         'backgrounds.mjs',
+        'art-grade.mjs',
+        'fx.mjs',
+        'hangar.mjs',
+        'showcase.mjs',
         'presentation.mjs',
         'settings.mjs',
         'audio.mjs',
@@ -187,6 +203,8 @@ if (!test && !oled) {
     );
     cpSync(resolve(root, 'assets'), resolve(root, 'dist/assets'), {
         recursive: true,
+        // Notes about the art stay in the repo; only the art itself ships.
+        filter: (source) => !source.endsWith('.md'),
     });
     copyFileSync(
         resolve(root, 'vendor/LICENSE.txt'),

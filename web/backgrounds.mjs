@@ -29,6 +29,31 @@ const canvasOf = (w, h) => {
   return { canvas, ctx };
 };
 
+const unpack = c => [c & 255, c >> 8 & 255, c >> 16 & 255];
+const pack = (r, g, b) => (255 << 24 | Math.max(0, Math.min(255, b)) << 16 | Math.max(0, Math.min(255, g)) << 8 | Math.max(0, Math.min(255, r))) >>> 0;
+const bayer = (x, y) => BAYER[(y & 3) * 4 + (x & 3)] / 16;
+// Posterise one channel to `levels` steps with ordered dither: chunky, never smooth.
+const step = (value, levels, x, y) => Math.floor(value / 255 * (levels - 1) + bayer(x, y)) / (levels - 1) * 255;
+
+// Value noise on a lattice, smoothly interpolated, summed over octaves.
+function fbm(seed, w, h, scale, octaves = 4) {
+  const next = rand(seed), out = new Float32Array(w * h);
+  let amp = 1, total = 0;
+  for (let o = 0; o < octaves; o++) {
+    const cell = Math.max(2, scale / 2 ** o), gw = Math.ceil(w / cell) + 3, gh = Math.ceil(h / cell) + 3;
+    const grid = Float32Array.from({ length:gw * gh }, next);
+    for (let y = 0; y < h; y++) for (let x = 0; x < w; x++) {
+      const fx = x / cell, fy = y / cell, ix = Math.floor(fx), iy = Math.floor(fy);
+      const tx = fx - ix, ty = fy - iy, sx = tx * tx * (3 - 2 * tx), sy = ty * ty * (3 - 2 * ty);
+      const a = grid[iy * gw + ix], b = grid[iy * gw + ix + 1], c = grid[(iy + 1) * gw + ix], d = grid[(iy + 1) * gw + ix + 1];
+      out[y * w + x] += (a + (b - a) * sx + (c - a + (a - b - c + d) * sx) * sy) * amp;
+    }
+    total += amp; amp *= .5;
+  }
+  for (let i = 0; i < out.length; i++) out[i] /= total;
+  return out;
+}
+
 // A raster is a 480x270 pixel buffer painted with a few pixel-art primitives.
 class Raster {
   constructor(w = WIDTH, h = HEIGHT) {
@@ -77,6 +102,60 @@ class Raster {
       this.rect(x, y, size, size, c);
     }
   }
+  // Soft coloured cloud added over the existing pixels, then re-dithered.
+  // `side` weights it toward an edge so the middle of the field stays calm.
+  nebula(seed, [r, g, b], { threshold = .42, gain = 2.4, strength = .8, scale = 90, side = 'top', levels = 20 } = {}) {
+    const n = fbm(seed, this.w, this.h, scale);
+    for (let y = 0; y < this.h; y++) for (let x = 0; x < this.w; x++) {
+      const i = y * this.w + x;
+      let weight = Math.max(0, Math.min(1, (n[i] - threshold) * gain)) * strength;
+      weight *= side === 'right' ? Math.min(1, x / this.w * 1.2) : side === 'top' ? Math.max(0, 1.15 - y / this.h * .6) : 1;
+      if (weight <= 0) continue;
+      const [cr, cg, cb] = unpack(this.data[i]);
+      this.data[i] = pack(step(cr + r * weight, levels, x, y), step(cg + g * weight, levels, x, y), step(cb + b * weight, levels, x, y));
+    }
+  }
+  // A warm light source off-screen: radial lift on the dithered backdrop.
+  bloom(cx, cy, reach, [r, g, b], strength = .3, levels = 20) {
+    for (let y = 0; y < this.h; y++) for (let x = 0; x < this.w; x++) {
+      const t = 1 - Math.hypot(x - cx, y - cy) / reach;
+      if (t <= 0) continue;
+      const k = t * t * strength, [cr, cg, cb] = unpack(this.data[y * this.w + x]);
+      this.data[y * this.w + x] = pack(step(cr + r * k, levels, x, y), step(cg + g * k, levels, x, y), step(cb + b * k, levels, x, y));
+    }
+  }
+  // Dithered atmosphere ring just outside a planet's limb.
+  halo(cx, cy, r, width, colour) {
+    for (let y = Math.max(0, cy - r - width); y <= Math.min(this.h - 1, cy + r + width); y++) {
+      for (let x = Math.max(0, cx - r - width); x <= Math.min(this.w - 1, cx + r + width); x++) {
+        const d = Math.hypot(x - cx, y - cy) - r;
+        if (d <= 0 || d > width) continue;
+        const lean = Math.max(0, (cx - x) * LIGHT[0] * -1 + (cy - y) * LIGHT[1] * -1) / r + .35;
+        if ((1 - d / width) * Math.min(1, lean) * .9 > bayer(x, y)) this.put(x, y, colour);
+      }
+    }
+  }
+  // A lit gas giant: banded colour wobbled by noise-like sines, shaded by the
+  // same light as every other body, with a bright atmospheric limb.
+  bandedDisc(cx, cy, r, bands, { count = 11, warp = .16, atmosphere = [255, 150, 120], clipTop = -Infinity } = {}) {
+    const rgb = bands.map(unpack);
+    for (let y = Math.max(clipTop, cy - r); y <= cy + r; y++) {
+      for (let x = cx - r; x <= cx + r; x++) {
+        const dx = (x - cx) / r, dy = (y - cy) / r, d2 = dx * dx + dy * dy;
+        if (d2 > 1) continue;
+        const nz = Math.sqrt(1 - d2);
+        const lit = Math.max(0, dx * LIGHT[0] + dy * LIGHT[1] + nz * LIGHT[2]);
+        const wobble = Math.sin(x * .045 + y * .02) * .5 + Math.sin(x * .11 - y * .05) * .25;
+        const band = (Math.sin((dy + wobble * warp) * count) * .5 + .5) * (rgb.length - 1);
+        const i = Math.min(rgb.length - 2, Math.floor(band)), u = band - i;
+        const shade = .16 + .95 * lit ** .85, rim = Math.max(0, (d2 - .52) / .48) ** 2 * Math.min(1, lit * 1.4 + .15) * .85;
+        const channel = k => rgb[i][k] + (rgb[i + 1][k] - rgb[i][k]) * u;
+        this.put(x, y, pack(step(channel(0) * shade + atmosphere[0] * rim, 14, x, y),
+          step(channel(1) * shade + atmosphere[1] * rim + (1 - shade) * 10, 14, x, y),
+          step(channel(2) * shade + atmosphere[2] * rim + (1 - shade) * 40, 14, x, y)));
+      }
+    }
+  }
   toCanvas() {
     const { canvas, ctx } = canvasOf(this.w, this.h);
     ctx.putImageData(new ImageData(new Uint8ClampedArray(this.data.buffer), this.w, this.h), 0, 0);
@@ -84,7 +163,18 @@ class Raster {
   }
 }
 
-const starLayer = (seed, count, colours) => { const r = new Raster(); r.stars(seed, count, colours); return r.toCanvas(); };
+// Sparse bright stars get a small cross so the field has points of focus.
+const starLayer = (seed, count, colours, flares = 0) => {
+  const r = new Raster(); r.stars(seed, count, colours);
+  const next = rand(seed + 500);
+  for (let i = 0; i < flares; i++) {
+    const x = 8 + Math.floor(next() * (WIDTH - 16)), y = 8 + Math.floor(next() * (HEIGHT - 60));
+    r.put(x, y, hex('#ffffff'));
+    for (const [dx, dy] of [[1, 0], [-1, 0], [0, 1], [0, -1]]) r.put(x + dx, y + dy, hex('#96aaff'));
+    r.put(x + 2, y, hex('#5a64be')); r.put(x - 2, y, hex('#5a64be'));
+  }
+  return r.toCanvas();
+};
 const tile = (ctx, layer, offset, alpha = 1) => {
   const x = -Math.floor(((offset % WIDTH) + WIDTH) % WIDTH);
   ctx.globalAlpha = alpha;
@@ -92,85 +182,78 @@ const tile = (ctx, layer, offset, alpha = 1) => {
   ctx.globalAlpha = 1;
 };
 
+// Pre-rendered rotation strips from worlds.png. A world turns once every
+// `period` ms (minutes, not seconds) and neighbouring frames crossfade, so the
+// spin is felt only as slow drift. `motion` 0 (reduced motion) holds frame 0.
+const S_ORBITS = [[38, 20, .5, '#9ad0ff'], [56, 30, 2.2, '#ffe9a0'], [74, 24, 4.1, '#ffb070'], [30, 16, 3.2, '#ffffff']];
+function drawWorld(ctx, worlds, name, cx, cy, time, motion, { period = 180000, phase = 0 } = {}) {
+  const w = worlds?.frames[name];
+  if (!w) return;
+  const turn = motion ? ((time / period + phase) % 1 + 1) % 1 : 0, at = turn * w.frames, i = Math.floor(at) % w.frames, mix = at - Math.floor(at);
+  const x = Math.round(cx - w.w / 2), y = Math.round(cy - w.h / 2);
+  ctx.drawImage(worlds.image, w.x + i * w.w, w.y, w.w, w.h, x, y, w.w, w.h);
+  if (motion && mix > .02) {
+    ctx.globalAlpha = mix;
+    ctx.drawImage(worlds.image, w.x + (i + 1) % w.frames * w.w, w.y, w.w, w.h, x, y, w.w, w.h);
+    ctx.globalAlpha = 1;
+  }
+}
+
 // Each builder returns { base, stars:[far, near], paint(ctx, time, motion, extra) }.
 // `motion` is 0 for reduced motion, otherwise 1.
 const BUILDERS = {
-  frontier() {
+  frontier(worlds) {
     const r = new Raster(), bg = new Raster();
-    bg.gradient(ramp(['#050a1a', '#0a1430', '#12214a', '#1b3158']));
-    r.disc(96, 78, 22, ramp(['#101a3a', '#1f3a6e', '#3f78b0', '#8cc6d8']), { craters:[[-6, 4, 3], [7, -6, 2]] });
-    r.disc(318, 52, 12, ramp(['#2a1830', '#573a63', '#9a6a8a', '#e0b4a8']));
-    r.disc(404, 120, 8, ramp(['#10282e', '#1d5560', '#3f9aa0', '#9ae0d0']));
-    // Low, dim rocky horizon: decoration only, well below the combat area.
-    r.hills(258, 5, [[3, 1, .4], [7, .5, 1.3], [13, .25, 2.1]], hex('#0d1730'), hex('#1a2b52'));
+    bg.gradient(ramp(['#09061c', '#1a0c3a', '#4a185c', '#96346a']));
+    bg.nebula(101, [70, 20, 120], { threshold:.42, gain:2.4, strength:.8 });
+    bg.nebula(102, [20, 70, 130], { threshold:.5, gain:2.8, strength:.6, scale:40, side:'right' });
+    bg.bloom(40, 18, 210, [255, 150, 90], .35);
+    // A storm giant fills the lower right, cropped by the ridge; a cratered moon hangs upper left.
+    r.hills(252, 8, [[3, 1, .4], [7, .5, 1.3], [13, .25, 2.1]], hex('#04030f'), hex('#8a3a58'));
     const base = r.toCanvas(), back = bg.toCanvas();
-    const stars = [starLayer(11, 70, ramp(['#1c2c4c', '#2c456c'])), starLayer(12, 46, ramp(['#4e7098', '#8ab8d0']))];
-    return { back, base, stars, paint(ctx, t, m) { ctx.drawImage(base, 0, 0); } };
-  },
-  violet() {
-    const radius = 118, size = radius * 2 + 1, cx = 372, cy = 214;
-    const lit = new Raster(size, size), mask = new Raster(size, size);
-    lit.disc(radius, radius, radius, ramp(['#000000', '#1a0d2e', '#33205a', '#503a86', '#7a5cb4']), {});
-    for (let i = 0; i < lit.data.length; i++) {
-      const c = lit.data[i];
-      mask.data[i] = c ? hex('#ffffff') : 0;
-    }
-    // Shadow/highlight overlay: sample the shaded sphere's luminance as dark alpha.
-    const shade = new Raster(size, size);
-    for (let i = 0; i < lit.data.length; i++) {
-      const c = lit.data[i];
-      if (!c) continue;
-      const level = (c & 255) / 255;
-      const checker = (i % size ^ Math.floor(i / size)) & 1;
-      shade.data[i] = level < .12 || (level <= .2 && checker) ? ((hex('#05020d') & 0xffffff | 150 << 24) >>> 0) : 0;
-    }
-    const maskCanvas = mask.toCanvas(), shadeCanvas = shade.toCanvas();
-    // Seamless banded texture: periodic wobble keeps the loop invisible.
-    const texture = new Raster(WIDTH, size);
-    const bands = ramp(['#2a1a52', '#3c2870', '#5a3c98', '#8a5ab8', '#b07ac8', '#d49cd0', '#5a3c98', '#2a1a52']);
-    for (let y = 0; y < size; y++) for (let x = 0; x < WIDTH; x++) {
-      const wobble = Math.sin(x / WIDTH * Math.PI * 4 + y * .07) * 3 + Math.sin(x / WIDTH * Math.PI * 2 + y * .02) * 5;
-      const band = (y + wobble) / 11;
-      const base = Math.floor(band) % bands.length, mix = band - Math.floor(band);
-      const i = (base + bands.length) % bands.length, j = (i + 1) % bands.length;
-      texture.data[y * WIDTH + x] = mix > BAYER[(y & 3) * 4 + (x & 3)] / 16 ? bands[j] : bands[i];
-    }
-    const textureCanvas = texture.toCanvas();
-    const work = canvasOf(size, size);
-    const bg = new Raster();
-    bg.gradient(ramp(['#08051a', '#120a2c', '#1c1040']));
-    const back = bg.toCanvas();
-    const stars = [starLayer(21, 60, ramp(['#2a2650', '#463e78'])), starLayer(22, 40, ramp(['#8a7ec0', '#d0c4f0']))];
-    return { back, stars, paint(ctx, t, m) {
-      const scroll = m ? t * .006 : 0;
-      work.ctx.globalCompositeOperation = 'source-over';
-      work.ctx.clearRect(0, 0, size, size);
-      tile(work.ctx, textureCanvas, scroll);
-      work.ctx.globalCompositeOperation = 'destination-in';
-      work.ctx.drawImage(maskCanvas, 0, 0);
-      work.ctx.globalCompositeOperation = 'source-over';
-      work.ctx.drawImage(shadeCanvas, 0, 0);
-      ctx.drawImage(work.canvas, cx - radius, cy - radius);
+    const stars = [starLayer(11, 70, ramp(['#3a2c68', '#5a4c98'])), starLayer(12, 46, ramp(['#8a98c8', '#e0d8f0']), 8)];
+    return { back, base, stars, paint(ctx, t, m) {
+      drawWorld(ctx, worlds, 'storm-giant', 398, 222, t, m, { period:240000 });
+      drawWorld(ctx, worlds, 'moon-small', 82, 74, t, m, { period:170000, phase:.3 });
+      drawWorld(ctx, worlds, 'moon-tiny', 304, 46, t, m, { period:130000, phase:.6 });
+      ctx.drawImage(base, 0, 0);
     } };
   },
-  ember() {
+  violet(worlds) {
+    const bg = new Raster();
+    bg.gradient(ramp(['#08051a', '#140a30', '#2c1248', '#5a2060']));
+    bg.nebula(111, [90, 30, 130], { threshold:.4, gain:2.2, strength:.8 });
+    bg.nebula(112, [30, 60, 150], { threshold:.5, gain:2.6, strength:.55, scale:44, side:'right' });
+    bg.bloom(30, 14, 200, [255, 140, 100], .25);
+    const back = bg.toCanvas();
+    const stars = [starLayer(21, 60, ramp(['#2a2650', '#463e78'])), starLayer(22, 40, ramp(['#8a7ec0', '#d0c4f0']), 6)];
+    return { back, stars, paint(ctx, t, m) {
+      drawWorld(ctx, worlds, 'ice-giant', 352, 168, t, m, { period:260000 });
+      drawWorld(ctx, worlds, 'ice-moon', 120, 70, t, m, { period:150000, phase:.4 });
+    } };
+  },
+  ember(worlds) {
     const r = new Raster(), bg = new Raster();
     bg.gradient(ramp(['#1c0a1a', '#3a1424', '#6a2430', '#8c3a3c']));
-    r.disc(118, 92, 54, ramp(['#2a0c14', '#6a1c24', '#b0382c', '#e07048', '#f0a878']), { craters:[[-14, 8, 6], [18, -12, 4], [6, 22, 5]] });
+    bg.nebula(121, [120, 40, 60], { threshold:.42, gain:2.2, strength:.7 });
+    bg.bloom(30, 14, 220, [255, 170, 110], .3);
     const base = r.toCanvas(), back = bg.toCanvas();
     const far = new Raster(); far.hills(236, 12, [[2, 1, .6], [5, .55, 1.4], [9, .3, 2.6]], hex('#4a1c34'), hex('#7a3050'));
     const near = new Raster(); near.hills(258, 9, [[3, 1, 2.2], [7, .5, .5], [11, .3, 1.7]], hex('#2e1228'), hex('#5a2442'));
     const farLayer = far.toCanvas(), nearLayer = near.toCanvas();
-    const stars = [starLayer(31, 40, ramp(['#6a3050', '#90506a'])), starLayer(32, 24, ramp(['#e0a8a0', '#f4d0c0']))];
+    const stars = [starLayer(31, 40, ramp(['#6a3050', '#90506a'])), starLayer(32, 24, ramp(['#e0a8a0', '#f4d0c0']), 6)];
     return { back, base, stars, paint(ctx, t, m) {
       ctx.drawImage(base, 0, 0);
+      drawWorld(ctx, worlds, 'lava-world', 122, 100, t, m, { period:200000 });
+      drawWorld(ctx, worlds, 'hot-jupiter', 408, 62, t, m, { period:140000, phase:.2 });
       tile(ctx, farLayer, m ? t * .003 : 0); tile(ctx, nearLayer, m ? t * .006 : 0);
     } };
   },
-  ruins() {
+  ruins(worlds) {
     const r = new Raster(), bg = new Raster();
     bg.gradient(ramp(['#080c1c', '#10162e', '#1c2442', '#2c3656']));
-    r.disc(338, 104, 64, ramp(['#1c2036', '#3a4262', '#6a7898', '#a4b2c8', '#d4dcea']), { craters:[[-18, -10, 9], [20, 14, 7], [-4, 28, 5], [26, -22, 4]] });
+    bg.nebula(131, [40, 56, 110], { threshold:.44, gain:2.2, strength:.7 });
+    bg.bloom(40, 14, 200, [220, 190, 170], .2);
     // Ruined skyline: tall at the edges, low in the middle, windows mostly dark.
     const next = rand(41);
     for (let x = 0; x < WIDTH;) {
@@ -185,58 +268,49 @@ const BUILDERS = {
       x += width;
     }
     const base = r.toCanvas(), back = bg.toCanvas();
-    const stars = [starLayer(42, 52, ramp(['#242c4a', '#3c4a70'])), starLayer(43, 30, ramp(['#8ea0c0', '#d0d8e8']))];
-    return { back, base, stars, paint(ctx) { ctx.drawImage(base, 0, 0); } };
+    const stars = [starLayer(42, 52, ramp(['#242c4a', '#3c4a70'])), starLayer(43, 30, ramp(['#8ea0c0', '#d0d8e8']), 6)];
+    return { back, base, stars, paint(ctx, t, m) {
+      drawWorld(ctx, worlds, 'moon-large', 338, 104, t, m, { period:300000 });
+      ctx.drawImage(base, 0, 0);
+    } };
   },
-  lunar() {
+  lunar(worlds) {
     const r = new Raster(), bg = new Raster();
     bg.gradient(ramp(['#050c20', '#0a1a3c', '#123058', '#1a4470']));
-    r.disc(128, 98, 44, ramp(['#0c1c3c', '#1c3c70', '#3a70a8', '#78b0d0', '#c0e4ee']), { craters:[[-12, -6, 6], [14, 12, 5], [4, -18, 3]] });
-    r.disc(356, 170, 26, ramp(['#0e1a38', '#22407a', '#4a78b4', '#90c0dc']), { craters:[[6, 4, 4]] });
-    r.disc(430, 52, 10, ramp(['#142038', '#2a4470', '#5a86b8', '#a8d0e4']));
+    bg.nebula(141, [20, 90, 130], { threshold:.42, gain:2.4, strength:.7 });
+    bg.bloom(40, 14, 200, [160, 220, 255], .22);
     const base = r.toCanvas(), back = bg.toCanvas();
-    const stars = [starLayer(51, 90, ramp(['#1c3458', '#2c4c78'])), starLayer(52, 56, ramp(['#6a9ac4', '#c0e0f0']))];
-    return { back, base, stars, paint(ctx) { ctx.drawImage(base, 0, 0); } };
+    const stars = [starLayer(51, 90, ramp(['#1c3458', '#2c4c78'])), starLayer(52, 56, ramp(['#6a9ac4', '#c0e0f0']), 6)];
+    return { back, base, stars, paint(ctx, t, m) {
+      drawWorld(ctx, worlds, 'ocean-world', 128, 98, t, m, { period:210000 });
+      drawWorld(ctx, worlds, 'ice-moon', 356, 172, t, m, { period:160000, phase:.5 });
+      drawWorld(ctx, worlds, 'moon-tiny', 430, 52, t, m, { period:120000, phase:.1 });
+    } };
   },
-  rift() {
-    const cx = 318, cy = 132, tilt = -.28, rx = 150, ry = 40;
-    const r = new Raster(), bg = new Raster();
+  rift(worlds) {
+    const cx = 318, cy = 132;
+    const bg = new Raster();
     bg.gradient(ramp(['#030208', '#080414', '#100a22']));
-    // Dim, fixed halo around the dark centre; the ring itself is animated.
-    for (let y = 0; y < HEIGHT; y++) for (let x = 0; x < WIDTH; x++) {
-      const d = Math.hypot((x - cx) / 1.5, y - cy);
-      if (d < 70 && d > 26 && (BAYER[(y & 3) * 4 + (x & 3)] / 16) < (70 - d) / 44 * .45) r.put(x, y, hex('#1a0e2e'));
-    }
-    const base = r.toCanvas(), back = bg.toCanvas();
-    const next = rand(61);
-    const bits = Array.from({ length:420 }, () => ({ a:next() * Math.PI * 2, w:.35 + next() * .5, s:.82 + next() * .36, c:Math.floor(next() * 4) }));
-    const warm = ['#5a2a1a', '#a85a24', '#e0a040', '#f4e0b0'];
-    const disc = new Raster(70, 70);
-    disc.disc(35, 35, 22, ramp(['#000000', '#02010a', '#06030f']));
-    const discCanvas = disc.toCanvas();
-    const stars = [starLayer(62, 44, ramp(['#2a1e48', '#443468'])), starLayer(63, 26, ramp(['#8a7cc0', '#d8d0f0']))];
-    return { back, base, stars, paint(ctx, t, m, { ringScale = 1 } = {}) {
-      ctx.drawImage(base, 0, 0);
-      const turn = m ? t * .00022 : 0, sin = Math.sin(tilt), cos = Math.cos(tilt);
-      const draw = back => {
-        for (const bit of bits) {
-          const a = bit.a + turn * bit.w * Math.PI * 2;
-          const px = Math.cos(a) * rx * bit.s * ringScale, py = Math.sin(a) * ry * bit.s * ringScale;
-          if ((py < 0) !== back) continue;
-          const x = Math.round(cx + px * cos - py * sin), y = Math.round(cy + px * sin + py * cos);
-          ctx.fillStyle = warm[bit.c];
-          ctx.fillRect(x, y, bit.c > 2 ? 2 : 1, 1);
-        }
-      };
-      draw(true);
-      ctx.drawImage(discCanvas, cx - 35, cy - 35);
-      draw(false);
+    bg.nebula(151, [70, 24, 90], { threshold:.45, gain:2.2, strength:.55, side:'all' });
+    const back = bg.toCanvas();
+    const stars = [starLayer(62, 44, ramp(['#2a1e48', '#443468'])), starLayer(63, 26, ramp(['#8a7cc0', '#d8d0f0']), 6)];
+    // Sagittarius A*: a lopsided ring around a black shadow. Four stars circle it,
+    // each taking minutes per orbit, and the image itself is static.
+    return { back, stars, paint(ctx, t, m) {
+      drawWorld(ctx, worlds, 'sgr-a', cx, cy, t, 0);
+      for (const [ia, ib, rot, colour] of S_ORBITS) {
+        const angle = rot + (m ? t / 1000 / 300 * Math.PI * 2 * (60 / ia) ** 1.5 : 0);
+        const co = Math.cos(rot), so = Math.sin(rot);
+        const x = cx + ia * Math.cos(angle) * co - ib * Math.sin(angle) * so, y = cy + ia * Math.cos(angle) * so + ib * Math.sin(angle) * co;
+        ctx.fillStyle = colour;
+        ctx.fillRect(Math.round(x) - 1, Math.round(y) - 1, 2, 2);
+      }
     } };
   },
 };
 
 // Dims decoration so bullets, rocks, pickups, and warnings stay on top.
-const PLAY_DIM = 'rgba(6, 10, 20, .38)';
+const PLAY_DIM = 'rgba(8, 4, 22, .2)';
 
 export class Backgrounds {
   constructor({ reduced = false } = {}) {
@@ -247,13 +321,16 @@ export class Backgrounds {
     this.built = new Map();
     this.failed = new Set();
     this.queued = new Set();
+    this.worlds = null;
   }
+  // Sprites arrive after the game art loads; regions built earlier are rebuilt.
+  setWorlds(worlds) { this.worlds = worlds; this.built.clear(); this.failed.clear(); }
   setReduced(value) { this.reduced = value; this.timeline.reduced = value; }
   art(index) {
     if (this.failed.has(index)) return null;
     let art = this.built.get(index);
     if (!art) {
-      try { art = BUILDERS[REGIONS[index].id](); this.built.set(index, art); }
+      try { art = BUILDERS[REGIONS[index].id](this.worlds); this.built.set(index, art); }
       catch (error) { console.error(`Background ${REGIONS[index].id} failed`, error); this.failed.add(index); return null; }
     }
     return art;
