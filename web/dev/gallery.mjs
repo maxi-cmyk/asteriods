@@ -1,7 +1,32 @@
 import { S, SCENE_FLOATS } from '../src/runtime/scene-layout.mjs';
 import { PixelRenderer, loadArt } from '../src/render/renderer.mjs';
+import { COLOUR } from '../src/render/constants.mjs';
+
+// The flight sprites at their real size, for checking silhouettes against each other.
+function drawComparison(renderer) {
+    const { context: ctx, px } = renderer;
+    ctx.fillStyle = COLOUR.background;
+    ctx.fillRect(0, 0, 480, 270);
+    for (let i = 0; i < 100; i++) {
+        ctx.fillStyle = ['#182633', '#263c4c', '#4b6573'][i % 3];
+        ctx.fillRect((i * 137 + 71) % 480, (i * i * 29 + 31) % 270, 1, 1);
+    }
+    px.text('FLIGHT ASSETS', 16, 15, COLOUR.ink, 2);
+    px.text('NATIVE PIXELS / 480 X 270', 16, 39, COLOUR.muted);
+    const xs = [44, 136, 220, 296, 366, 430];
+    const names = ['ship', 'rock-0-0-0', 'rock-1-1-0', 'rock-2-2-0', 'multishot', 'shield'];
+    const labels = ['24X16', '32X32', '20X20', '12X12', '12X12', '12X12'];
+    names.forEach((name, i) => {
+        const { w, h } = renderer.art.sprites[name];
+        px.sprite(name, xs[i] - w / 2, 96 - h / 2);
+        px.text(labels[i], xs[i], 125, COLOUR.muted, 1, 'center');
+    });
+    px.text('SHIP / ROCKS / MULTISHOT / SHIELD', 16, 164, COLOUR.muted);
+    for (let frame = 0; frame < 8; frame++) px.sprite(`explosion-${frame}`, 17 + frame * 55, 190);
+    px.text('EXPLOSION  /  8 FRAMES, 320 MS', 16, 239, COLOUR.muted);
+}
 try {
-    new PixelRenderer(document.querySelector('#comparison'), await loadArt()).comparison();
+    drawComparison(new PixelRenderer(document.querySelector('#comparison'), await loadArt()));
 } catch (error) {
     document.querySelector('.description').textContent =
         'Could not load pixel assets. Reload the page after rebuilding.';
