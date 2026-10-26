@@ -143,7 +143,7 @@ const pop = (v, f = 700, at = 0, vol = 0.1) =>
 
 // ---------------------------------------------------------------- sound book
 // charge: attack id -> (v, seconds). release: hazard kind or shot family -> (v).
-const BOOK = {
+export const BOOK = {
     sentinel: {
         sting: (v) => {
             v.tone({ f: 70, to: 140, type: 'sawtooth', dur: 0.9, vol: 0.16, env: 'swell' });
