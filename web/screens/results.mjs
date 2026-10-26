@@ -43,10 +43,7 @@ export function renderResultsScreen({
             update(element('personalBest'), 'Team complete');
             return;
         }
-        update(
-            element('continueResults'),
-            result.rules.practice ? 'Return home' : 'Continue',
-        );
+        update(element('continueResults'), result.rules.practice ? 'Return home' : 'Continue');
         update(
             element('personalBest'),
             `${result.rules.practice ? 'Practice complete' : 'Run complete'} · Player ${result.profile + 1}`,

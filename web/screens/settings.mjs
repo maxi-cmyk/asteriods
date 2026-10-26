@@ -1,11 +1,5 @@
 import { element } from '../dom.mjs';
-import {
-    KEY_ACTIONS,
-    PAD_ACTIONS,
-    PAD_BUTTONS,
-    sanitizeSettings,
-    keyLabel,
-} from '../settings.mjs';
+import { KEY_ACTIONS, PAD_ACTIONS, PAD_BUTTONS, sanitizeSettings, keyLabel } from '../settings.mjs';
 
 export function createSettingsScreen({
     settings,
@@ -22,9 +16,7 @@ export function createSettingsScreen({
     function changed() {
         const dirty = settingsDraft.changed();
         applyButton.disabled = !dirty;
-        settingsStatus.textContent = dirty
-            ? 'Unapplied changes'
-            : '';
+        settingsStatus.textContent = dirty ? 'Unapplied changes' : '';
     }
     function render() {
         element('inputProfile').value = profileStore.activeProfile;
@@ -33,8 +25,7 @@ export function createSettingsScreen({
         element('bossLongWarnings').checked = settings.bossLongWarnings;
         element('bossCalm').checked = settings.bossCalm;
         if (!storage)
-            settingsStatus.textContent =
-                'Storage unavailable; settings apply for this visit';
+            settingsStatus.textContent = 'Storage unavailable; settings apply for this visit';
         for (const name of [
             'volume',
             'deadzone',
@@ -70,8 +61,7 @@ export function createSettingsScreen({
                 settingsStatus.textContent = `Press a new key for ${title}; Esc cancels`;
             });
             button.dataset.action = action;
-            if (settingsUi.rebinding === action)
-                button.textContent = 'Press a key…';
+            if (settingsUi.rebinding === action) button.textContent = 'Press a key…';
             label.append(button);
             keys.append(label);
         }
@@ -101,9 +91,7 @@ export function createSettingsScreen({
                 controls.clear();
                 render();
                 changed();
-                document
-                    .querySelector(`#padBindings [data-action="${action}"]`)
-                    .focus();
+                document.querySelector(`#padBindings [data-action="${action}"]`).focus();
             });
             label.append(select);
             pads.append(label);
@@ -112,13 +100,8 @@ export function createSettingsScreen({
     function select(category) {
         settingsUi.category = category;
         for (const button of document.querySelectorAll('[data-category]'))
-            button.setAttribute(
-                'aria-pressed',
-                String(button.dataset.category === category),
-            );
-        for (const panel of document.querySelectorAll(
-            '[data-settings-panel]',
-        )) {
+            button.setAttribute('aria-pressed', String(button.dataset.category === category));
+        for (const panel of document.querySelectorAll('[data-settings-panel]')) {
             panel.hidden = panel.dataset.settingsPanel !== category;
             panel.inert = panel.hidden;
         }
@@ -167,8 +150,7 @@ export function createSettingsScreen({
         });
     }
     element('inputProfile').addEventListener('change', (event) => {
-        profileStore.profiles[profileStore.activeProfile] =
-            sanitizeSettings(settings);
+        profileStore.profiles[profileStore.activeProfile] = sanitizeSettings(settings);
         profileStore.activeProfile = Number(event.target.value);
         Object.assign(
             settings,

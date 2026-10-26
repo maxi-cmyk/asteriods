@@ -19,8 +19,7 @@ export function renderPlayChrome({
 }) {
     const state = runtime.state;
     element('pauseMenu').hidden = navigation.screen !== 'pause';
-    document.querySelector('.toolbar').inert =
-        navigation.screen === 'pause' || showResults;
+    document.querySelector('.toolbar').inert = navigation.screen === 'pause' || showResults;
     if (!showResults) canvas.inert = navigation.screen !== 'play';
     element('gameHome').hidden = state !== 'game-over';
     fireButton.hidden = !['initials', 'game-over'].includes(state);
@@ -39,7 +38,10 @@ export function renderPlayChrome({
     if (!(navigation.screen === 'records' && element('recordsMode').value !== 'solo')) {
         const entries = Array.from({ length: Math.min(5, scene[31]) }, (_, i) => {
             const at = 486 + i * 5;
-            return { initials: String.fromCharCode(...scene.subarray(at + 1, at + 4)), score: scene[at] };
+            return {
+                initials: String.fromCharCode(...scene.subarray(at + 1, at + 4)),
+                score: scene[at],
+            };
         });
         renderLeaderboard(leaderboard, entries, { highlight: scene[29] });
     }
@@ -53,8 +55,7 @@ export function renderPlayChrome({
 
         lastState = state;
         stateLabel.textContent = state.toUpperCase().replace('-', ' ');
-        pauseButton.textContent =
-            navigation.screen === 'pause' ? 'Resume' : 'Pause';
+        pauseButton.textContent = navigation.screen === 'pause' ? 'Resume' : 'Pause';
         pauseButton.disabled = !navigation.live;
         const hints = {
             results: '',

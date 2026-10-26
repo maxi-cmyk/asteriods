@@ -1,6 +1,6 @@
-import {readFile,writeFile} from 'node:fs/promises';
-const html=await readFile(new URL('../dist/index.html',import.meta.url),'utf8');
-const setup=`<script>
+import { readFile, writeFile } from 'node:fs/promises';
+const html = await readFile(new URL('../dist/index.html', import.meta.url), 'utf8');
+const setup = `<script>
 // Synthetic controllers for browser flow checks; no physical-input claim.
 const pads=[0,1].map(index=>({index,id:'Synthetic QA controller '+index,connected:true,mapping:'standard',axes:[0,0,0,0],buttons:Array.from({length:17},()=>({pressed:false,value:0}))}));
 Object.defineProperty(navigator,'getGamepads',{value:()=>pads.filter(p=>p.connected)});
@@ -16,5 +16,10 @@ const b=document.createElement('button');b.textContent=name;b.onclick=()=>{pads[
 }
 document.body.append(qa);
 </script><script type="module" src="./app.mjs"></script>`;
-await writeFile(new URL('../dist/coop-browser.html',import.meta.url),html.replace('<script type="module" src="./app.mjs"></script>',setup));
-console.log('Prepared /coop-browser.html with synthetic controllers; excluded from production build packaging.');
+await writeFile(
+    new URL('../dist/coop-browser.html', import.meta.url),
+    html.replace('<script type="module" src="./app.mjs"></script>', setup),
+);
+console.log(
+    'Prepared /coop-browser.html with synthetic controllers; excluded from production build packaging.',
+);

@@ -426,7 +426,7 @@ dialog {
         min-height: 40px;
     }
     .help-layout > section,
-[data-settings-panel] {
+    [data-settings-panel] {
         padding: var(--space-3);
     }
     #screenTitle {
@@ -666,34 +666,52 @@ body[data-screen='pause'] .screen {
 }
 
 /* Two-player status has its own space, outside the shared combat geometry. */
-body[data-coop='true']:is([data-screen='play'],[data-screen='pause']) .console {
+body[data-coop='true']:is([data-screen='play'], [data-screen='pause']) .console {
     padding: 44px 12px 8px;
     gap: 8px;
     justify-content: flex-start;
 }
-body[data-coop='true']:is([data-screen='play'],[data-screen='pause']) .console > #coopHud,
-body[data-coop='true']:is([data-screen='play'],[data-screen='pause']) .console > .toolbar {
+body[data-coop='true']:is([data-screen='play'], [data-screen='pause']) .console > #coopHud,
+body[data-coop='true']:is([data-screen='play'], [data-screen='pause']) .console > .toolbar {
     position: relative;
     inset: auto;
     width: auto;
     flex: none;
     margin: 0;
 }
-body[data-coop='true'] #coopHud { padding: 4px 8px; }
-body[data-coop='true'] .pilot-hud { font-family: var(--font-body); }
-body[data-coop='true'] .screen { margin: auto 0; }
-body[data-coop='true'] #coopReconnect { font-size: var(--size-small); }
-body[data-coop='true'] .pause-menu { max-height: 95%; overflow-y: auto; }
-.coop-lobby.utility-view { padding: 20px 28px; }
-.coop-lobby.utility-view > h1 { margin: 0 0 12px; font-size: clamp(22px,2.5vw,32px); }
-.coop-lobby .crew-slot label { font-family: var(--font-body); }
+body[data-coop='true'] #coopHud {
+    padding: 4px 8px;
+}
+body[data-coop='true'] .pilot-hud {
+    font-family: var(--font-body);
+}
+body[data-coop='true'] .screen {
+    margin: auto 0;
+}
+body[data-coop='true'] #coopReconnect {
+    font-size: var(--size-small);
+}
+body[data-coop='true'] .pause-menu {
+    max-height: 95%;
+    overflow-y: auto;
+}
+.coop-lobby.utility-view {
+    padding: 20px 28px;
+}
+.coop-lobby.utility-view > h1 {
+    margin: 0 0 12px;
+    font-size: clamp(22px, 2.5vw, 32px);
+}
+.coop-lobby .crew-slot label {
+    font-family: var(--font-body);
+}
 
 /* ---- Quiet solo HUD ------------------------------------------------------
    No panels. Light type sits on soft fades over the playfield: lives and wave
    top left, score centred, ability glyphs with thin meters bottom left. Run
    stats (CPS, accuracy, chain) live on the results screen instead. Co-op keeps
    its own layout above. */
-body:is([data-screen='play'],[data-screen='pause']):not([data-coop='true']) .console .hud {
+body:is([data-screen='play'], [data-screen='pause']):not([data-coop='true']) .console .hud {
     top: 0;
     left: 0;
     right: 0;
@@ -706,24 +724,26 @@ body:is([data-screen='play'],[data-screen='pause']):not([data-coop='true']) .con
     pointer-events: none;
     text-shadow: none;
 }
-body:is([data-screen='play'],[data-screen='pause']):not([data-coop='true']) .hud-group {
+body:is([data-screen='play'], [data-screen='pause']):not([data-coop='true']) .hud-group {
     grid-column: 1;
     display: flex;
     flex-direction: column;
     align-items: flex-start;
     gap: 8px;
 }
-body:is([data-screen='play'],[data-screen='pause']):not([data-coop='true']) .hud-group > span {
+body:is([data-screen='play'], [data-screen='pause']):not([data-coop='true']) .hud-group > span {
     font-family: var(--font-display);
     font-size: var(--size-label);
     color: #ffbe96;
     letter-spacing: 0.06em;
 }
-body:is([data-screen='play'],[data-screen='pause']):not([data-coop='true']) .hud-group > span:first-child {
+body:is([data-screen='play'], [data-screen='pause']):not([data-coop='true'])
+    .hud-group
+    > span:first-child {
     font-size: 0;
     line-height: 0;
 }
-body:is([data-screen='play'],[data-screen='pause']):not([data-coop='true']) #lives {
+body:is([data-screen='play'], [data-screen='pause']):not([data-coop='true']) #lives {
     display: block;
     font-size: 0;
     height: 16px;
@@ -731,23 +751,25 @@ body:is([data-screen='play'],[data-screen='pause']):not([data-coop='true']) #liv
     background: url('./assets/ui/ship-life.png') left center / 30px 16px repeat-x;
     image-rendering: pixelated;
 }
-body:is([data-screen='play'],[data-screen='pause']):not([data-coop='true']) #wave {
+body:is([data-screen='play'], [data-screen='pause']):not([data-coop='true']) #wave {
     color: #ffd6b8;
     font-size: var(--size-label);
 }
-body:is([data-screen='play'],[data-screen='pause']):not([data-coop='true']) .hud .score {
+body:is([data-screen='play'], [data-screen='pause']):not([data-coop='true']) .hud .score {
     grid-column: 2;
     display: flex;
     flex-direction: column;
     align-items: center;
     gap: 6px;
 }
-body:is([data-screen='play'],[data-screen='pause']):not([data-coop='true']) #score {
+body:is([data-screen='play'], [data-screen='pause']):not([data-coop='true']) #score {
     color: #fff4d6;
     font-size: 34px;
-    text-shadow: 0 0 10px #ffa05a99, 2px 2px 0 #3a1646;
+    text-shadow:
+        0 0 10px #ffa05a99,
+        2px 2px 0 #3a1646;
 }
-body:is([data-screen='play'],[data-screen='pause']):not([data-coop='true']) .hud .chain {
+body:is([data-screen='play'], [data-screen='pause']):not([data-coop='true']) .hud .chain {
     display: flex;
     align-items: center;
     gap: 8px;
@@ -755,21 +777,21 @@ body:is([data-screen='play'],[data-screen='pause']):not([data-coop='true']) .hud
     font-size: var(--size-label);
     color: #ffc882;
 }
-body:is([data-screen='play'],[data-screen='pause']):not([data-coop='true']) .hud .track {
+body:is([data-screen='play'], [data-screen='pause']):not([data-coop='true']) .hud .track {
     width: 56px;
     height: 2px;
     background: #3a2466;
     border: 0;
 }
-body:is([data-screen='play'],[data-screen='pause']):not([data-coop='true']) .hud .track i {
+body:is([data-screen='play'], [data-screen='pause']):not([data-coop='true']) .hud .track i {
     background: #ffc882;
 }
 
-body:is([data-screen='play'],[data-screen='pause']):not([data-coop='true']) .console .live-stats {
+body:is([data-screen='play'], [data-screen='pause']):not([data-coop='true']) .console .live-stats {
     display: none;
 }
 
-body:is([data-screen='play'],[data-screen='pause']):not([data-coop='true']) .console .combat-hud {
+body:is([data-screen='play'], [data-screen='pause']):not([data-coop='true']) .console .combat-hud {
     left: 18px;
     right: auto;
     bottom: 14px;
@@ -780,7 +802,7 @@ body:is([data-screen='play'],[data-screen='pause']):not([data-coop='true']) .con
     pointer-events: none;
     text-shadow: none;
 }
-body:is([data-screen='play'],[data-screen='pause']):not([data-coop='true']) .combat-hud .ability {
+body:is([data-screen='play'], [data-screen='pause']):not([data-coop='true']) .combat-hud .ability {
     --tone: #ffc86e;
     position: relative;
     display: inline-flex;
@@ -793,20 +815,31 @@ body:is([data-screen='play'],[data-screen='pause']):not([data-coop='true']) .com
     opacity: 0.55;
     transition: opacity 0.2s;
 }
-body:is([data-screen='play'],[data-screen='pause']):not([data-coop='true']) .combat-hud .ability::before {
+body:is([data-screen='play'], [data-screen='pause']):not([data-coop='true'])
+    .combat-hud
+    .ability::before {
     content: '';
     width: 14px;
     height: 14px;
     background: var(--glyph) center / 14px 14px no-repeat;
     image-rendering: pixelated;
 }
-.combat-hud .ability[data-ability='laser'] { --tone: #ffc86e; --glyph: url('./assets/ui/bolt.png'); }
-.combat-hud .ability[data-ability='shield'] { --tone: #78ebff; --glyph: url('./assets/ui/shield.png'); }
-.combat-hud .ability[data-ability='double'] { --tone: #ff82c8; --glyph: url('./assets/ui/x2.png'); }
-body:is([data-screen='play'],[data-screen='pause']) .combat-hud .ability[data-state='ready'],
-body:is([data-screen='play'],[data-screen='pause']) .combat-hud .ability[data-state='charging'],
-body:is([data-screen='play'],[data-screen='pause']) .combat-hud .ability[data-state='active'],
-body:is([data-screen='play'],[data-screen='pause']) .combat-hud .ability[data-state='stored'] {
+.combat-hud .ability[data-ability='laser'] {
+    --tone: #ffc86e;
+    --glyph: url('./assets/ui/bolt.png');
+}
+.combat-hud .ability[data-ability='shield'] {
+    --tone: #78ebff;
+    --glyph: url('./assets/ui/shield.png');
+}
+.combat-hud .ability[data-ability='double'] {
+    --tone: #ff82c8;
+    --glyph: url('./assets/ui/x2.png');
+}
+body:is([data-screen='play'], [data-screen='pause']) .combat-hud .ability[data-state='ready'],
+body:is([data-screen='play'], [data-screen='pause']) .combat-hud .ability[data-state='charging'],
+body:is([data-screen='play'], [data-screen='pause']) .combat-hud .ability[data-state='active'],
+body:is([data-screen='play'], [data-screen='pause']) .combat-hud .ability[data-state='stored'] {
     opacity: 1;
 }
 .combat-hud .ability kbd {
@@ -829,45 +862,51 @@ body:is([data-screen='play'],[data-screen='pause']) .combat-hud .ability[data-st
 .combat-hud .ability .track i {
     background: var(--tone);
 }
-body:is([data-screen='play'],[data-screen='pause']):not([data-coop='true']) #precisionStatus:not(.active) {
+body:is([data-screen='play'], [data-screen='pause']):not([data-coop='true'])
+    #precisionStatus:not(.active) {
     display: none;
 }
-body:is([data-screen='play'],[data-screen='pause']):not([data-coop='true']) #precisionStatus {
+body:is([data-screen='play'], [data-screen='pause']):not([data-coop='true']) #precisionStatus {
     font-family: var(--font-display);
     font-size: var(--size-label);
     color: #78ebff;
 }
 
 /* Playfield chrome recedes: ghost buttons, a dim hint, nothing boxed. */
-body:is([data-screen='play'],[data-screen='pause']):not([data-coop='true']) .shell-header button {
+body:is([data-screen='play'], [data-screen='pause']):not([data-coop='true']) .shell-header button {
     background: transparent;
     border-color: transparent;
     color: #a894cc;
     min-height: 24px;
 }
-body:is([data-screen='play'],[data-screen='pause']):not([data-coop='true']) .shell-header button:hover,
-body:is([data-screen='play'],[data-screen='pause']):not([data-coop='true']) .shell-header button:focus {
+body:is([data-screen='play'], [data-screen='pause']):not([data-coop='true'])
+    .shell-header
+    button:hover,
+body:is([data-screen='play'], [data-screen='pause']):not([data-coop='true'])
+    .shell-header
+    button:focus {
     color: #fff4d6;
     background: #1a0c3acc;
 }
-body:is([data-screen='play'],[data-screen='pause']):not([data-coop='true']) .console .toolbar {
+body:is([data-screen='play'], [data-screen='pause']):not([data-coop='true']) .console .toolbar {
     left: auto;
     right: 14px;
     bottom: 10px;
 }
-body:is([data-screen='play'],[data-screen='pause']):not([data-coop='true']) .toolbar #hint {
+body:is([data-screen='play'], [data-screen='pause']):not([data-coop='true']) .toolbar #hint {
     color: #a894cc;
     font-size: var(--size-small);
 }
-body:is([data-screen='play'],[data-screen='pause']):not([data-coop='true']) #pause {
+body:is([data-screen='play'], [data-screen='pause']):not([data-coop='true']) #pause {
     background: transparent;
     border-color: transparent;
     color: #a894cc;
     min-height: 24px;
     font-size: var(--size-label);
 }
-body:is([data-screen='play'],[data-screen='pause']):not([data-coop='true']) #pause:hover:not(:disabled),
-body:is([data-screen='play'],[data-screen='pause']):not([data-coop='true']) #pause:focus {
+body:is([data-screen='play'], [data-screen='pause']):not([data-coop='true'])
+    #pause:hover:not(:disabled),
+body:is([data-screen='play'], [data-screen='pause']):not([data-coop='true']) #pause:focus {
     color: #fff4d6;
     background: #1a0c3acc;
 }
@@ -1048,7 +1087,9 @@ body[data-screen='home'] .shell-header button {
     color: #aa8cd2;
     font-family: var(--font-body);
     font-size: var(--size-body);
-    transition: border-color 0.12s, box-shadow 0.12s;
+    transition:
+        border-color 0.12s,
+        box-shadow 0.12s;
 }
 .mode-card canvas {
     display: block;
@@ -1058,7 +1099,7 @@ body[data-screen='home'] .shell-header button {
     margin-bottom: 8px;
     image-rendering: pixelated;
     border-bottom: 1px solid #3a2a64;
-    filter: saturate(.85) brightness(.82);
+    filter: saturate(0.85) brightness(0.82);
     transition: filter 0.12s;
 }
 .mode-card em {
@@ -1088,7 +1129,9 @@ body[data-screen='home'] .shell-header button {
 .mode-card:focus {
     background: #160a34e6;
     border-color: #ffbe6e;
-    box-shadow: 0 0 0 1px #ffbe6e, 0 0 30px #ff785a40;
+    box-shadow:
+        0 0 0 1px #ffbe6e,
+        0 0 30px #ff785a40;
     outline: 1px solid transparent;
 }
 .mode-card:hover canvas,
@@ -1196,7 +1239,9 @@ body[data-screen='home'] .shell-header button {
     margin: 0;
     font-size: clamp(30px, 4vw, 50px);
     color: var(--accent);
-    text-shadow: 3px 3px 0 #340e4a, 0 0 18px color-mix(in srgb, var(--accent) 45%, transparent);
+    text-shadow:
+        3px 3px 0 #340e4a,
+        0 0 18px color-mix(in srgb, var(--accent) 45%, transparent);
 }
 .hangar-info p {
     margin: 0;
@@ -1253,17 +1298,28 @@ body[data-screen='home'] .shell-header button {
 .hangar-bay button:focus {
     background: #160a34e6;
     border-color: var(--accent);
-    box-shadow: 0 0 0 1px var(--accent), 0 0 22px color-mix(in srgb, var(--accent) 30%, transparent);
+    box-shadow:
+        0 0 0 1px var(--accent),
+        0 0 22px color-mix(in srgb, var(--accent) 30%, transparent);
     color: #fff;
     outline: 1px solid transparent;
 }
 @media (max-width: 800px) {
-    .mode-options { grid-template-columns: 1fr; }
-    .hangar-stage { grid-template-columns: 1fr; }
-    .hangar-bay { grid-template-columns: repeat(4, minmax(0, 1fr)); }
+    .mode-options {
+        grid-template-columns: 1fr;
+    }
+    .hangar-stage {
+        grid-template-columns: 1fr;
+    }
+    .hangar-bay {
+        grid-template-columns: repeat(4, minmax(0, 1fr));
+    }
 }
 @media (max-height: 650px) {
-    .mode-card canvas { aspect-ratio: 21 / 9; object-fit: cover; }
+    .mode-card canvas {
+        aspect-ratio: 21 / 9;
+        object-fit: cover;
+    }
 }
 
 /* ---- Settings on the violet theme -----------------------------------------
@@ -1444,7 +1500,9 @@ body[data-screen='home'] .shell-header button {
 }
 [data-view='settings'] input[type='range']:focus::-webkit-slider-thumb {
     background: #fff4d6;
-    box-shadow: 0 0 0 2px #ffbe6e, 0 0 14px #ff785a99;
+    box-shadow:
+        0 0 0 2px #ffbe6e,
+        0 0 14px #ff785a99;
 }
 [data-view='settings'] input[type='range']:focus::-moz-range-thumb {
     background: #fff4d6;
@@ -1525,7 +1583,9 @@ body[data-screen='home'] .shell-header button {
 [data-view='settings'] input[type='checkbox']:focus {
     outline: none;
     border-color: #ffbe6e;
-    box-shadow: 0 0 0 1px #ffbe6e, 0 0 12px #ff785a66;
+    box-shadow:
+        0 0 0 1px #ffbe6e,
+        0 0 12px #ff785a66;
 }
 [data-view='settings'] .settings-help,
 [data-view='settings'] .settings-bindings p,
@@ -1664,18 +1724,26 @@ body[data-screen='home'] .shell-header button {
 
 /* Keep the HUD out of the ship's way: no darkening band, and the readouts fade
    while the ship is underneath them. */
-body:is([data-screen='play'],[data-screen='pause']):not([data-coop='true']) .console .hud {
+body:is([data-screen='play'], [data-screen='pause']):not([data-coop='true']) .console .hud {
     background: none;
     transition: opacity 0.15s;
 }
-body:is([data-screen='play'],[data-screen='pause']):not([data-coop='true']) .hud,
-body:is([data-screen='play'],[data-screen='pause']):not([data-coop='true']) .combat-hud {
-    text-shadow: 0 1px 0 #080416, 0 0 6px #080416;
+body:is([data-screen='play'], [data-screen='pause']):not([data-coop='true']) .hud,
+body:is([data-screen='play'], [data-screen='pause']):not([data-coop='true']) .combat-hud {
+    text-shadow:
+        0 1px 0 #080416,
+        0 0 6px #080416;
 }
-body[data-ship-top='true']:is([data-screen='play'],[data-screen='pause']):not([data-coop='true']) .console .hud {
+body[data-ship-top='true']:is([data-screen='play'], [data-screen='pause']):not([data-coop='true'])
+    .console
+    .hud {
     opacity: 0.22;
 }
-body[data-ship-bottom='true']:is([data-screen='play'],[data-screen='pause']):not([data-coop='true']) .console .combat-hud {
+body[data-ship-bottom='true']:is([data-screen='play'], [data-screen='pause']):not(
+        [data-coop='true']
+    )
+    .console
+    .combat-hud {
     opacity: 0.22;
 }
 
@@ -1801,7 +1869,10 @@ dialog {
     color: #cdb6f0;
     border: 1px solid #5a3c98;
     border-radius: 0;
-    box-shadow: 0 0 0 1px #05020f, 0 0 60px #6a2a8a55, 0 24px 80px #000c;
+    box-shadow:
+        0 0 0 1px #05020f,
+        0 0 60px #6a2a8a55,
+        0 24px 80px #000c;
 }
 dialog::backdrop {
     background: #0a0518d1;
@@ -1852,7 +1923,9 @@ dialog .actions button[data-decision='discard'] {
 dialog .actions button:hover:not(:disabled),
 dialog .actions button:focus {
     border-color: #fff4d6;
-    box-shadow: 0 0 0 1px #ffbe6e, 0 0 18px #ff785a66;
+    box-shadow:
+        0 0 0 1px #ffbe6e,
+        0 0 18px #ff785a66;
     outline: none;
 }
 
@@ -1874,15 +1947,23 @@ body:is([data-screen='play'], [data-screen='pause']) .console {
     background: transparent;
 }
 body[data-bars='true']:is([data-screen='play'], [data-screen='pause']) .screen {
-    box-shadow: 0 0 0 1px #3a2a64, 0 0 70px #6a2a8a40;
+    box-shadow:
+        0 0 0 1px #3a2a64,
+        0 0 70px #6a2a8a40;
 }
-body[data-bars='true']:is([data-screen='play'], [data-screen='pause']):not([data-coop='true']) .console .hud {
+body[data-bars='true']:is([data-screen='play'], [data-screen='pause']):not([data-coop='true'])
+    .console
+    .hud {
     top: max(0px, calc(var(--bar, 0px) / 2 - 38px));
 }
-body[data-bars='true']:is([data-screen='play'], [data-screen='pause']):not([data-coop='true']) .console .combat-hud {
+body[data-bars='true']:is([data-screen='play'], [data-screen='pause']):not([data-coop='true'])
+    .console
+    .combat-hud {
     bottom: max(14px, calc(var(--bar, 0px) / 2 - 14px));
 }
-body[data-bars='true']:is([data-screen='play'], [data-screen='pause']):not([data-coop='true']) .console .toolbar {
+body[data-bars='true']:is([data-screen='play'], [data-screen='pause']):not([data-coop='true'])
+    .console
+    .toolbar {
     bottom: max(10px, calc(var(--bar, 0px) / 2 - 16px));
 }
 body[data-bars='true']:is([data-screen='play'], [data-screen='pause']) .shell-header {
@@ -1917,7 +1998,9 @@ body[data-bars='true'] .console .combat-hud {
 #skipLaunch:focus {
     border-color: #ffbe6e;
     color: #fff4d6;
-    box-shadow: 0 0 0 1px #ffbe6e, 0 0 16px #ff785a66;
+    box-shadow:
+        0 0 0 1px #ffbe6e,
+        0 0 16px #ff785a66;
     outline: none;
 }
 
@@ -1929,11 +2012,16 @@ body[data-bars='true'] .console .combat-hud {
 .practice-note {
     display: none;
 }
-body[data-practice='true']:is([data-screen='play'], [data-screen='pause']):not([data-coop='true']) .hud .hud-group,
-body[data-practice='true']:is([data-screen='play'], [data-screen='pause']):not([data-coop='true']) .hud .score {
+body[data-practice='true']:is([data-screen='play'], [data-screen='pause']):not([data-coop='true'])
+    .hud
+    .hud-group,
+body[data-practice='true']:is([data-screen='play'], [data-screen='pause']):not([data-coop='true'])
+    .hud
+    .score {
     display: none;
 }
-body[data-practice='true']:is([data-screen='play'], [data-screen='pause']):not([data-coop='true']) .practice-tag {
+body[data-practice='true']:is([data-screen='play'], [data-screen='pause']):not([data-coop='true'])
+    .practice-tag {
     display: inline-block;
     grid-column: 1;
     justify-self: start;
@@ -1947,7 +2035,8 @@ body[data-practice='true']:is([data-screen='play'], [data-screen='pause']):not([
     text-transform: uppercase;
     background: #ffbe6e1f;
 }
-body[data-practice='true']:is([data-screen='play'], [data-screen='pause']):not([data-coop='true']) .practice-note {
+body[data-practice='true']:is([data-screen='play'], [data-screen='pause']):not([data-coop='true'])
+    .practice-note {
     display: block;
     grid-column: 2;
     justify-self: center;
@@ -1959,8 +2048,13 @@ body[data-practice='true']:is([data-screen='play'], [data-screen='pause']):not([
     animation: practice-note 6s ease forwards;
 }
 @keyframes practice-note {
-    0%, 70% { opacity: 1; }
-    100% { opacity: 0; }
+    0%,
+    70% {
+        opacity: 1;
+    }
+    100% {
+        opacity: 0;
+    }
 }
 .practice-tools[hidden] {
     display: none;
@@ -2016,8 +2110,14 @@ body[data-results='true'] .console .combat-hud {
     animation: result-rise 0.45s ease-out both;
 }
 @keyframes result-rise {
-    from { opacity: 0; transform: translateY(14px); }
-    to { opacity: 1; transform: none; }
+    from {
+        opacity: 0;
+        transform: translateY(14px);
+    }
+    to {
+        opacity: 1;
+        transform: none;
+    }
 }
 .screen .run-summary #personalBest {
     margin: 0 0 clamp(2px, 1cqw, 10px);
@@ -2047,7 +2147,9 @@ body[data-results='true'] .console .combat-hud {
     line-height: 0.95;
     color: #fff4d6;
     font-variant-numeric: tabular-nums;
-    text-shadow: 0 0 26px #ffa05a99, 4px 4px 0 #3a1646;
+    text-shadow:
+        0 0 26px #ffa05a99,
+        4px 4px 0 #3a1646;
 }
 .screen .run-summary #resultRegion {
     margin: clamp(4px, 1cqw, 10px) 0 0;
@@ -2102,7 +2204,9 @@ body[data-results='true'] .console .combat-hud {
 .screen .run-summary #continueResults:focus {
     background: #ffd68c;
     border-color: #fff4d6;
-    box-shadow: 0 0 0 1px #ffbe6e, 0 0 24px #ff785a88;
+    box-shadow:
+        0 0 0 1px #ffbe6e,
+        0 0 24px #ff785a88;
     outline: none;
 }
 /* Co-op: two pilot cards under the team score. */
@@ -2140,8 +2244,12 @@ body[data-results='true'] .console .combat-hud {
     line-height: 1.35;
 }
 @container (max-width: 560px) {
-    .screen .run-summary dl { grid-template-columns: repeat(2, minmax(0, 1fr)); }
-    #coopResults { grid-template-columns: 1fr; }
+    .screen .run-summary dl {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+    #coopResults {
+        grid-template-columns: 1fr;
+    }
 }
 
 /* Results fit the playfield without scrolling: stats run in one row on wide
@@ -2183,8 +2291,12 @@ body[data-results='true'] .console .combat-hud {
     font-size: clamp(24px, 3cqw, 34px);
 }
 @container (max-width: 560px) {
-    .screen .run-summary dl { grid-template-columns: repeat(2, minmax(0, 1fr)); }
-    #resultScore { font-size: clamp(44px, 14cqw, 80px); }
+    .screen .run-summary dl {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+    #resultScore {
+        font-size: clamp(44px, 14cqw, 80px);
+    }
 }
 
 /* ---- Boss HUD: entrance card and health bar ------------------------------------ */
@@ -2194,10 +2306,12 @@ body[data-results='true'] .console .combat-hud {
     z-index: 4;
     display: grid;
     justify-items: center;
-    gap: clamp(2px, .6cqw, 8px);
+    gap: clamp(2px, 0.6cqw, 8px);
     pointer-events: none;
     text-align: center;
-    transition: opacity 0.22s ease-out, transform 0.22s ease-out;
+    transition:
+        opacity 0.22s ease-out,
+        transform 0.22s ease-out;
 }
 .boss-intro[data-beat='in'],
 .boss-intro[data-beat='out'] {
@@ -2216,7 +2330,7 @@ body[data-results='true'] .console .combat-hud {
     -webkit-background-clip: text;
     background-clip: text;
     -webkit-text-fill-color: transparent;
-    filter: drop-shadow(0 .06em 0 #34104a) drop-shadow(0 0 .35em #ff7a5a66);
+    filter: drop-shadow(0 0.06em 0 #34104a) drop-shadow(0 0 0.35em #ff7a5a66);
 }
 .boss-intro .boss-region,
 .boss-intro .boss-tier {
@@ -2227,8 +2341,12 @@ body[data-results='true'] .console .combat-hud {
     color: #be96e6;
     text-shadow: 0 1px 0 #080416;
 }
-.boss-intro .boss-tier:empty { display: none; }
-.boss-intro .boss-tier { color: #ffb868; }
+.boss-intro .boss-tier:empty {
+    display: none;
+}
+.boss-intro .boss-tier {
+    color: #ffb868;
+}
 .boss-bar {
     position: absolute;
     top: 11.5%;
@@ -2247,7 +2365,9 @@ body[data-results='true'] .console .combat-hud {
     letter-spacing: 0.22em;
     text-transform: uppercase;
     color: #ffe9c4;
-    text-shadow: 0 1px 0 #34104a, 0 0 6px #080416;
+    text-shadow:
+        0 1px 0 #34104a,
+        0 0 6px #080416;
 }
 .boss-track {
     position: relative;
@@ -2278,12 +2398,23 @@ body[data-results='true'] .console .combat-hud {
     animation: boss-notch 0.42s steps(4, end);
 }
 @keyframes boss-notch {
-    0%, 50% { border-color: #fff4d6; box-shadow: 0 0 0 2px #fff4d655; }
-    100% { border-color: #5a3c98; box-shadow: none; }
+    0%,
+    50% {
+        border-color: #fff4d6;
+        box-shadow: 0 0 0 2px #fff4d655;
+    }
+    100% {
+        border-color: #5a3c98;
+        box-shadow: none;
+    }
 }
 @media (prefers-reduced-motion: reduce) {
-    .boss-intro { transition: none; }
-    .boss-bar.crossed .boss-track { animation: none; }
+    .boss-intro {
+        transition: none;
+    }
+    .boss-bar.crossed .boss-track {
+        animation: none;
+    }
 }
 
 /* ---- Boss practice picker (Pause, practice only) ------------------------------ */
@@ -2323,7 +2454,9 @@ body[data-results='true'] .console .combat-hud {
     text-transform: uppercase;
     color: #ffc88a;
 }
-#resultBosses[hidden] { display: none; }
+#resultBosses[hidden] {
+    display: none;
+}
 
 /* ---- Unlock toast and locked hulls ------------------------------------------- */
 .unlock-toast {
@@ -2343,12 +2476,16 @@ body[data-results='true'] .console .combat-hud {
     pointer-events: none;
     animation: result-rise 0.3s ease-out both;
 }
-.unlock-toast[hidden] { display: none; }
+.unlock-toast[hidden] {
+    display: none;
+}
 .hangar-bay button[data-locked='true'] {
     opacity: 0.45;
     filter: grayscale(0.7);
 }
-.hangar-bay button[data-locked='true'] canvas { filter: brightness(0.5); }
+.hangar-bay button[data-locked='true'] canvas {
+    filter: brightness(0.5);
+}
 
 /* ---- Records ------------------------------------------------------------------
    The Hangar's voice: sunset title, chip filters, no boxes. Big Jersey numbers for

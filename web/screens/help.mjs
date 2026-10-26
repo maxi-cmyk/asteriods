@@ -1,10 +1,5 @@
 import { element } from '../dom.mjs';
-import {
-    KEY_ACTIONS,
-    PAD_ACTIONS,
-    PAD_BUTTONS,
-    keyLabel,
-} from '../settings.mjs';
+import { KEY_ACTIONS, PAD_ACTIONS, PAD_BUTTONS, keyLabel } from '../settings.mjs';
 
 export function createHelpScreen(settings) {
     let lastHelpDevice = '';
@@ -41,19 +36,17 @@ export function createHelpScreen(settings) {
                               .map((k) => keyLabel(settings.keys[k]))
                               .join(' / '),
                   ],
-                  ...['fire', 'laser', 'shield', 'precision', 'pause'].map(
-                      (key) => [
-                          KEY_ACTIONS[key][0],
-                          keyLabel(settings.keys[key]) +
-                              (key === 'fire'
-                                  ? ' / left click / Enter'
-                                  : key === 'laser'
-                                    ? ' / right click'
-                                    : key === 'pause'
-                                      ? ' / Esc'
-                                      : ''),
-                      ],
-                  ),
+                  ...['fire', 'laser', 'shield', 'precision', 'pause'].map((key) => [
+                      KEY_ACTIONS[key][0],
+                      keyLabel(settings.keys[key]) +
+                          (key === 'fire'
+                              ? ' / left click / Enter'
+                              : key === 'laser'
+                                ? ' / right click'
+                                : key === 'pause'
+                                  ? ' / Esc'
+                                  : ''),
+                  ]),
               ];
         const list = element('helpBindings');
         list.replaceChildren();

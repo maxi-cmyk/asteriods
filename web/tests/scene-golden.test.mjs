@@ -11,7 +11,9 @@ const CLOCK = new Set([1, 3, 37]); // browser time, not simulation state
 
 async function game(seed = 11) {
     let state = seed;
-    return createRuntime(bytes, { random: () => (state = (Math.imul(state, 1664525) + 1013904223) >>> 0) });
+    return createRuntime(bytes, {
+        random: () => (state = (Math.imul(state, 1664525) + 1013904223) >>> 0),
+    });
 }
 function hash(floats) {
     let h = 0x811c9dc5;
@@ -50,7 +52,11 @@ const scenarios = {
         for (let i = 1; i <= 400; i++) {
             g.step({ players: [sweep(i), sweep(i + 40)] });
             if (i % 100 === 0)
-                out.push(hash(g.scene()), hash(view(g, g.api.web_coop_player(0))), hash(view(g, g.api.web_coop_player(1))));
+                out.push(
+                    hash(g.scene()),
+                    hash(view(g, g.api.web_coop_player(0))),
+                    hash(view(g, g.api.web_coop_player(1))),
+                );
         }
         return out;
     },

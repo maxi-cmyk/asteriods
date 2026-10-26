@@ -3,8 +3,7 @@ export function createRecordsActions({ getRuntime, profileStore, draw }) {
     let resetRecordsArmed = false;
     function disarmRecordsReset() {
         resetRecordsArmed = false;
-        element('resetRecords').textContent =
-            'Reset this profile’s personal bests';
+        element('resetRecords').textContent = 'Reset this profile’s personal bests';
         element('cancelResetRecords').hidden = true;
     }
     element('cancelResetRecords').addEventListener('click', disarmRecordsReset);
@@ -20,8 +19,7 @@ export function createRecordsActions({ getRuntime, profileStore, draw }) {
         if (!resetRecordsArmed || resetProfile !== current) {
             resetRecordsArmed = true;
             resetProfile = current;
-            element('resetRecords').textContent =
-                `Confirm reset for Player ${current + 1}`;
+            element('resetRecords').textContent = `Confirm reset for Player ${current + 1}`;
             element('cancelResetRecords').hidden = false;
             element('recordsStatus').textContent =
                 'Clears all personal bests for this profile, including practice. Top-five scores are kept.';
@@ -34,8 +32,7 @@ export function createRecordsActions({ getRuntime, profileStore, draw }) {
     let browserResetArmed = false;
     function cancelBrowserReset() {
         browserResetArmed = false;
-        element('clearBrowserRecords').textContent =
-            'Clear this browser’s records';
+        element('clearBrowserRecords').textContent = 'Clear this browser’s records';
         element('cancelBrowserReset').hidden = true;
         element('browserResetStatus').textContent = '';
     }
@@ -44,8 +41,7 @@ export function createRecordsActions({ getRuntime, profileStore, draw }) {
         const status = element('browserResetStatus');
         if (!browserResetArmed) {
             browserResetArmed = true;
-            element('clearBrowserRecords').textContent =
-                'Confirm: clear all browser records';
+            element('clearBrowserRecords').textContent = 'Confirm: clear all browser records';
             element('cancelBrowserReset').hidden = false;
             status.textContent =
                 'Clears solo and co-op team leaderboards and all personal bests ' +

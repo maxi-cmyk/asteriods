@@ -12,20 +12,23 @@ export function renderPractice({ scene, navigation, runtime, update, practiceBut
                   ? 'Leaderboard'
                   : practice
                     ? 'Practice'
-                    : runtime.coop ? 'Local co-op' : 'Solo flight';
+                    : runtime.coop
+                      ? 'Local co-op'
+                      : 'Solo flight';
     if (['play', 'pause'].includes(navigation.screen)) {
         update(element('screenTitle'), title);
         document.title = `${title} · Asteroids`;
     }
     update(
         element('runLabel'),
-        practice ||
-            (runtime.state === 'results' && runtime.result?.rules.practice)
+        practice || (runtime.state === 'results' && runtime.result?.rules.practice)
             ? 'Practice flight'
             : 'Solo flight',
     );
     // The tools live in the Pause menu; the HUD shows a quiet tag instead of score and lives.
-    document.body.dataset.practice = String(practice || (runtime.state === 'results' && !!runtime.result?.rules.practice));
+    document.body.dataset.practice = String(
+        practice || (runtime.state === 'results' && !!runtime.result?.rules.practice),
+    );
     const tools = element('practiceTools');
     if (tools.hidden === practice) {
         tools.hidden = !practice;

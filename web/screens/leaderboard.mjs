@@ -6,7 +6,8 @@ export function renderLeaderboard(list, entries, { highlight = -1 } = {}) {
     list.dataset.rows = signature;
     list.replaceChildren(
         ...Array.from({ length: 5 }, (_, i) => {
-            const entry = entries[i], row = document.createElement('li');
+            const entry = entries[i],
+                row = document.createElement('li');
             row.dataset.empty = String(!entry);
             row.dataset.latest = String(i === highlight);
             for (const [name, text] of [

@@ -24,7 +24,8 @@ function syncChips() {
         const select = element(group.dataset.for);
         for (const button of group.querySelectorAll('button[data-value]')) {
             const on = button.dataset.value === select.value;
-            if (button.getAttribute('aria-pressed') !== String(on)) button.setAttribute('aria-pressed', String(on));
+            if (button.getAttribute('aria-pressed') !== String(on))
+                button.setAttribute('aria-pressed', String(on));
             if (button.disabled !== select.disabled) button.disabled = select.disabled;
         }
     }
@@ -56,14 +57,19 @@ function renderBossLog(runtime, profile, bossArt) {
     const log = buildBossLog(bossArt);
     const counts = runtime.bossRecords.profiles[profile];
     for (const tile of log.children) {
-        const info = KINDS[Number(tile.dataset.kind)], count = counts[info.id] || 0;
+        const info = KINDS[Number(tile.dataset.kind)],
+            count = counts[info.id] || 0;
         const canvas = tile.querySelector('canvas');
-        if (canvas.dataset.drawn !== 'yes' && bossArt?.icon(Number(tile.dataset.kind), canvas)) canvas.dataset.drawn = 'yes';
+        if (canvas.dataset.drawn !== 'yes' && bossArt?.icon(Number(tile.dataset.kind), canvas))
+            canvas.dataset.drawn = 'yes';
         const state = count ? 'beaten' : 'unseen';
         if (tile.dataset.state !== state) tile.dataset.state = state;
         const [label, number] = tile.querySelectorAll('figcaption > *');
-        const wave = info.mini ? 3 + 5 * (Number(tile.dataset.kind) - 6) : 5 + 5 * Number(tile.dataset.kind);
-        const name = count ? info.name : `Wave ${wave}`, tally = count ? `×${count}` : info.mini ? 'mini' : 'boss';
+        const wave = info.mini
+            ? 3 + 5 * (Number(tile.dataset.kind) - 6)
+            : 5 + 5 * Number(tile.dataset.kind);
+        const name = count ? info.name : `Wave ${wave}`,
+            tally = count ? `×${count}` : info.mini ? 'mini' : 'boss';
         if (label.textContent !== name) label.textContent = name;
         if (number.textContent !== tally) number.textContent = tally;
     }
@@ -79,8 +85,7 @@ export function renderRecordsScreen({
 }) {
     wireChips();
     const recordProfile = Number(element('recordsProfile').value);
-    if (resetRecordsArmed && resetProfile !== recordProfile)
-        disarmRecordsReset();
+    if (resetRecordsArmed && resetProfile !== recordProfile) disarmRecordsReset();
     const mode = element('recordsMode').value;
     const coOp = mode !== 'solo';
     element('recordsType').disabled = coOp;
@@ -135,8 +140,7 @@ export function renderRecordsScreen({
                 metrics.append(cell);
             }
     }
-    element('retryRecords').hidden =
-        !runtime.records.status.startsWith('Could not save');
+    element('retryRecords').hidden = !runtime.records.status.startsWith('Could not save');
     if (!coOp) update(element('leaderboardStatus'), runtime.scoreStatus);
     update(
         element('recordsAccuracy'),
@@ -146,6 +150,5 @@ export function renderRecordsScreen({
     );
     renderBossLog(runtime, recordProfile, bossArt);
     update(element('recordsBosses'), runtime.bossRecords.text(recordProfile));
-    if (!resetRecordsArmed)
-        update(element('recordsStatus'), runtime.records.status);
+    if (!resetRecordsArmed) update(element('recordsStatus'), runtime.records.status);
 }

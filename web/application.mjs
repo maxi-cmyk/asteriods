@@ -1,5 +1,5 @@
-import {CoopInput, supportedPad} from './coop-input.mjs';
-import {createCoopScreen} from './screens/coop.mjs';
+import { CoopInput } from './coop-input.mjs';
+import { createCoopScreen } from './screens/coop.mjs';
 import { renderDiagnostics } from './screens/diagnostics.mjs';
 import { renderPractice } from './screens/practice.mjs';
 import { createBossUi } from './bossui.mjs';
@@ -18,12 +18,7 @@ import { renderRecordsScreen } from './screens/records.mjs';
 import { renderHomeScreen } from './screens/home.mjs';
 import { adjustField } from './menu-fields.mjs';
 import { createDemo } from './demo/engine.mjs';
-import {
-    Navigation,
-    MenuInput,
-    routeFromHash,
-    fitPlayfield,
-} from './navigation.mjs';
+import { Navigation, MenuInput, routeFromHash, fitPlayfield } from './navigation.mjs';
 import { accuracyText } from './records.mjs';
 import { drawHome, drawWarp, LaunchSequence } from './presentation.mjs';
 import { createRuntime } from './runtime.mjs';
@@ -47,9 +42,7 @@ const stateLabel = element('state');
 const hint = element('hint');
 const fireButton = element('fire');
 const inputDiagnostics = element('inputDiagnostics');
-inputDiagnostics.hidden = !new URLSearchParams(location.search).has(
-    'input-fix',
-);
+inputDiagnostics.hidden = !new URLSearchParams(location.search).has('input-fix');
 let diagnosticPad = null;
 const pauseButton = element('pause');
 const soundButton = element('sound');
@@ -59,12 +52,11 @@ try {
 } catch {}
 const profileStore = loadProfiles(storage);
 const unlocks = createUnlocks(storage);
-let lastBossMask = 0, toastTimer = 0;
+let lastBossMask = 0,
+    toastTimer = 0;
 const hangarStore = loadHangar(storage);
 let gameArt = null;
-const settings = sanitizeSettings(
-    profileStore.profiles[profileStore.activeProfile],
-);
+const settings = sanitizeSettings(profileStore.profiles[profileStore.activeProfile]);
 try {
     if (
         !storage?.getItem('asteroids.web.settings-v1') &&
@@ -76,10 +68,24 @@ try {
 } catch {}
 const controls = new Controls(settings);
 const coopInput = new CoopInput(profileStore.profiles);
-function connectedPads() { try { return Array.from(navigator.getGamepads?.() || []); } catch { return []; } }
-function keyboardControls() { return runtime?.coop ? coopInput.keyboard() : controls; }
-const coopScreen = createCoopScreen({input:coopInput,getPads:connectedPads,
-    getRuntime:()=>runtime,getNavigation:()=>navigation,launch:beginLaunch,profiles:()=>profileStore.profiles});
+function connectedPads() {
+    try {
+        return Array.from(navigator.getGamepads?.() || []);
+    } catch {
+        return [];
+    }
+}
+function keyboardControls() {
+    return runtime?.coop ? coopInput.keyboard() : controls;
+}
+const coopScreen = createCoopScreen({
+    input: coopInput,
+    getPads: connectedPads,
+    getRuntime: () => runtime,
+    getNavigation: () => navigation,
+    launch: beginLaunch,
+    profiles: () => profileStore.profiles,
+});
 const settingsDraft = new SettingsDraft(profileStore, settings);
 const applyButton = element('applySettings');
 const audio = new GameAudio(settings);
@@ -128,8 +134,7 @@ function unlockAudio() {
     audio.unlock();
 }
 function persistSettings() {
-    profileStore.profiles[profileStore.activeProfile] =
-        sanitizeSettings(settings);
+    profileStore.profiles[profileStore.activeProfile] = sanitizeSettings(settings);
     settingsStatus.textContent = saveProfiles(storage, profileStore)
         ? 'Saved locally'
         : 'Storage unavailable; settings apply for this visit';
@@ -145,13 +150,8 @@ function syncSettingsEffects() {
     runtime?.bossAssist({ longWarnings: settings.bossLongWarnings, calm: settings.bossCalm });
     soundButton.textContent = settings.soundEnabled ? 'Sound on' : 'Sound off';
     soundButton.setAttribute('aria-pressed', String(settings.soundEnabled));
-    element('music').textContent = settings.musicEnabled
-        ? 'Music on'
-        : 'Music off';
-    element('music').setAttribute(
-        'aria-pressed',
-        String(settings.musicEnabled),
-    );
+    element('music').textContent = settings.musicEnabled ? 'Music on' : 'Music off';
+    element('music').setAttribute('aria-pressed', String(settings.musicEnabled));
 }
 const calibration = setupCalibration({
     settings,
@@ -213,8 +213,7 @@ function applyDraft() {
 applyButton.addEventListener('click', applyDraft);
 element('resetSettings').addEventListener('click', () => {
     Object.assign(settings, defaults());
-    if (matchMedia('(prefers-reduced-motion: reduce)').matches)
-        settings.shake = 0;
+    if (matchMedia('(prefers-reduced-motion: reduce)').matches) settings.shake = 0;
     settingsUi.rebinding = null;
     controls.clear();
     calibration.reset();
@@ -238,7 +237,11 @@ for (const [id, action] of [
 }
 element('bossPracticeStart').addEventListener('click', () => {
     controls.clear();
-    runtime.bossPractice(Number(element('bossPick').value), Number(element('bossTier').value), Number(element('bossPhase').value));
+    runtime.bossPractice(
+        Number(element('bossPick').value),
+        Number(element('bossTier').value),
+        Number(element('bossPhase').value),
+    );
     navigation.resume();
 });
 element('endPractice').addEventListener('click', () => {
@@ -266,22 +269,19 @@ const recordsActions = createRecordsActions({
 });
 function findController() {
     if (runtime?.coop) {
-        const owner=isSettingsOpen()?Math.max(0,coopInput.profileIds.indexOf(profileStore.activeProfile)):coopInput.menuOwner;
-        return coopInput.pad(owner,connectedPads());
+        const owner = isSettingsOpen()
+            ? Math.max(0, coopInput.profileIds.indexOf(profileStore.activeProfile))
+            : coopInput.menuOwner;
+        return coopInput.pad(owner, connectedPads());
     }
     let pads = [];
     try {
         pads = [...(navigator.getGamepads?.() || [])];
     } catch {}
     const current = pads.find(
-        (pad) =>
-            pad?.index === activePadIndex &&
-            pad.connected &&
-            pad.mapping === 'standard',
+        (pad) => pad?.index === activePadIndex && pad.connected && pad.mapping === 'standard',
     );
-    const pad =
-        current ||
-        pads.find((pad) => pad?.connected && pad.mapping === 'standard');
+    const pad = current || pads.find((pad) => pad?.connected && pad.mapping === 'standard');
     if (activePadIndex !== null && !current && runtime) runtime.pause();
     activePadIndex = pad?.index ?? null;
     const label = pad
@@ -292,14 +292,16 @@ function findController() {
     const compact = pad ? 'Controller connected' : 'Keyboard + mouse';
     controllerLabel.textContent = pad ? compact : label;
     element('runDevice').textContent = pad ? compact : 'Keyboard + mouse';
-    if (navigation?.screen === 'help')
-        helpScreen.render(!!pad && menuDevice === 'controller');
+    if (navigation?.screen === 'help') helpScreen.render(!!pad && menuDevice === 'controller');
     return pad;
 }
 // A first defeat of a mini-boss in a real run earns its Hangar hull.
 function trackBossUnlocks(scene) {
     const mask = scene[610] | 0;
-    if (!mask) { lastBossMask = 0; return; }
+    if (!mask) {
+        lastBossMask = 0;
+        return;
+    }
     const fresh = mask & ~lastBossMask;
     lastBossMask = mask;
     if (!fresh || scene[609]) return;
@@ -318,11 +320,7 @@ function draw() {
         if (element.textContent !== text) element.textContent = text;
     };
     const scene = runtime.scene();
-    if (
-        ['play', 'pause'].includes(navigation.screen) &&
-        runtime.state !== 'results'
-    )
-    {
+    if (['play', 'pause'].includes(navigation.screen) && runtime.state !== 'results') {
         renderer.hulls = runtime.coop
             ? [0, 1].map((slot) => hangarStore.profiles[coopInput.profileIds?.[slot] ?? slot])
             : [hangarStore.profiles[profileStore.activeProfile]];
@@ -331,8 +329,7 @@ function draw() {
     trackBossUnlocks(scene);
     bossUi.render(
         scene,
-        navigation.screen === 'play' &&
-            ['playing', 'countdown', 'death'].includes(runtime.state),
+        navigation.screen === 'play' && ['playing', 'countdown', 'death'].includes(runtime.state),
     );
     renderHomeScreen({
         demoEngine,
@@ -353,8 +350,7 @@ function draw() {
     audio.setMode(
         navigation.screen === 'home' && !demoEngine?.active
             ? 'home'
-            : navigation.screen === 'play' &&
-                ['playing', 'countdown'].includes(runtime.state)
+            : navigation.screen === 'play' && ['playing', 'countdown'].includes(runtime.state)
               ? 'flight'
               : 'off',
         suspended,
@@ -373,11 +369,11 @@ function draw() {
     const stats = runtime.stats();
     update(
         element('doubleFireStatus'),
-        stats.doubleFireMs
-            ? `${(stats.doubleFireMs / 1000).toFixed(1)}s`
-            : 'INACTIVE',
+        stats.doubleFireMs ? `${(stats.doubleFireMs / 1000).toFixed(1)}s` : 'INACTIVE',
     );
-    element('doubleFireStatus').closest('.ability')?.setAttribute('data-state', stats.doubleFireMs ? 'active' : 'empty');
+    element('doubleFireStatus')
+        .closest('.ability')
+        ?.setAttribute('data-state', stats.doubleFireMs ? 'active' : 'empty');
     update(element('liveCps'), String(stats.cps));
     update(element('liveAccuracy'), accuracyText(stats.hits, stats.spawned));
     update(element('liveChain'), String(stats.longestChain));
@@ -417,7 +413,10 @@ function draw() {
         isSettingsOpen,
     });
     coopScreen.render();
-    if (nextState !== lastState) { gameplayReady = false; if(runtime.coop && nextState==='game-over')fireButton.focus(); }
+    if (nextState !== lastState) {
+        gameplayReady = false;
+        if (runtime.coop && nextState === 'game-over') fireButton.focus();
+    }
     lastState = nextState;
 }
 // Preserve brief controller releases between the fixed simulation ticks.
@@ -436,11 +435,9 @@ setInterval(() => {
         pads = navigator.getGamepads?.() || [];
     } catch {}
     const pad =
-        Array.from(pads).find(
-            (p) => p?.index === activePadIndex && p.connected,
-        ) ||
+        Array.from(pads).find((p) => p?.index === activePadIndex && p.connected) ||
         Array.from(pads).find((p) => p?.connected && p.mapping === 'standard');
-    if(runtime.coop)coopInput.observe(connectedPads());
+    if (runtime.coop) coopInput.observe(connectedPads());
     else controls.observeController(pad);
 }, 4);
 const homeFx = element('homeFx').getContext('2d'),
@@ -476,7 +473,11 @@ function beginLaunch(go) {
         pointerPosition = null;
         audio.stopWarp();
         if (started) go();
-        else { coopInput.live=false; if(navigation.screen==='lobby')element('coopStart').focus();else element('play').focus(); }
+        else {
+            coopInput.live = false;
+            if (navigation.screen === 'lobby') element('coopStart').focus();
+            else element('play').focus();
+        }
     });
 }
 element('skipLaunch').addEventListener('click', () => launch.skip());
@@ -496,22 +497,20 @@ window.addEventListener(
 );
 function frame(now) {
     requestAnimationFrame(frame);
-    const elapsed =
-        presentationLast === null ? 0 : Math.min(100, now - presentationLast);
+    const elapsed = presentationLast === null ? 0 : Math.min(100, now - presentationLast);
     presentationLast = now;
     if (!suspended) presentationTime += elapsed;
     if (launch.active) {
-        if(coopInput.live && !coopInput.valid(connectedPads())) { launch.cancel();coopScreen.reset(); }
+        if (coopInput.live && !coopInput.valid(connectedPads())) {
+            launch.cancel();
+            coopScreen.reset();
+        }
         if (!suspended) {
             if (launch.reduced) {
                 launchCanvas.fillStyle = '#03060f';
                 launchCanvas.fillRect(0, 0, 480, 270);
             } else drawWarp(launchCanvas, launch.elapsed(presentationTime));
-            const padInput = menuInput.sample(
-                findController(),
-                now,
-                settings.buttons.pause,
-            );
+            const padInput = menuInput.sample(findController(), now, settings.buttons.pause);
             if (padInput.back) launch.cancel();
             else if (padInput.confirm || padInput.pause) launch.skip();
             launch.tick(presentationTime);
@@ -534,20 +533,22 @@ function frame(now) {
     }
     if (navigation?.screen === 'hangar') hangarScreen.draw(presentationTime);
     else if (navigation?.screen === 'mode') modeScreen.draw(presentationTime);
-    if(runtime?.coop && navigation.screen==='pause') {
-        const sampled=coopInput.sample(connectedPads(),now);
+    if (runtime?.coop && navigation.screen === 'pause') {
+        const sampled = coopInput.sample(connectedPads(), now);
         runtime.releaseCoopLasers(sampled.players);
     }
-    if(runtime?.coop && navigation.screen==='pause' && coopInput.neutral(connectedPads(),physicalKeys.size,pointerButtons.size))coopResumeReady=true;
-    const pad = runtime?.coop ? coopInput.pad(coopInput.menuOwner,connectedPads()) : findController();
-    diagnosticPad = pad;
     if (
-        gameplayReady &&
-        navigation.screen === 'play' &&
-        runtime.state !== 'results' &&
-        !suspended
+        runtime?.coop &&
+        navigation.screen === 'pause' &&
+        coopInput.neutral(connectedPads(), physicalKeys.size, pointerButtons.size)
     )
-        if(runtime.coop)coopInput.observe(connectedPads());
+        coopResumeReady = true;
+    const pad = runtime?.coop
+        ? coopInput.pad(coopInput.menuOwner, connectedPads())
+        : findController();
+    diagnosticPad = pad;
+    if (gameplayReady && navigation.screen === 'play' && runtime.state !== 'results' && !suspended)
+        if (runtime.coop) coopInput.observe(connectedPads());
         else controls.observeController(pad);
     const padId = pad?.index ?? null;
     if (padId !== lastMenuPad) {
@@ -561,14 +562,15 @@ function frame(now) {
     if (
         !suspended &&
         (navigation?.screen !== 'play' ||
-            runtime?.state === 'results' || (runtime?.coop && runtime.state==='game-over') ||
+            runtime?.state === 'results' ||
+            (runtime?.coop && runtime.state === 'game-over') ||
             navigation.pending)
     )
-        if(navigation.screen==='lobby' && !navigation.pending)coopScreen.handlePads(connectedPads(),now);
+        if (navigation.screen === 'lobby' && !navigation.pending)
+            coopScreen.handlePads(connectedPads(), now);
         else handleMenuPad(pad, now);
     // Cross confirms the focused menu action; gameplay bindings stay separate.
-    if (isSettingsOpen() && settingsUi.category === 'calibration')
-        calibration.update(now);
+    if (isSettingsOpen() && settingsUi.category === 'calibration') calibration.update(now);
     if (!runtime || suspended) {
         previousTime = now;
         return;
@@ -582,51 +584,52 @@ function advanceSimulation(now, pad) {
     // Advance in exact 20 ms ticks. Long stalls freeze rather than skip physics.
     accumulator += delta > 100 ? 0 : delta;
     while (accumulator >= 20) {
-        if (
-            (!navigation.shouldStep && !demoEngine?.active) ||
-            element('navigationDecision').open
-        ) {
+        if ((!navigation.shouldStep && !demoEngine?.active) || element('navigationDecision').open) {
             accumulator = 0;
             break;
         }
         if (pointerPosition) {
             const rect = canvas.getBoundingClientRect(),
-                scene = runtime.coop ? runtime.coopPlayers()[Math.max(0,coopInput.keyboardSlot())].scene : runtime.scene();
+                scene = runtime.coop
+                    ? runtime.coopPlayers()[Math.max(0, coopInput.keyboardSlot())].scene
+                    : runtime.scene();
             keyboardControls()?.aimAt(
-                ((pointerPosition[0] - rect.left) * WIDTH) / rect.width -
-                    scene[4],
-                ((pointerPosition[1] - rect.top) * HEIGHT) / rect.height -
-                    scene[5],
+                ((pointerPosition[0] - rect.left) * WIDTH) / rect.width - scene[4],
+                ((pointerPosition[1] - rect.top) * HEIGHT) / rect.height - scene[5],
             );
         }
         if (navigation.screen === 'home') demoEngine?.step();
         else if (runtime.state === 'results') runtime.step();
         else {
             if (runtime.coop) {
-                const pads=connectedPads();
-                if(!coopInput.valid(pads)) { navigation.pause();accumulator=0;break; }
-                if(!gameplayReady && coopInput.neutral(pads,physicalKeys.size,pointerButtons.size)) {
-                    coopInput.clear();gameplayReady=true;
+                const pads = connectedPads();
+                if (!coopInput.valid(pads)) {
+                    navigation.pause();
+                    accumulator = 0;
+                    break;
                 }
-                runtime.step(gameplayReady?coopInput.sample(pads,now):{players:[{},{}]});
+                if (
+                    !gameplayReady &&
+                    coopInput.neutral(pads, physicalKeys.size, pointerButtons.size)
+                ) {
+                    coopInput.clear();
+                    gameplayReady = true;
+                }
+                runtime.step(gameplayReady ? coopInput.sample(pads, now) : { players: [{}, {}] });
                 navigation.sync();
-                accumulator-=20;
+                accumulator -= 20;
                 continue;
             }
             const held =
                 physicalKeys.size ||
                 pointerButtons.size ||
-                (pad?.buttons || []).some(
-                    (b) => b?.pressed || b?.value > 0.2,
-                ) ||
+                (pad?.buttons || []).some((b) => b?.pressed || b?.value > 0.2) ||
                 (pad?.axes || []).some((v) => Math.abs(v) > 0.55);
             if (!gameplayReady && !held) {
                 controls.clear();
                 gameplayReady = true;
             }
-            runtime.step(
-                gameplayReady ? controls.sample(findController(), now) : {},
-            );
+            runtime.step(gameplayReady ? controls.sample(findController(), now) : {});
             navigation.sync();
         }
         accumulator -= 20;
@@ -644,15 +647,9 @@ window.addEventListener('keydown', (event) => {
         return;
     }
     if (element('navigationDecision').open) {
-        if (
-            ['ArrowLeft', 'ArrowUp', 'ArrowRight', 'ArrowDown'].includes(
-                event.code,
-            )
-        ) {
+        if (['ArrowLeft', 'ArrowUp', 'ArrowRight', 'ArrowDown'].includes(event.code)) {
             event.preventDefault();
-            moveMenuFocus(
-                ['ArrowLeft', 'ArrowUp'].includes(event.code) ? -1 : 1,
-            );
+            moveMenuFocus(['ArrowLeft', 'ArrowUp'].includes(event.code) ? -1 : 1);
         }
         return;
     }
@@ -666,14 +663,10 @@ window.addEventListener('keydown', (event) => {
             navigation.back();
             return;
         }
-        if (
-            !settingsUi.rebinding &&
-            ['ArrowUp', 'ArrowDown'].includes(event.code)
-        ) {
+        if (!settingsUi.rebinding && ['ArrowUp', 'ArrowDown'].includes(event.code)) {
             event.preventDefault();
             const direction = event.code === 'ArrowUp' ? -1 : 1;
-            if (menuEditing && event.target.matches('select'))
-                adjustField(event.target, direction);
+            if (menuEditing && event.target.matches('select')) adjustField(event.target, direction);
             else {
                 menuEditing = false;
                 moveMenuFocus(direction);
@@ -707,10 +700,7 @@ window.addEventListener('keydown', (event) => {
             const buttons = [...document.querySelectorAll('[data-category]')],
                 index = buttons.indexOf(event.target);
             buttons[
-                (index +
-                    (event.code === 'ArrowLeft' ? -1 : 1) +
-                    buttons.length) %
-                    buttons.length
+                (index + (event.code === 'ArrowLeft' ? -1 : 1) + buttons.length) % buttons.length
             ].click();
             return;
         }
@@ -721,9 +711,7 @@ window.addEventListener('keydown', (event) => {
                 const action = settingsUi.rebinding;
                 settingsUi.rebinding = null;
                 renderSettings();
-                document
-                    .querySelector(`#keyBindings [data-action="${action}"]`)
-                    .focus();
+                document.querySelector(`#keyBindings [data-action="${action}"]`).focus();
                 settingsStatus.textContent = 'Key change canceled';
                 return;
             }
@@ -732,16 +720,10 @@ window.addEventListener('keydown', (event) => {
                 keys: { ...settings.keys, [settingsUi.rebinding]: event.code },
             };
             const conflict = Object.keys(settings.keys).find(
-                (key) =>
-                    key !== settingsUi.rebinding &&
-                    settings.keys[key] === event.code,
+                (key) => key !== settingsUi.rebinding && settings.keys[key] === event.code,
             );
-            if (conflict)
-                candidate.keys[conflict] = settings.keys[settingsUi.rebinding];
-            if (
-                sanitizeSettings(candidate).keys[settingsUi.rebinding] !==
-                event.code
-            ) {
+            if (conflict) candidate.keys[conflict] = settings.keys[settingsUi.rebinding];
+            if (sanitizeSettings(candidate).keys[settingsUi.rebinding] !== event.code) {
                 settingsStatus.textContent =
                     'Choose a letter, number, modifier, Space or punctuation key.';
                 return;
@@ -751,15 +733,14 @@ window.addEventListener('keydown', (event) => {
             settingsUi.rebinding = null;
             renderSettings();
             markSettingsChanged();
-            document
-                .querySelector(`#keyBindings [data-action="${action}"]`)
-                .focus();
+            document.querySelector(`#keyBindings [data-action="${action}"]`).focus();
         }
         return;
     }
     if (
         navigation?.screen !== 'play' ||
-        runtime?.state === 'results' || (runtime?.coop && runtime.state==='game-over') ||
+        runtime?.state === 'results' ||
+        (runtime?.coop && runtime.state === 'game-over') ||
         navigation.pending
     ) {
         if (event.repeat && ['Enter', 'Space'].includes(event.code)) {
@@ -782,8 +763,7 @@ window.addEventListener('keydown', (event) => {
         if (['ArrowUp', 'ArrowDown'].includes(event.code)) {
             event.preventDefault();
             const direction = event.code === 'ArrowUp' ? -1 : 1;
-            if (menuEditing && event.target.matches('select'))
-                adjustField(event.target, direction);
+            if (menuEditing && event.target.matches('select')) adjustField(event.target, direction);
             else {
                 menuEditing = false;
                 moveMenuFocus(direction);
@@ -798,18 +778,12 @@ window.addEventListener('keydown', (event) => {
             adjustField(event.target, event.code === 'ArrowLeft' ? -1 : 1);
             return;
         }
-        if (
-            event.code === 'Enter' &&
-            event.target.matches('select,input[type=range]')
-        ) {
+        if (event.code === 'Enter' && event.target.matches('select,input[type=range]')) {
             event.preventDefault();
             menuEditing = !menuEditing;
             return;
         }
-        if (
-            event.code === 'Enter' &&
-            !event.target.closest('button,a,input,select')
-        ) {
+        if (event.code === 'Enter' && !event.target.closest('button,a,input,select')) {
             event.preventDefault();
             const scope = menuScope();
             scope.querySelector('button:not([hidden]):not(:disabled)')?.click();
@@ -818,10 +792,16 @@ window.addEventListener('keydown', (event) => {
     }
     if (
         navigation.live &&
-        ['Escape', keyboardControls()?.settings.keys.pause ?? settings.keys.pause].includes(event.code)
+        ['Escape', keyboardControls()?.settings.keys.pause ?? settings.keys.pause].includes(
+            event.code,
+        )
     ) {
         event.preventDefault();
-        if (!event.repeat) { if(runtime.coop && coopInput.keyboardSlot()>=0)coopInput.menuOwner=coopInput.keyboardSlot(); navigation.pause(); }
+        if (!event.repeat) {
+            if (runtime.coop && coopInput.keyboardSlot() >= 0)
+                coopInput.menuOwner = coopInput.keyboardSlot();
+            navigation.pause();
+        }
         return;
     }
     const keySettings = keyboardControls()?.settings ?? settings;
@@ -834,10 +814,7 @@ window.addEventListener('keydown', (event) => {
         'Escape',
         ...Object.values(keySettings.keys),
     ];
-    if (
-        !accepted.includes(event.code) ||
-        event.target.closest('button, input, select, textarea')
-    )
+    if (!accepted.includes(event.code) || event.target.closest('button, input, select, textarea'))
         return;
     event.preventDefault();
     unlockAudio();
@@ -863,9 +840,7 @@ canvas.addEventListener('pointerdown', (event) => {
     keyboardControls()?.pointerDown(event.button, performance.now());
     canvas.setPointerCapture(event.pointerId);
 });
-window.addEventListener('pointerup', (event) =>
-    keyboardControls()?.pointerUp(event.button),
-);
+window.addEventListener('pointerup', (event) => keyboardControls()?.pointerUp(event.button));
 canvas.addEventListener('pointercancel', () => {
     controls.clear();
     pointerPosition = null;
@@ -879,9 +854,7 @@ window.addEventListener('pointerdown', (event) => {
     menuDevice = 'mouse';
     pointerButtons.add(event.button);
 });
-window.addEventListener('pointerup', (event) =>
-    pointerButtons.delete(event.button),
-);
+window.addEventListener('pointerup', (event) => pointerButtons.delete(event.button));
 window.addEventListener('pointerdown', unlockAudio);
 function suspend() {
     coopScreen.resetMenu();
@@ -914,9 +887,13 @@ document.addEventListener('visibilitychange', () => {
     }
 });
 window.addEventListener('gamepaddisconnected', (event) => {
-    if(runtime?.coop) {
-        if(coopInput.lost(event.gamepad.index)) {
-            navigation.pause();coopInput.clear();menuInput.reset();gameplayReady=false;draw();
+    if (runtime?.coop) {
+        if (coopInput.lost(event.gamepad.index)) {
+            navigation.pause();
+            coopInput.clear();
+            menuInput.reset();
+            gameplayReady = false;
+            draw();
         }
         return;
     }
@@ -928,8 +905,17 @@ window.addEventListener('gamepaddisconnected', (event) => {
         'Controller disconnected. Reconnect and release controls, or continue with keyboard.';
 });
 fireButton.addEventListener('click', () => {
-    if(runtime?.coop && runtime.state==='game-over') { runtime.abandon();coopScreen.reset();navigation.set('lobby');return; }
-    if(runtime?.coop && runtime.state==='initials') { runtime.step({firePressed:true});draw();return; }
+    if (runtime?.coop && runtime.state === 'game-over') {
+        runtime.abandon();
+        coopScreen.reset();
+        navigation.set('lobby');
+        return;
+    }
+    if (runtime?.coop && runtime.state === 'initials') {
+        runtime.step({ firePressed: true });
+        draw();
+        return;
+    }
     if (runtime?.state === 'results') {
         runtime.continueResults();
         controls.discardFirePresses();
@@ -963,8 +949,7 @@ element('fullscreen').addEventListener('click', async () => {
         fitCanvas();
     } catch {
         hint.textContent = 'Fullscreen unavailable in this browser';
-        element('shellStatus').textContent =
-            'Fullscreen unavailable in this browser';
+        element('shellStatus').textContent = 'Fullscreen unavailable in this browser';
     }
 });
 function fitCanvas() {
@@ -1027,21 +1012,14 @@ function menuScope() {
     const decision = element('navigationDecision');
     if (decision.open) return decision;
     if (demoEngine?.active) return element('demoControls');
-    if (runtime?.state === 'results' && navigation.screen === 'play')
-        return element('runSummary');
+    if (runtime?.state === 'results' && navigation.screen === 'play') return element('runSummary');
     if (navigation.screen === 'pause') return element('pauseMenu');
-    if (runtime?.coop && runtime.state==='game-over')return document.querySelector('.toolbar');
+    if (runtime?.coop && runtime.state === 'game-over') return document.querySelector('.toolbar');
     return document.querySelector(`[data-view="${navigation.screen}"]`);
 }
 function moveMenuFocus(direction) {
-    const nodes = [
-        ...menuScope().querySelectorAll('button,a,input,select'),
-    ].filter(
-        (el) =>
-            !el.disabled &&
-            !el.hidden &&
-            !el.closest('[inert]') &&
-            el.getClientRects().length,
+    const nodes = [...menuScope().querySelectorAll('button,a,input,select')].filter(
+        (el) => !el.disabled && !el.hidden && !el.closest('[inert]') && el.getClientRects().length,
     );
     if (!nodes.length) return;
     const current = nodes.indexOf(document.activeElement);
@@ -1053,13 +1031,18 @@ function moveMenuFocus(direction) {
 function scrollerOf(el) {
     for (let node = el.parentElement; node; node = node.parentElement) {
         const { overflowY } = getComputedStyle(node);
-        if (/(auto|scroll)/.test(overflowY) && node.scrollHeight > node.clientHeight + 1) return node;
+        if (/(auto|scroll)/.test(overflowY) && node.scrollHeight > node.clientHeight + 1)
+            return node;
     }
     return document.scrollingElement;
 }
 function onScreen(el) {
-    const box = el.getBoundingClientRect(), scroller = scrollerOf(el);
-    const clip = scroller === document.scrollingElement ? { top: 0, bottom: innerHeight } : scroller.getBoundingClientRect();
+    const box = el.getBoundingClientRect(),
+        scroller = scrollerOf(el);
+    const clip =
+        scroller === document.scrollingElement
+            ? { top: 0, bottom: innerHeight }
+            : scroller.getBoundingClientRect();
     const middle = box.top + box.height / 2;
     return middle >= Math.max(0, clip.top) && middle <= Math.min(innerHeight, clip.bottom);
 }
@@ -1068,37 +1051,54 @@ function moveMenuFocusToward(dx, dy) {
         (el) => !el.disabled && !el.hidden && !el.closest('[inert]') && el.getClientRects().length,
     );
     const current = nodes.indexOf(document.activeElement);
-    if (current < 0) { nodes[0]?.focus(); return; }
+    if (current < 0) {
+        nodes[0]?.focus();
+        return;
+    }
     // From the Settings rail, Right enters the panel at its first control.
     if (dx > 0 && nodes[current].closest('.settings-tabs')) {
         const first = nodes.find((el) => el.closest('[data-settings-panel]'));
-        if (first) { first.focus(); return; }
+        if (first) {
+            first.focus();
+            return;
+        }
     }
-    const from = nodes[current].getBoundingClientRect(), home = scrollerOf(nodes[current]);
-    const fx = from.left + from.width / 2, fy = from.top + from.height / 2;
+    const from = nodes[current].getBoundingClientRect(),
+        home = scrollerOf(nodes[current]);
+    const fx = from.left + from.width / 2,
+        fy = from.top + from.height / 2;
     const options = [];
     for (const [index, node] of nodes.entries()) {
         if (index === current) continue;
         const box = node.getBoundingClientRect();
-        const along = ((box.left + box.width / 2) - fx) * dx + ((box.top + box.height / 2) - fy) * dy;
+        const along = (box.left + box.width / 2 - fx) * dx + (box.top + box.height / 2 - fy) * dy;
         if (along <= 2) continue;
-        const across = Math.abs(((box.left + box.width / 2) - fx) * dy + ((box.top + box.height / 2) - fy) * dx);
-        options.push({ node, rank: along + across * 2.5, same: scrollerOf(node) === home, shown: onScreen(node) });
+        const across = Math.abs(
+            (box.left + box.width / 2 - fx) * dy + (box.top + box.height / 2 - fy) * dx,
+        );
+        options.push({
+            node,
+            rank: along + across * 2.5,
+            same: scrollerOf(node) === home,
+            shown: onScreen(node),
+        });
     }
     const nearest = (list) => list.sort((a, b) => a.rank - b.rank)[0]?.node;
     // Sideways: the nearest visible control, wherever it lives. Up and down: walk
     // the current scrolling area in order (revealing hidden rows) before leaving it.
     const target = dx
         ? nearest(options.filter((o) => o.shown)) || nearest(options)
-        : nearest(options.filter((o) => o.same)) || nearest(options.filter((o) => o.shown)) || nearest(options);
+        : nearest(options.filter((o) => o.same)) ||
+          nearest(options.filter((o) => o.shown)) ||
+          nearest(options);
     if (target) target.focus();
     else moveMenuFocus(dx + dy > 0 ? 1 : -1);
 }
 // L1 / R1 step through the active tab strip (Settings categories, Hangar pilots).
 function stepMenuTab(direction) {
-    const tabs = [...menuScope().querySelectorAll('.settings-tabs button, .hangar-pilots button')].filter(
-        (el) => !el.disabled && !el.closest('[inert]') && el.getClientRects().length,
-    );
+    const tabs = [
+        ...menuScope().querySelectorAll('.settings-tabs button, .hangar-pilots button'),
+    ].filter((el) => !el.disabled && !el.closest('[inert]') && el.getClientRects().length);
     if (tabs.length < 2) return false;
     const active = tabs.findIndex((el) => el.getAttribute('aria-pressed') === 'true');
     const target = tabs[(Math.max(0, active) + direction + tabs.length) % tabs.length];
@@ -1107,7 +1107,9 @@ function stepMenuTab(direction) {
 }
 function handleMenuPad(pad, now) {
     if (!navigation) return;
-    const menuPause=runtime?.coop?coopInput.controls[coopInput.menuOwner].settings.buttons.pause:settings.buttons.pause;
+    const menuPause = runtime?.coop
+        ? coopInput.controls[coopInput.menuOwner].settings.buttons.pause
+        : settings.buttons.pause;
     const input = menuInput.sample(pad, now, menuPause);
     if (
         !input.direction &&
@@ -1129,8 +1131,7 @@ function handleMenuPad(pad, now) {
     if (input.horizontal && !adjustField(field, input.horizontal))
         moveMenuFocusToward(input.horizontal, 0);
     if (input.direction) {
-        if (menuEditing && field.matches('select'))
-            adjustField(field, input.direction);
+        if (menuEditing && field.matches('select')) adjustField(field, input.direction);
         else {
             menuEditing = false;
             moveMenuFocusToward(0, input.direction);
@@ -1141,39 +1142,33 @@ function handleMenuPad(pad, now) {
             const action = settingsUi.rebinding;
             settingsUi.rebinding = null;
             renderSettings();
-            document
-                .querySelector(`#keyBindings [data-action="${action}"]`)
-                .focus();
+            document.querySelector(`#keyBindings [data-action="${action}"]`).focus();
         } else if (menuEditing) menuEditing = false;
         else if (navigation.pending) navigation.resolve('stay');
         else navigation.back();
     }
     if (input.confirm) {
         const focused = document.activeElement;
-        if (
-            menuScope().contains(focused) &&
-            focused.matches('input[type=checkbox],button,a')
-        )
+        if (menuScope().contains(focused) && focused.matches('input[type=checkbox],button,a'))
             focused.click();
         else if (focused.matches('select,input[type=range]')) {
             menuEditing = !menuEditing;
             settingsStatus.textContent = menuEditing
                 ? 'Left/right adjusts values; up/down changes select options. Circle ends editing.'
                 : 'Cross selects; Circle goes back.';
-        } else
-            menuScope()
-                .querySelector('button:not([hidden]):not(:disabled)')
-                ?.click();
+        } else menuScope().querySelector('button:not([hidden]):not(:disabled)')?.click();
     }
 }
 function screenChanged(screen, previous) {
     coopScreen.resetMenu();
     coopInput.clear();
-    coopResumeReady=false;
-    if(screen==='home' && !runtime?.coop) {coopInput.live=false; element('resume').disabled=false;}
+    coopResumeReady = false;
+    if (screen === 'home' && !runtime?.coop) {
+        coopInput.live = false;
+        element('resume').disabled = false;
+    }
     if (screen !== 'home') demoEngine?.stop();
-    if (previous === 'records' && screen !== 'records')
-        recordsActions.cancelBrowserReset();
+    if (previous === 'records' && screen !== 'records') recordsActions.cancelBrowserReset();
     menuEditing = false;
     controls.clear();
     gameplayReady = false;
@@ -1183,7 +1178,10 @@ function screenChanged(screen, previous) {
     menuInput.reset();
     if (previous === 'settings' && screen !== 'settings') {
         settingsDraft.discard();
-        if(runtime?.coop) {coopInput.profiles=profileStore.profiles;coopInput.refresh();}
+        if (runtime?.coop) {
+            coopInput.profiles = profileStore.profiles;
+            coopInput.refresh();
+        }
         syncSettingsEffects();
         settingsUi.rebinding = null;
         calibration.reset();
@@ -1193,7 +1191,9 @@ function screenChanged(screen, previous) {
         settingsDraft.begin();
         applyButton.disabled = true;
         settingsStatus.textContent = '';
-        if(runtime?.coop)element('settingsProfileNote').textContent='Profile 1 / 2 selects the matching co-op pilot’s controls and calibration. Audio and display are shared during this run.';
+        if (runtime?.coop)
+            element('settingsProfileNote').textContent =
+                'Profile 1 / 2 selects the matching co-op pilot’s controls and calibration. Audio and display are shared during this run.';
         calibration.reset();
         renderSettings();
     }
@@ -1217,8 +1217,7 @@ function screenChanged(screen, previous) {
     };
     element('screenTitle').textContent = titles[screen];
     element('screenBack').hidden = ['home', 'play', 'pause'].includes(screen);
-    document.title =
-        screen === 'home' ? 'Asteroids' : `${titles[screen]} · Asteroids`;
+    document.title = screen === 'home' ? 'Asteroids' : `${titles[screen]} · Asteroids`;
     element('helpPractice').hidden = navigation.origin === 'pause';
     element('helpPaused').hidden = navigation.origin !== 'pause';
     if (runtime) {
@@ -1253,8 +1252,7 @@ function screenChanged(screen, previous) {
     } else {
         if (decision.open) decision.close();
         const restore = focusOrigins.get(screen);
-        if (restore?.isConnected && !restore.closest('[hidden]'))
-            restore.focus();
+        if (restore?.isConnected && !restore.closest('[hidden]')) restore.focus();
         else if (screen === 'home') element('play').focus();
         else if (screen === 'pause') element('resume').focus();
         else if (screen === 'play') canvas.focus();
@@ -1262,8 +1260,7 @@ function screenChanged(screen, previous) {
     }
     const hash = `#${['play', 'pause'].includes(screen) ? 'play' : screen}`;
     if (location.hash !== hash) {
-        if (routeFromHistory || navigation.pending)
-            history.replaceState(null, '', hash);
+        if (routeFromHistory || navigation.pending) history.replaceState(null, '', hash);
         else history.pushState(null, '', hash);
     }
 }
@@ -1285,8 +1282,14 @@ element('play').addEventListener('click', () => {
     if (!navigation || launch.active || consumeDemo()) return;
     navigation.request('mode');
 });
-element('soloPlay').addEventListener('click',()=>{coopInput.live=false;beginLaunch(()=>navigation.start());});
-element('localPlay').addEventListener('click',()=>{coopScreen.reset();navigation.request('lobby');});
+element('soloPlay').addEventListener('click', () => {
+    coopInput.live = false;
+    beginLaunch(() => navigation.start());
+});
+element('localPlay').addEventListener('click', () => {
+    coopScreen.reset();
+    navigation.request('lobby');
+});
 element('resume').addEventListener('click', () => navigation.resume());
 element('quitRun').addEventListener('click', () => navigation.request('home'));
 element('gameHome').addEventListener('click', () => navigation.request('home'));
@@ -1295,9 +1298,7 @@ element('helpPractice').addEventListener('click', () => navigation.start(true));
 for (const button of document.querySelectorAll('[data-go]'))
     button.addEventListener('click', () => navigate(button.dataset.go, button));
 for (const button of document.querySelectorAll('[data-decision]'))
-    button.addEventListener('click', () =>
-        navigation.resolve(button.dataset.decision),
-    );
+    button.addEventListener('click', () => navigation.resolve(button.dataset.decision));
 element('navigationDecision').addEventListener('cancel', (event) => {
     event.preventDefault();
     navigation.resolve('stay');
@@ -1307,9 +1308,7 @@ window.addEventListener('hashchange', () => {
     if (!navigation) return;
     routeFromHistory = true;
     navigation.request(
-        location.hash === '#play' && navigation.live
-            ? 'pause'
-            : routeFromHash(location.hash),
+        location.hash === '#play' && navigation.live ? 'pause' : routeFromHash(location.hash),
     );
     routeFromHistory = false;
 });
@@ -1323,8 +1322,7 @@ new ResizeObserver(() => fitCanvas()).observe(document.querySelector('.console')
 new ResizeObserver(() => fitCanvas()).observe(element('coopHud'));
 try {
     const response = await fetch('./game.wasm');
-    if (!response.ok)
-        throw new Error(`Game download failed (${response.status})`);
+    if (!response.ok) throw new Error(`Game download failed (${response.status})`);
     const art = (gameArt = await loadArt()),
         bytes = await response.arrayBuffer();
     renderer = new PixelRenderer(canvas, art);
@@ -1346,20 +1344,31 @@ try {
         apply: applyDraft,
         discard: () => settingsDraft.discard(),
         changed: screenChanged,
-        canResume:()=>{
-            if(!runtime.coop)return true;
-            const pads=connectedPads();
-            const confirmKeys=new Set(['Enter','Space']);
-            const ready=coopResumeReady && coopInput.valid(pads) &&
-                [...physicalKeys].every(key=>confirmKeys.has(key)) &&
-                coopInput.devices.every((device,i)=>{
-                    if(device==='keyboard')return true;
-                    const pad=coopInput.pad(i,pads);
-                    const allowed=i===coopInput.menuOwner?[0,coopInput.controls[i].settings.buttons.pause]:[];
-                    return !(pad.axes||[]).some(v=>Math.abs(v)>.55) &&
-                        !(pad.buttons||[]).some((b,index)=>(b.pressed||b.value>.2)&&!allowed.includes(index));
+        canResume: () => {
+            if (!runtime.coop) return true;
+            const pads = connectedPads();
+            const confirmKeys = new Set(['Enter', 'Space']);
+            const ready =
+                coopResumeReady &&
+                coopInput.valid(pads) &&
+                [...physicalKeys].every((key) => confirmKeys.has(key)) &&
+                coopInput.devices.every((device, i) => {
+                    if (device === 'keyboard') return true;
+                    const pad = coopInput.pad(i, pads);
+                    const allowed =
+                        i === coopInput.menuOwner
+                            ? [0, coopInput.controls[i].settings.buttons.pause]
+                            : [];
+                    return (
+                        !(pad.axes || []).some((v) => Math.abs(v) > 0.55) &&
+                        !(pad.buttons || []).some(
+                            (b, index) => (b.pressed || b.value > 0.2) && !allowed.includes(index),
+                        )
+                    );
                 });
-            if(!ready)element('pauseSettingsHint').textContent='Assign both inputs and release sticks, triggers and keys before Resume.';
+            if (!ready)
+                element('pauseSettingsHint').textContent =
+                    'Assign both inputs and release sticks, triggers and keys before Resume.';
             return ready;
         },
     });
@@ -1376,13 +1385,11 @@ try {
     requestAnimationFrame(frame);
 } catch (error) {
     stateLabel.textContent = 'UNAVAILABLE';
-    element('homeHint').textContent =
-        'Could not load the game. Choose Reload to retry.';
+    element('homeHint').textContent = 'Could not load the game. Choose Reload to retry.';
     const retry = element('play');
     retry.disabled = false;
     retry.textContent = 'Reload';
     retry.addEventListener('click', () => location.reload(), { once: true });
-    hint.textContent =
-        'Could not load the game. Serve web/dist over HTTP and reload.';
+    hint.textContent = 'Could not load the game. Serve web/dist over HTTP and reload.';
     console.error(error);
 }

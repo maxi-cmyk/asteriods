@@ -1,43 +1,24 @@
 import { spawnSync } from 'node:child_process';
 import { fileURLToPath } from 'node:url';
 import { dirname, resolve } from 'node:path';
-import {
-    existsSync,
-    mkdirSync,
-    copyFileSync,
-    readFileSync,
-    cpSync,
-    rmSync,
-} from 'node:fs';
+import { existsSync, mkdirSync, copyFileSync, readFileSync, cpSync, rmSync } from 'node:fs';
 const root = dirname(fileURLToPath(import.meta.url));
 const test = process.argv.includes('--test');
 const oled = process.argv.includes('--oled');
-const outputName = oled
-    ? test
-        ? 'oled-test'
-        : 'oled'
-    : test
-      ? 'test'
-      : 'game';
+const outputName = oled ? (test ? 'oled-test' : 'oled') : test ? 'test' : 'game';
 const clang =
     process.env.CLANGXX ||
-    [
-        '/opt/homebrew/opt/llvm/bin/clang++',
-        '/opt/homebrew/opt/llvm@22/bin/clang++',
-    ].find(existsSync) ||
+    ['/opt/homebrew/opt/llvm/bin/clang++', '/opt/homebrew/opt/llvm@22/bin/clang++'].find(
+        existsSync,
+    ) ||
     'clang++';
 const linker =
     process.env.WASM_LD ||
     (existsSync('/opt/homebrew/opt/lld/bin/wasm-ld')
         ? '/opt/homebrew/opt/lld/bin/wasm-ld'
         : 'wasm-ld');
-if (
-    (clang.includes('/') && !existsSync(clang)) ||
-    (linker.includes('/') && !existsSync(linker))
-) {
-    throw new Error(
-        'Set CLANGXX and WASM_LD, or install LLVM and lld (brew install llvm lld).',
-    );
+if ((clang.includes('/') && !existsSync(clang)) || (linker.includes('/') && !existsSync(linker))) {
+    throw new Error('Set CLANGXX and WASM_LD, or install LLVM and lld (brew install llvm lld).');
 }
 mkdirSync(resolve(root, 'dist'), { recursive: true });
 const exports = [
@@ -150,9 +131,7 @@ const allowedImports = new Set([
     'browser_storage_read',
     'browser_storage_write',
 ]);
-for (const item of WebAssembly.Module.imports(
-    new WebAssembly.Module(readFileSync(output)),
-)) {
+for (const item of WebAssembly.Module.imports(new WebAssembly.Module(readFileSync(output)))) {
     if (item.module !== 'env' || !allowedImports.has(item.name)) {
         throw new Error(`Unexpected WASM import: ${item.module}.${item.name}`);
     }
@@ -213,10 +192,7 @@ if (!test && !oled) {
         recursive: true,
     });
     mkdirSync(resolve(root, 'dist/demo'), { recursive: true });
-    copyFileSync(
-        resolve(root, 'demo/engine.mjs'),
-        resolve(root, 'dist/demo/engine.mjs'),
-    );
+    copyFileSync(resolve(root, 'demo/engine.mjs'), resolve(root, 'dist/demo/engine.mjs'));
     cpSync(resolve(root, 'assets'), resolve(root, 'dist/assets'), {
         recursive: true,
         // Notes about the art stay in the repo; only the art itself ships.

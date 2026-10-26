@@ -1,5 +1,5 @@
 import { ThemeMusic } from './music.mjs';
-import { BOSS_AT, bossHazards } from './boss-scene.mjs';
+import { bossHazards } from './boss-scene.mjs';
 import { BossSound } from './boss-sound.mjs';
 export class GameAudio {
     constructor(settings) {
@@ -37,9 +37,7 @@ export class GameAudio {
         if (!this.context) return;
         const now = this.context.currentTime;
         this.master.gain.setTargetAtTime(
-            this.settings.soundEnabled && !this.suspended
-                ? this.settings.volume
-                : 0,
+            this.settings.soundEnabled && !this.suspended ? this.settings.volume : 0,
             now,
             0.015,
         );
@@ -51,8 +49,7 @@ export class GameAudio {
         this.apply();
     }
     cue(kind) {
-        if (!this.context || !this.settings.soundEnabled || this.suspended)
-            return;
+        if (!this.context || !this.settings.soundEnabled || this.suspended) return;
         const now = this.context.currentTime,
             osc = this.context.createOscillator(),
             gain = this.context.createGain();
@@ -65,10 +62,7 @@ export class GameAudio {
         );
         gain.gain.setValueAtTime(0, now);
         gain.gain.linearRampToValueAtTime(discharge ? 0.16 : 0.09, now + 0.008);
-        gain.gain.exponentialRampToValueAtTime(
-            0.001,
-            now + (discharge ? 0.35 : 0.22),
-        );
+        gain.gain.exponentialRampToValueAtTime(0.001, now + (discharge ? 0.35 : 0.22));
         osc.connect(gain).connect(this.master);
         osc.start(now);
         osc.stop(now + 0.4);
@@ -81,26 +75,26 @@ export class GameAudio {
     // boss sound design lives in boss-sound.mjs.
     bossCue() {
         if (!this.context || !this.settings.soundEnabled || this.suspended) return;
-        const now = this.context.currentTime, osc = this.context.createOscillator(), env = this.context.createGain();
+        const now = this.context.currentTime,
+            osc = this.context.createOscillator(),
+            env = this.context.createGain();
         osc.type = 'square';
         osc.frequency.setValueAtTime(1500, now);
         env.gain.setValueAtTime(0.0001, now);
-        env.gain.linearRampToValueAtTime(.04, now + .005);
-        env.gain.exponentialRampToValueAtTime(.001, now + .05);
+        env.gain.linearRampToValueAtTime(0.04, now + 0.005);
+        env.gain.exponentialRampToValueAtTime(0.001, now + 0.05);
         osc.connect(env).connect(this.master);
         osc.start(now);
-        osc.stop(now + .08);
-        osc.onended = () => { osc.disconnect(); env.disconnect(); };
+        osc.stop(now + 0.08);
+        osc.onended = () => {
+            osc.disconnect();
+            env.disconnect();
+        };
     }
     setMode(mode, suspended = false) {
         this.mode = mode;
         this.musicSuspended = suspended;
-        this.music?.update(
-            mode,
-            this.settings.musicEnabled,
-            this.settings.volume,
-            suspended,
-        );
+        this.music?.update(mode, this.settings.musicEnabled, this.settings.volume, suspended);
     }
     startWarp() {
         if (!this.context || !this.settings.soundEnabled) return;
@@ -113,10 +107,7 @@ export class GameAudio {
         oscillator.frequency.exponentialRampToValueAtTime(1800, now + 1.9);
         oscillator.frequency.exponentialRampToValueAtTime(90, now + 2.5);
         gain.gain.setValueAtTime(0, now);
-        gain.gain.linearRampToValueAtTime(
-            this.settings.volume * 0.12,
-            now + 0.3,
-        );
+        gain.gain.linearRampToValueAtTime(this.settings.volume * 0.12, now + 0.3);
         gain.gain.exponentialRampToValueAtTime(0.0001, now + 2.65);
         oscillator.connect(gain).connect(this.context.destination);
         oscillator.start();
@@ -156,10 +147,20 @@ export class GameAudio {
             if (old[49] > 0 && scene[49] === 0) this.cue('ready');
             this.bossSound.observe(old, scene);
             if (scene[512] && old[512]) {
-                const before = new Map(bossHazards(old).map(h => [h.index, h]));
+                const before = new Map(bossHazards(old).map((h) => [h.index, h]));
                 for (const h of bossHazards(scene)) {
                     const prev = before.get(h.index);
-                    if (h.kind <= 4 && h.warn > 0 && h.warn <= 200 && prev && prev.warn > 200 && prev.kind === h.kind) { this.bossCue(); break; }
+                    if (
+                        h.kind <= 4 &&
+                        h.warn > 0 &&
+                        h.warn <= 200 &&
+                        prev &&
+                        prev.warn > 200 &&
+                        prev.kind === h.kind
+                    ) {
+                        this.bossCue();
+                        break;
+                    }
                 }
             }
         }
@@ -169,7 +170,6 @@ export class GameAudio {
         if (value) this.stopWarp();
         this.suspended = value;
         this.apply();
-        if (value && this.context)
-            this.chargeGain.gain.setValueAtTime(0, this.context.currentTime);
+        if (value && this.context) this.chargeGain.gain.setValueAtTime(0, this.context.currentTime);
     }
 }

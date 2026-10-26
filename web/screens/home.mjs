@@ -22,6 +22,5 @@ export function renderHomeScreen({
           ? 'D-pad / left stick: navigate · Cross: select · Circle: back'
           : 'Arrow keys: navigate · Enter: select · Esc: back';
     if (watching) demoEngine.render();
-    element('profileLabel').textContent =
-        `Player ${profileStore.activeProfile + 1}`;
+    element('profileLabel').textContent = `Player ${profileStore.activeProfile + 1}`;
 }

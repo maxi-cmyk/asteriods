@@ -1,11 +1,5 @@
 import { element } from '../dom.mjs';
-export function renderDiagnostics({
-    inputDiagnostics,
-    diagnosticPad,
-    runtime,
-    controls,
-    update,
-}) {
+export function renderDiagnostics({ inputDiagnostics, diagnosticPad, runtime, controls, update }) {
     if (!inputDiagnostics.hidden) {
         const pad = diagnosticPad;
         update(
