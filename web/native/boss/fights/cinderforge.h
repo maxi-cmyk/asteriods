@@ -1,6 +1,12 @@
 #pragma once
 // Cinderforge and Cinderling
 
+// Slots of boss.aux and boss.stamp.
+enum { AUX_FORGE_HEAT = 0,        // shell glow, .45 cold .. .8 hot
+       AUX_FORGE_OPEN = 1 };      // 1 while the shell is open and the core can be shot
+enum { AUX_CINDER_GLOW = 0, AUX_CINDER_OPEN = 1 };   // the mini's glow and open flag
+enum { STAMP_FORGE_OPEN_UNTIL = 0 };                 // game_ms until which the shell stays open
+
 // ================================================================ CINDERFORGE / CINDERLING
 static const BossRow SEQ_FORGE[] = {{2, CA_LOB, CA_LOB},
                                     {4, CA_LOB, CA_JETS, CA_EMBER, CA_JETS},
@@ -13,7 +19,7 @@ static void bs_forge_begin() {
         p = {};
         p.exists = true; p.kind = PK_PANEL; p.slot = i; p.hp = p.hp_max = 3; p.r = 16;
     }
-    boss.aux[0] = .5f;
+    boss.aux[AUX_FORGE_HEAT] = .5f;
 }
 static unsigned bs_broken_panels() {
     unsigned n = 0;
@@ -21,8 +27,8 @@ static unsigned bs_broken_panels() {
     return n;
 }
 static void bs_forge_update() {
-    boss.aux[0] = .45f + .12f * (boss.phase > 1) + .12f * (boss.phase > 2) + .04f * sinf(bs_since(boss.born) / 300.0f);
-    boss.aux[1] = game_ms < boss.stamp[0] ? 1.0f : 0.0f;
+    boss.aux[AUX_FORGE_HEAT] = .45f + .12f * (boss.phase > 1) + .12f * (boss.phase > 2) + .04f * sinf(bs_since(boss.born) / 300.0f);
+    boss.aux[AUX_FORGE_OPEN] = game_ms < boss.stamp[STAMP_FORGE_OPEN_UNTIL] ? 1.0f : 0.0f;
     for (unsigned i = 0; i < 8; i++) {
         BossPart& p = boss.parts[i];
         float a = bs_panel_angle(i);
@@ -50,7 +56,7 @@ static bool bs_forge_run(int id, unsigned long t) {
                 float px = boss.target_x, py = boss.target_y;
                 if (k) bs_nearest(mx, my, px, py);
                 bs_lob(px, py, mx, my - 30 + k * 36);
-                if (boss.mini) boss.stamp[0] = game_ms + 2300;
+                if (boss.mini) boss.stamp[STAMP_FORGE_OPEN_UNTIL] = game_ms + 2300;
             }
         return t >= (n - 1) * 500 + 1300;
     }
@@ -96,7 +102,7 @@ static bool bs_forge_run(int id, unsigned long t) {
                 BossPart& p = boss.parts[i];
                 if (p.state != 2) { p.state = 2; bs_particles(p.x, p.y); }
             }
-            boss.stamp[0] = game_ms + 2000;
+            boss.stamp[STAMP_FORGE_OPEN_UNTIL] = game_ms + 2000;
             display_shake(2);
         }
         return t >= 1100;
@@ -112,11 +118,11 @@ static int bs_cinderling_pick() {
     return CA_LOB;
 }
 static void bs_cinderling_update() {
-    boss.aux[0] = .5f + .1f * sinf(bs_since(boss.born) / 260.0f);
-    boss.aux[1] = game_ms < boss.stamp[0] ? 1.0f : 0.0f;
+    boss.aux[AUX_CINDER_GLOW] = .5f + .1f * sinf(bs_since(boss.born) / 260.0f);
+    boss.aux[AUX_CINDER_OPEN] = game_ms < boss.stamp[STAMP_FORGE_OPEN_UNTIL] ? 1.0f : 0.0f;
 }
 static void bs_forge_circles() {
-    if (game_ms < boss.stamp[0]) bs_circle(boss.x, boss.y, 34, BC_CORE, 0, 3);
+    if (game_ms < boss.stamp[STAMP_FORGE_OPEN_UNTIL]) bs_circle(boss.x, boss.y, 34, BC_CORE, 0, 3);
     else {
         for (unsigned i = 0; i < 8; i++)
             bs_circle(boss.parts[i].x, boss.parts[i].y, 16, BC_PART, i, 1);
@@ -125,7 +131,7 @@ static void bs_forge_circles() {
     }
 }
 static void bs_cinderling_circles() {
-    if (boss.aux[1] > .5f) bs_circle(boss.x, boss.y, 24, BC_CORE, 0, 3);
+    if (boss.aux[AUX_CINDER_OPEN] > .5f) bs_circle(boss.x, boss.y, 24, BC_CORE, 0, 3);
     else {
         bs_circle(boss.x, boss.y, 50, BC_BLOCK, 0, 1);
         bs_circle(boss.x, boss.y, 24, BC_CORE, 0, 2);
@@ -143,7 +149,7 @@ static unsigned bs_cinderling_body(float *out) {
 }
 // The forge's shell blunts the laser unless the core is exposed.
 static unsigned bs_forge_soak(unsigned damage, bool laser) {
-    return laser && game_ms >= boss.stamp[0] ? damage / 2 : damage;
+    return laser && game_ms >= boss.stamp[STAMP_FORGE_OPEN_UNTIL] ? damage / 2 : damage;
 }
 // A panel takes hits until it blows out; once open, hits reach the core.
 static void bs_forge_hit(BossPart& p, unsigned owner, unsigned damage, bool laser) {

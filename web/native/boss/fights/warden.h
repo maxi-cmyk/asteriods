@@ -1,6 +1,16 @@
 #pragma once
 // Horizon Warden and Lens Imp
 
+// Slots of boss.aux and boss.stamp.
+enum { AUX_WARDEN_CLOCK = 0,      // seconds since the entrance, moves the orbiting stars
+       AUX_WARDEN_CORE_OPEN = 1,  // 1 during the periodic window the core can be shot
+       AUX_WARDEN_BUSY = 2,       // 1 while an attack runs
+       AUX_WARDEN_PASS = 3 };     // counts accretion passes
+enum { STAMP_WARDEN_WINDOW = 1,   // start of the next (or current) core window
+       STAMP_WARDEN_PULLED = 4 }; // the gravity pull was used; it is not repeated
+enum { AUX_LENS_CLOCK = 0, AUX_LENS_BLINK = 1 };     // the mini's clock and blink flag
+enum { STAMP_LENS_BLINK_UNTIL = 3 };                 // game_ms until which the imp is gone
+
 // ================================================================ HORIZON WARDEN / LENS IMP
 static const BossRow SEQ_WARDEN[] = {{0}, {2, WA_SPIRAL, WA_CURVE},
                                      {5, WA_ACCRETE, WA_SPIRAL, WA_CURVE, WA_PULL, WA_ACCRETE}};
@@ -13,11 +23,11 @@ static void bs_warden_begin() {
         p.exists = true; p.kind = PK_STAR; p.slot = i; p.hp = p.hp_max = 5; p.r = 8;
         p.fire_at = game_ms + BOSS_ENTRANCE_MS + 1500 + i * 1000;
     }
-    boss.stamp[1] = game_ms + BOSS_ENTRANCE_MS + 4000;
+    boss.stamp[STAMP_WARDEN_WINDOW] = game_ms + BOSS_ENTRANCE_MS + 4000;
 }
 static void bs_star_pos(unsigned i, float& x, float& y) {
     float ia = WARDEN_ORBIT[i][0], ib = WARDEN_ORBIT[i][1], rot = WARDEN_ORBIT[i][2];
-    float t = boss.aux[0] * (100.0f / ia) + rot * 2;
+    float t = boss.aux[AUX_WARDEN_CLOCK] * (100.0f / ia) + rot * 2;
     float ex = ia * cosf(t), ey = ib * sinf(t);
     x = boss.x + ex * cosf(rot) - ey * sinf(rot);
     y = boss.y + ex * sinf(rot) + ey * cosf(rot);
@@ -28,13 +38,13 @@ static unsigned bs_stars() {
     return n;
 }
 static void bs_warden_update() {
-    boss.aux[0] += FRAME_TIME_MS / 1000.0f;
+    boss.aux[AUX_WARDEN_CLOCK] += FRAME_TIME_MS / 1000.0f;
     for (unsigned i = 0; i < 4; i++) bs_star_pos(i, boss.parts[i].x, boss.parts[i].y);
     if (!boss.phase) return;
     // The core opens for 2 s every 8 s, announced by the halo (aux[1]).
-    if (game_ms >= boss.stamp[1] + 2000) boss.stamp[1] = game_ms + 6000;
-    boss.aux[1] = game_ms >= boss.stamp[1] && game_ms < boss.stamp[1] + 2000 ? 1.0f : 0.0f;
-    boss.aux[2] = boss.atk ? 1.0f : 0.0f;
+    if (game_ms >= boss.stamp[STAMP_WARDEN_WINDOW] + 2000) boss.stamp[STAMP_WARDEN_WINDOW] = game_ms + 6000;
+    boss.aux[AUX_WARDEN_CORE_OPEN] = game_ms >= boss.stamp[STAMP_WARDEN_WINDOW] && game_ms < boss.stamp[STAMP_WARDEN_WINDOW] + 2000 ? 1.0f : 0.0f;
+    boss.aux[AUX_WARDEN_BUSY] = boss.atk ? 1.0f : 0.0f;
     unsigned long interval = 4000;
     for (unsigned i = 0; i < 4; i++) {
         BossPart& p = boss.parts[i];
@@ -83,7 +93,7 @@ static bool bs_warden_run(int id, unsigned long t) {
     }
     case WA_ACCRETE:
         if (bs_at(t, 0)) {
-            unsigned pass = (unsigned)boss.aux[3]++;
+            unsigned pass = (unsigned)boss.aux[AUX_WARDEN_PASS]++;
             float radius = 96;
             for (unsigned i = 0; i < pass && radius > 48; i++) radius *= .94f;
             radius = bs_max(radius, 48);
@@ -101,7 +111,7 @@ static bool bs_warden_run(int id, unsigned long t) {
             bs_hazard(HK_TELL, cx, cy, 0, 150, 0, 1200, 0);
             BossHazard *h = bs_hazard(HK_PULL, cx, cy, 0, .8f, 0, 1200, 1500);
             (void)h;
-            boss.stamp[4] = 1;
+            boss.stamp[STAMP_WARDEN_PULLED] = 1;
         }
         return t >= 2800;
     }
@@ -110,13 +120,13 @@ static bool bs_warden_run(int id, unsigned long t) {
 
 // ================================================================ LENS IMP
 static void bs_lens_update() {
-    boss.aux[0] += FRAME_TIME_MS / 1000.0f;
-    boss.aux[1] = boss.stamp[3] && game_ms < boss.stamp[3] ? 1.0f : 0.0f; // blinking
+    boss.aux[AUX_LENS_CLOCK] += FRAME_TIME_MS / 1000.0f;
+    boss.aux[AUX_LENS_BLINK] = boss.stamp[STAMP_LENS_BLINK_UNTIL] && game_ms < boss.stamp[STAMP_LENS_BLINK_UNTIL] ? 1.0f : 0.0f; // blinking
 }
 static bool bs_lens_run(int id, unsigned long t) {
     if (id == MA_CURVE1) return bs_warden_run(id, t);
     // Blink: a 700 ms tell, then the imp reappears elsewhere.
-    if (bs_at(t, 0)) boss.stamp[3] = game_ms + 900;
+    if (bs_at(t, 0)) boss.stamp[STAMP_LENS_BLINK_UNTIL] = game_ms + 900;
     if (bs_at(t, 700)) {
         float y = bs_rand(80, 195);
         if (fabsf(y - boss.home_y) < 50) y = y < 135 ? y + 60 : y - 60;
@@ -126,18 +136,18 @@ static bool bs_lens_run(int id, unsigned long t) {
     return t >= 1000;
 }
 
-static bool bs_blinking() { return boss.kind == BK_LENSIMP && boss.stamp[3] && game_ms < boss.stamp[3]; }
+static bool bs_blinking() { return boss.kind == BK_LENSIMP && boss.stamp[STAMP_LENS_BLINK_UNTIL] && game_ms < boss.stamp[STAMP_LENS_BLINK_UNTIL]; }
 // The pull is held back for a while after it fires, and never under the calm assist.
 static int bs_warden_pick() {
     int id = bs_seq_pick(SEQ_WARDEN, 3);
-    if (id == WA_PULL && (boss.stamp[4] || boss_assist_calm)) id = WA_CURVE;
+    if (id == WA_PULL && (boss.stamp[STAMP_WARDEN_PULLED] || boss_assist_calm)) id = WA_CURVE;
     return id;
 }
 static int bs_lens_pick() { return bs_seq_pick(SEQ_LENS, 1); }
 static void bs_warden_circles() {
     for (unsigned i = 0; i < 4; i++)
         if (boss.parts[i].exists) bs_circle(boss.parts[i].x, boss.parts[i].y, 9, BC_PART, i, 3);
-    bool open = boss.aux[1] > .5f || !bs_stars();
+    bool open = boss.aux[AUX_WARDEN_CORE_OPEN] > .5f || !bs_stars();
     if (open) bs_circle(boss.x, boss.y, 46, BC_CORE, 0, 3);
     else {
         bs_circle(boss.x, boss.y, 100, BC_BLOCK, 0, 1);

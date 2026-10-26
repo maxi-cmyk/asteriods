@@ -1,6 +1,13 @@
 #pragma once
 // Tidecaller and Moonjelly
 
+// Slots of boss.aux and boss.stamp.
+enum { AUX_TIDE_CLOCK = 0,        // seconds since the entrance, drives the sway
+       AUX_TIDE_EXPOSED = 2 };    // 1 once no bubble guards the bell
+enum { AUX_JELLY_CLOCK = 0 };
+enum { STAMP_TIDE_BARE_SINCE = 0,     // when the last bubble popped (0 = bubbles stand)
+       STAMP_TIDE_REFORMED = 2 };     // the bubbles reformed once already
+
 // ================================================================ TIDECALLER / MOONJELLY
 static const BossRow SEQ_TIDE[] = {{2, TA_SINE, TA_SINE},
                                    {4, TA_SINE, TA_TENDRIL, TA_SPORE, TA_TENDRIL},
@@ -19,23 +26,23 @@ static void bs_tide_begin() {
     }
 }
 static void bs_tide_update() {
-    boss.aux[0] += FRAME_TIME_MS / 1000.0f;
-    float w = TWO_PI / 9.0f * boss.aux[0];
+    boss.aux[AUX_TIDE_CLOCK] += FRAME_TIME_MS / 1000.0f;
+    float w = TWO_PI / 9.0f * boss.aux[AUX_TIDE_CLOCK];
     boss.x = boss.home_x + 22 * sinf(w);
     boss.y = boss.home_y + 26 * sinf(2 * w);
-    boss.aux[2] = bs_bubbles() ? 0.0f : 1.0f;
+    boss.aux[AUX_TIDE_EXPOSED] = bs_bubbles() ? 0.0f : 1.0f;
     for (unsigned i = 0; i < 3; i++) {
         BossPart& p = boss.parts[i];
-        float a = boss.aux[0] * 1.3f + i * TWO_PI / 3;
+        float a = boss.aux[AUX_TIDE_CLOCK] * 1.3f + i * TWO_PI / 3;
         p.x = boss.x + cosf(a) * 108;
         p.y = boss.y - 17 + sinf(a) * 40;
     }
     if (boss.phase && !bs_bubbles()) {
-        if (!boss.stamp[0]) boss.stamp[0] = game_ms;
-        else if (!boss.stamp[2] && bs_since(boss.stamp[0]) >= 3000) {
+        if (!boss.stamp[STAMP_TIDE_BARE_SINCE]) boss.stamp[STAMP_TIDE_BARE_SINCE] = game_ms;
+        else if (!boss.stamp[STAMP_TIDE_REFORMED] && bs_since(boss.stamp[STAMP_TIDE_BARE_SINCE]) >= 3000) {
             for (unsigned i = 0; i < 3; i++) { boss.parts[i].exists = true; boss.parts[i].hp = 2; }
-            boss.stamp[2] = 1; // bubbles reform once
-            boss.stamp[0] = 0;
+            boss.stamp[STAMP_TIDE_REFORMED] = 1; // bubbles reform once
+            boss.stamp[STAMP_TIDE_BARE_SINCE] = 0;
         }
     }
 }
@@ -93,8 +100,8 @@ static bool bs_tide_run(int id, unsigned long t) {
 static int bs_tide_pick() { return bs_seq_pick(SEQ_TIDE, 3); }
 static int bs_moonjelly_pick() { return MA_SINE6; }
 static void bs_moonjelly_update() {
-    boss.aux[0] += FRAME_TIME_MS / 1000.0f;
-    float w = TWO_PI / 8.0f * boss.aux[0];
+    boss.aux[AUX_JELLY_CLOCK] += FRAME_TIME_MS / 1000.0f;
+    float w = TWO_PI / 8.0f * boss.aux[AUX_JELLY_CLOCK];
     boss.x = boss.home_x + 16 * sinf(w);
     boss.y = boss.home_y + 24 * sinf(2 * w);
 }

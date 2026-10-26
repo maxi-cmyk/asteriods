@@ -1,6 +1,16 @@
 #pragma once
 // Bastion and Gunnery
 
+// Slots of boss.aux and boss.stamp.
+enum { AUX_BASTION_CANNON = 0,    // 1 while the nose cannon or broadside fires
+       AUX_BASTION_PODS = 1,      // 1 while the missile pods or mine bay is open
+       AUX_BASTION_ARMOUR = 2 };  // hull plating shown in the scene
+enum { AUX_GUNNERY_FIRING = 0 };  // 1 while the bolts attack runs
+// Queued bolts (Bastion's MA_BOLTS echo and Gunnery): four floats per gun from AUX_BOLTS.
+enum { AUX_BOLTS = 8, BOLT_STRIDE = 4, BOLT_X = 0, BOLT_Y = 1, BOLT_ANGLE = 2, BOLT_FIRE_AT = 3 };
+enum { STAMP_BASTION_REVIVED = 2,           // the guns came back once already
+       STAMP_BASTION_GUNLESS_SINCE = 3 };   // when the last gun fell (0 = a gun stands)
+
 // ================================================================ BASTION / GUNNERY
 static const BossRow SEQ_BASTION[] = {{4, BA_CANNON, BA_MISSILE, BA_CANNON, BA_MINES},
                                       {4, BA_CANNON, BA_MISSILE, BA_BROAD, BA_MINES}};
@@ -28,21 +38,21 @@ static void bs_bastion_update() {
     for (unsigned i = 0; i < 3; i++) bs_bastion_xy(i, boss.parts[i].x, boss.parts[i].y);
     bool any = false;
     for (unsigned i = 0; i < 3; i++) any |= boss.parts[i].exists;
-    if (any) boss.stamp[3] = 0;
-    else if (!boss.stamp[3]) boss.stamp[3] = game_ms;
-    else if (!boss.stamp[2] && bs_since(boss.stamp[3]) >= 8000) {
+    if (any) boss.stamp[STAMP_BASTION_GUNLESS_SINCE] = 0;
+    else if (!boss.stamp[STAMP_BASTION_GUNLESS_SINCE]) boss.stamp[STAMP_BASTION_GUNLESS_SINCE] = game_ms;
+    else if (!boss.stamp[STAMP_BASTION_REVIVED] && bs_since(boss.stamp[STAMP_BASTION_GUNLESS_SINCE]) >= 8000) {
         bs_bastion_revive(6);
-        boss.stamp[2] = 1;
-        boss.stamp[3] = 0;
+        boss.stamp[STAMP_BASTION_REVIVED] = 1;
+        boss.stamp[STAMP_BASTION_GUNLESS_SINCE] = 0;
     }
-    boss.aux[0] = boss.atk == BA_CANNON || boss.atk == BA_BROAD ? 1.0f : 0.0f;
-    boss.aux[1] = boss.atk == BA_MISSILE || boss.atk == BA_MINES ? 1.0f : 0.0f;
-    boss.aux[2] = .6f + .3f * (boss.phase > 1);
+    boss.aux[AUX_BASTION_CANNON] = boss.atk == BA_CANNON || boss.atk == BA_BROAD ? 1.0f : 0.0f;
+    boss.aux[AUX_BASTION_PODS] = boss.atk == BA_MISSILE || boss.atk == BA_MINES ? 1.0f : 0.0f;
+    boss.aux[AUX_BASTION_ARMOUR] = .6f + .3f * (boss.phase > 1);
     // Bolts wait on their aim lines.
     for (unsigned k = 0; k < 2; k++) {
-        float& fire = boss.aux[11 + k * 4];
+        float& fire = boss.aux[AUX_BOLTS + k * BOLT_STRIDE + BOLT_FIRE_AT];
         if (fire > 0 && game_ms >= (unsigned long)fire) {
-            bs_shot_at(SF_BOLT, boss.aux[8 + k * 4], boss.aux[9 + k * 4], boss.aux[10 + k * 4], 3.0f);
+            bs_shot_at(SF_BOLT, boss.aux[AUX_BOLTS + k * BOLT_STRIDE + BOLT_X], boss.aux[AUX_BOLTS + k * BOLT_STRIDE + BOLT_Y], boss.aux[AUX_BOLTS + k * BOLT_STRIDE + BOLT_ANGLE], 3.0f);
             fire = 0;
         }
     }
@@ -50,10 +60,10 @@ static void bs_bastion_update() {
 static void bs_bolt(unsigned k, float x, float y, float tx, float ty, unsigned long delay) {
     float ang = bs_angle_to(x, y, tx, ty);
     bs_hazard(HK_AIM, x, y, ang, 520, 0, 500, 0);
-    boss.aux[8 + k * 4] = x;
-    boss.aux[9 + k * 4] = y;
-    boss.aux[10 + k * 4] = ang;
-    boss.aux[11 + k * 4] = float(game_ms + 500 + delay);
+    boss.aux[AUX_BOLTS + k * BOLT_STRIDE + BOLT_X] = x;
+    boss.aux[AUX_BOLTS + k * BOLT_STRIDE + BOLT_Y] = y;
+    boss.aux[AUX_BOLTS + k * BOLT_STRIDE + BOLT_ANGLE] = ang;
+    boss.aux[AUX_BOLTS + k * BOLT_STRIDE + BOLT_FIRE_AT] = float(game_ms + 500 + delay);
 }
 static int bs_bastion_pick() {
     const BossRow *rows = SEQ_BASTION;
@@ -130,13 +140,13 @@ static bool bs_bastion_run(int id, unsigned long t) {
 static void bs_gunnery_update() {
     boss.y = boss.home_y + 20 * sinf(TWO_PI * bs_since(boss.born) / 6000.0f);
     for (unsigned k = 0; k < 2; k++) {
-        float& fire = boss.aux[11 + k * 4];
+        float& fire = boss.aux[AUX_BOLTS + k * BOLT_STRIDE + BOLT_FIRE_AT];
         if (fire > 0 && game_ms >= (unsigned long)fire) {
-            bs_shot_at(SF_BOLT, boss.aux[8 + k * 4], boss.aux[9 + k * 4], boss.aux[10 + k * 4], 3.0f);
+            bs_shot_at(SF_BOLT, boss.aux[AUX_BOLTS + k * BOLT_STRIDE + BOLT_X], boss.aux[AUX_BOLTS + k * BOLT_STRIDE + BOLT_Y], boss.aux[AUX_BOLTS + k * BOLT_STRIDE + BOLT_ANGLE], 3.0f);
             fire = 0;
         }
     }
-    boss.aux[0] = boss.atk == MA_BOLTS ? 1.0f : 0.0f;
+    boss.aux[AUX_GUNNERY_FIRING] = boss.atk == MA_BOLTS ? 1.0f : 0.0f;
 }
 static int bs_gunnery_pick() { return bs_seq_pick(SEQ_GUNNERY, 1); }
 static void bs_bastion_circles() {
@@ -178,7 +188,7 @@ static unsigned bs_bastion_soak(unsigned damage, bool laser) {
 static void bs_bastion_phase(unsigned phase) {
     if (phase >= 2) {
         bs_bastion_revive(7);
-        boss.stamp[3] = 0;
+        boss.stamp[STAMP_BASTION_GUNLESS_SINCE] = 0;
     }
 }
 static void bs_bastion_hit(BossPart& p, unsigned, unsigned damage, bool) {

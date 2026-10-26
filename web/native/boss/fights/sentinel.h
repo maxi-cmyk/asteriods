@@ -1,14 +1,18 @@
 #pragma once
 // Sentinel and Picket
 
+// Slots of boss.aux (floats the scene exports to the UI).
+enum { AUX_SENTINEL_OPEN = 0,   // 0 closed .. 1 open: only an open gate can be shot
+       AUX_SENTINEL_BUSY = 1 }; // 1 while an attack runs
+
 // ================================================================ SENTINEL / PICKET
 static const BossRow SEQ_SENTINEL[] = {{2, SA_LANCE, SA_FAN}, {4, SA_LANCE, SA_FAN, SA_VOLLEY, SA_CROSS}};
 static const BossRow SEQ_PICKET[] = {{1, SA_LANCE}};
 
 static void bs_gate_update() {
     float want = boss.atk ? 0.0f : 1.0f;
-    boss.aux[0] += bs_clamp(want - boss.aux[0], -.08f, .08f);
-    boss.aux[1] = boss.atk ? 1.0f : 0.0f;
+    boss.aux[AUX_SENTINEL_OPEN] += bs_clamp(want - boss.aux[AUX_SENTINEL_OPEN], -.08f, .08f);
+    boss.aux[AUX_SENTINEL_BUSY] = boss.atk ? 1.0f : 0.0f;
     if (boss.kind == BK_PICKET && boss.phase) boss.y = boss.home_y + 36 * sinf(TWO_PI * bs_since(boss.born) / 7000.0f);
 }
 static bool bs_sentinel_run(int id, unsigned long t) {
@@ -51,7 +55,7 @@ static bool bs_sentinel_run(int id, unsigned long t) {
 
 static int bs_sentinel_pick() { return bs_seq_pick(SEQ_SENTINEL, 2); }
 static int bs_picket_pick() { return bs_seq_pick(SEQ_PICKET, 1); }
-static bool bs_open_gate() { return boss.aux[0] > .5f; }
+static bool bs_open_gate() { return boss.aux[AUX_SENTINEL_OPEN] > .5f; }
 static void bs_sentinel_circles() {
     if (bs_open_gate()) bs_circle(boss.x, boss.y, 33, BC_CORE, 0, 3);
     else bs_circle(boss.x, boss.y, 72, BC_BLOCK, 0, 1);

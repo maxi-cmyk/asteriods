@@ -7,7 +7,6 @@ static void bs_kind_begin() {
     const BossOps& o = bs_ops();
     boss.home_x = o.home_x;
     boss.home_y = o.home_y;
-    boss.aux[4] = 0;
     if (o.begin) o.begin();
 }
 static void bs_kind_update() { bs_ops().update(); }

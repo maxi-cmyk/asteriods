@@ -1,6 +1,14 @@
 #pragma once
 // Ringwarden and Shardling
 
+// Slots of boss.aux.
+enum { AUX_RING_SCALE = 0,        // radius scale of both rings (collapse shrinks it)
+       AUX_RING_OUTER_SPIN = 1,   // angle of the outer ring
+       AUX_RING_INNER_SPIN = 2,   // angle of the inner ring
+       AUX_RING_CHARGING = 3 };   // 1 while the core glows for a burst or prism
+enum { AUX_SHARD_SPIN = 2,        // angle of the three orbiting blades
+       AUX_SHARD_KITE_X = 4 };    // x the mini drifts toward (0 = home)
+
 // ================================================================ RINGWARDEN / SHARDLING
 static const BossRow SEQ_RING[] = {{2, RA_BURST, RA_BURST},
                                    {4, RA_BURST, RA_PRISM, RA_PICK, RA_PRISM},
@@ -8,8 +16,8 @@ static const BossRow SEQ_RING[] = {{2, RA_BURST, RA_BURST},
 static void bs_ring_pos(unsigned i, float& x, float& y) {
     bool outer = i < 16;
     unsigned count = outer ? 16 : 11, slot = outer ? i : i - 16;
-    float spin = outer ? boss.aux[1] : boss.aux[2];
-    float radius = (outer ? 106.0f : 70.0f) * boss.aux[0];
+    float spin = outer ? boss.aux[AUX_RING_OUTER_SPIN] : boss.aux[AUX_RING_INNER_SPIN];
+    float radius = (outer ? 106.0f : 70.0f) * boss.aux[AUX_RING_SCALE];
     float a = slot * TWO_PI / count + spin;
     x = boss.x + cosf(a) * radius;
     y = boss.y + sinf(a) * radius;
@@ -17,10 +25,10 @@ static void bs_ring_pos(unsigned i, float& x, float& y) {
 static void bs_ring_update() {
     float t = bs_since(boss.born) / 1000.0f;
     boss.y = boss.home_y + 40 * sinf(TWO_PI * t / 8.0f);
-    boss.aux[1] += .0042f;
-    boss.aux[2] -= .0075f;
-    if (boss.atk != RA_COLLAPSE) boss.aux[0] = 1 + .02f * sinf(t * 2);
-    boss.aux[3] = boss.atk == RA_BURST || boss.atk == RA_PRISM ? 1.0f : 0.0f;
+    boss.aux[AUX_RING_OUTER_SPIN] += .0042f;
+    boss.aux[AUX_RING_INNER_SPIN] -= .0075f;
+    if (boss.atk != RA_COLLAPSE) boss.aux[AUX_RING_SCALE] = 1 + .02f * sinf(t * 2);
+    boss.aux[AUX_RING_CHARGING] = boss.atk == RA_BURST || boss.atk == RA_PRISM ? 1.0f : 0.0f;
     for (unsigned i = 0; i < 27; i++) {
         BossPart& p = boss.parts[i];
         if (!p.exists && p.until && game_ms >= p.until) { p.exists = true; p.hp = 1; p.until = 0; }
@@ -34,8 +42,8 @@ static void bs_ring_spawn_parts() {
         p.exists = true; p.kind = PK_BLADE; p.slot = i; p.hp = p.hp_max = 1;
         p.r = i < 16 ? 14 : 12;
     }
-    boss.aux[0] = 1;
-    boss.aux[2] = .28f;
+    boss.aux[AUX_RING_SCALE] = 1;
+    boss.aux[AUX_RING_INNER_SPIN] = .28f;
 }
 static void bs_ring_break(BossPart& p, unsigned long regrow) {
     p.exists = false;
@@ -90,9 +98,9 @@ static bool bs_ring_run(int id, unsigned long t) {
             if (h) { h->d = 2.0f; h->e = 0; }
             bs_hazard(HK_TELL, boss.x, boss.y, 0, 120, 0, 1200, 0);
         }
-        if (t < 1200) boss.aux[0] = 1 - .8f * (t / 1200.0f);
+        if (t < 1200) boss.aux[AUX_RING_SCALE] = 1 - .8f * (t / 1200.0f);
         if (bs_at(t, 1200)) {
-            boss.aux[0] = 1;
+            boss.aux[AUX_RING_SCALE] = 1;
             for (unsigned i = 0; i < 27; i++) {
                 BossPart& p = boss.parts[i];
                 if (p.exists) bs_ring_break(p, 2500);
@@ -105,8 +113,8 @@ static bool bs_ring_run(int id, unsigned long t) {
 }
 // ================================================================ SHARDLING
 static void bs_shardling_update() {
-    boss.aux[2] += .02f;
-    float want = boss.aux[4] > 0 ? boss.aux[4] : boss.home_x;
+    boss.aux[AUX_SHARD_SPIN] += .02f;
+    float want = boss.aux[AUX_SHARD_KITE_X] > 0 ? boss.aux[AUX_SHARD_KITE_X] : boss.home_x;
     boss.x += bs_clamp(want - boss.x, -1.1f, 1.1f);
     boss.y += bs_clamp(bs_clamp(boss.target_y, 70, 205) - boss.y, -.8f, .8f);
 }
@@ -116,11 +124,11 @@ static bool bs_shardling_run(int id, unsigned long t) {
     float mx = boss.x + cosf(ang) * 62, my = boss.y + sinf(ang) * 62;
     if (bs_at(t, 0)) {
         bs_hazard(HK_AIM, mx, my, ang, 480, 0, 500, 0);
-        boss.aux[4] = 300; // kite in
+        boss.aux[AUX_SHARD_KITE_X] = 300; // kite in
     }
     for (int k = 0; k < 3; k++)
         if (bs_at(t, 500 + k * 150)) bs_shot_at(SF_FAST, mx, my, ang, 2.6f);
-    if (bs_at(t, 1100)) boss.aux[4] = boss.home_x;
+    if (bs_at(t, 1100)) boss.aux[AUX_SHARD_KITE_X] = boss.home_x;
     return t >= 1200;
 }
 
@@ -143,7 +151,7 @@ static unsigned bs_ring_body(float *out) {
 static void bs_ring_hit(BossPart& p, unsigned, unsigned, bool) { bs_ring_break(p, 6000); }
 static void bs_shardling_circles() {
     for (unsigned k = 0; k < 3; k++) {
-        float a = boss.aux[2] + k * TWO_PI / 3;
+        float a = boss.aux[AUX_SHARD_SPIN] + k * TWO_PI / 3;
         bs_circle(boss.x + cosf(a) * 46, boss.y + sinf(a) * 46, 11, BC_BLOCK, 0, 1);
     }
     bs_circle(boss.x, boss.y, 22, BC_CORE, 0, 3);
@@ -152,7 +160,7 @@ static unsigned bs_shardling_body(float *out) {
     unsigned n = 0;
     bs_guard_body(out, n, boss.x, boss.y, 24);
     for (unsigned k = 0; k < 3; k++) {
-        float a = boss.aux[2] + k * TWO_PI / 3;
+        float a = boss.aux[AUX_SHARD_SPIN] + k * TWO_PI / 3;
         bs_guard_body(out, n, boss.x + cosf(a) * 46, boss.y + sinf(a) * 46, 11);
     }
     return n;
