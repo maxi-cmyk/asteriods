@@ -6,6 +6,7 @@ import { renderResultsScreen } from '../screens/results.mjs';
 import { renderRecordsScreen } from '../screens/records.mjs';
 import { renderHomeScreen } from '../screens/home.mjs';
 import { accuracyText } from '../state/records.mjs';
+import { MusicDirector } from '../audio/soundtrack.mjs';
 import { element, setText } from './dom.mjs';
 
 const HUD_IDS = [
@@ -26,6 +27,7 @@ export class Presenter {
         this.app = app;
         this.hud = Object.fromEntries(HUD_IDS.map((id) => [id, element(id)]));
         this.lastState = '';
+        this.music = new MusicDirector();
     }
     draw() {
         const { app } = this,
@@ -115,13 +117,13 @@ export class Presenter {
             { audio, navigation, runtime } = app;
         audio.suspend(app.loop.suspended || navigation.screen !== 'play');
         audio.observe(scene);
-        audio.setMode(
-            navigation.screen === 'home' && !app.demo?.active
-                ? 'home'
-                : navigation.screen === 'play' && ['playing', 'countdown'].includes(runtime.state)
-                  ? 'flight'
-                  : 'off',
-            app.loop.suspended,
+        audio.setMusic(
+            this.music.request({
+                screen: navigation.screen,
+                runtimeState: runtime.state,
+                scene,
+                demoScene: app.demo?.active ? app.demo.scene() : null,
+            }),
         );
     }
     #liveStats(runtime, update) {

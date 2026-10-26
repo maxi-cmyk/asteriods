@@ -170,8 +170,9 @@ if (!test && !oled) {
     }
     cpSync(resolve(root, 'assets'), resolve(root, 'dist/assets'), {
         recursive: true,
-        // Notes about the art stay in the repo; only the art itself ships.
-        filter: (source) => !source.endsWith('.md'),
+        // Notes and reference sheets stay in the repo; only the art and audio ship.
+        filter: (source) =>
+            !source.endsWith('.md') && !/\/assets\/(screenshots$|bosses\/attacks-)/.test(source),
     });
     copyFileSync(
         resolve(root, 'vendor/LICENSE.txt'),

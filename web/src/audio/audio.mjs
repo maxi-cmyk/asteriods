@@ -1,5 +1,5 @@
 import { S } from '../runtime/scene-layout.mjs';
-import { ThemeMusic } from './music.mjs';
+import { MusicPlayer } from './music.mjs';
 import { bossHazards } from '../boss/scene.mjs';
 import { BossSound } from '../boss/sound.mjs';
 export class GameAudio {
@@ -8,6 +8,11 @@ export class GameAudio {
         this.frequency = 0;
         this.previous = null;
         this.suspended = false;
+        this.manifest = null;
+        this.launchBuffer = null;
+        this.request = null;
+        this.lastMusicFrame = 0;
+        this.musicTimer = null;
         this.bossSound = new BossSound(this);
     }
     unlock() {
@@ -17,7 +22,10 @@ export class GameAudio {
             this.context = new Audio();
             this.master = this.context.createGain();
             this.master.connect(this.context.destination);
-            this.music = new ThemeMusic(this.context, this.context.destination);
+            this.music = new MusicPlayer(this.context, this.context.destination, {
+                manifest: () => this.manifest,
+            });
+            this.#loadAssets();
             this.tone = this.context.createOscillator();
             this.tone.type = 'square';
             this.toneGain = this.context.createGain();
@@ -33,6 +41,17 @@ export class GameAudio {
         }
         this.context.resume().catch(() => {});
         this.apply();
+    }
+    // The soundtrack manifest and the warp-jump sound, fetched once the first gesture unlocks audio.
+    async #loadAssets() {
+        try {
+            const manifest = await fetch('./assets/soundtracks/soundtracks.json');
+            this.manifest = await manifest.json();
+        } catch {}
+        try {
+            const response = await fetch('./assets/sfx/launch.mp3');
+            this.launchBuffer = await this.context.decodeAudioData(await response.arrayBuffer());
+        } catch {}
     }
     apply() {
         if (!this.context) return;
@@ -92,39 +111,42 @@ export class GameAudio {
             env.disconnect();
         };
     }
-    setMode(mode, suspended = false) {
-        this.mode = mode;
-        this.musicSuspended = suspended;
-        this.music?.update(mode, this.settings.musicEnabled, this.settings.volume, suspended);
+    // `request` is what soundtrack.mjs chose for this frame. Music is not tied to the game's
+    // pause or focus: it plays on through a pause, another tab or another window.
+    setMusic(request) {
+        this.request = request;
+        this.#tickMusic();
+        this.lastMusicFrame = performance.now();
+        // A hidden tab gets no animation frames, so a timer keeps the loop and crossfades going.
+        this.musicTimer ??= setInterval(() => {
+            if (performance.now() - this.lastMusicFrame > 300) this.#tickMusic();
+        }, 250);
+    }
+    #tickMusic() {
+        this.music?.update(this.request, this.settings.musicEnabled, this.settings.volume, false);
     }
     startWarp() {
-        if (!this.context || !this.settings.soundEnabled) return;
+        if (!this.context || !this.settings.soundEnabled || !this.launchBuffer) return;
         this.stopWarp();
         const now = this.context.currentTime;
-        const oscillator = this.context.createOscillator();
+        const source = this.context.createBufferSource();
         const gain = this.context.createGain();
-        oscillator.type = 'triangle';
-        oscillator.frequency.setValueAtTime(65, now);
-        oscillator.frequency.exponentialRampToValueAtTime(1800, now + 1.9);
-        oscillator.frequency.exponentialRampToValueAtTime(90, now + 2.5);
-        gain.gain.setValueAtTime(0, now);
-        gain.gain.linearRampToValueAtTime(this.settings.volume * 0.12, now + 0.3);
-        gain.gain.exponentialRampToValueAtTime(0.0001, now + 2.65);
-        oscillator.connect(gain).connect(this.context.destination);
-        oscillator.start();
-        oscillator.stop(now + 2.7);
-        this.warp = { oscillator, gain };
-        oscillator.onended = () => {
-            oscillator.disconnect();
+        source.buffer = this.launchBuffer;
+        gain.gain.value = this.settings.volume * 0.3;
+        source.connect(gain).connect(this.context.destination);
+        source.start(now);
+        this.warp = { source, gain };
+        source.onended = () => {
+            source.disconnect();
             gain.disconnect();
         };
     }
     stopWarp() {
         if (!this.warp) return;
-        const { oscillator, gain } = this.warp;
+        const { source, gain } = this.warp;
         gain.gain.setTargetAtTime(0, this.context.currentTime, 0.015);
         try {
-            oscillator.stop(this.context.currentTime + 0.05);
+            source.stop(this.context.currentTime + 0.05);
         } catch {}
         this.warp = null;
     }

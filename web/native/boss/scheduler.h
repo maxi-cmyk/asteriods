@@ -24,11 +24,26 @@ static unsigned long bs_rest_scaled(unsigned long base) {
     if (boss.tier >= 2 && bs_frenzy()) scale = .7f;
     return (unsigned long)(base * scale);
 }
+// Ringwarden is the second boss and by far the hardest to learn, so unlike the other fights
+// (one shield and one multishot, by phase) it drops a fresh shield every 7 s from its entrance.
+// A shield still drifting on screen is replaced; a multishot is left to be collected first.
+static const unsigned long RINGWARDEN_SHIELD_MS = 7000;
+static void bs_timed_shield() {
+    if (!boss.shield_at) boss.shield_at = game_ms + RINGWARDEN_SHIELD_MS;
+    if (game_ms < boss.shield_at) return;
+    if (pickup.active && pickup.kind != PICKUP_SHIELD) return;
+    pickup = {float(SCREEN_W - 24), bs_rand(70, 200), PICKUP_SHIELD, true};
+    boss.shield_at = game_ms + RINGWARDEN_SHIELD_MS;
+}
 static void bs_pickups() {
-    if (boss.mini || pickup.active) return;
+    if (boss.mini) return;
+    bool timed = boss.kind == BK_RINGWARDEN;
+    if (timed) bs_timed_shield();
+    if (pickup.active) return;
     uint8_t want = boss.phase >= 3 ? 2 : boss.phase >= 2 ? 1 : 0;
     for (uint8_t bit = 0; bit < want; bit++) {
         if (boss.drops & (1u << bit)) continue;
+        if (timed && bit == 0) continue; // its shields come from the timer
         pickup = {float(SCREEN_W - 24), bs_rand(70, 200), bit == 0 ? PICKUP_SHIELD : PICKUP_MULTISHOT, true};
         boss.drops |= 1u << bit;
         return;

@@ -13,6 +13,8 @@ const types = {
     '.woff2': 'font/woff2',
     '.png': 'image/png',
     '.json': 'application/json',
+    '.mp3': 'audio/mpeg',
+    '.m4a': 'audio/mp4',
 };
 createServer(async (request, response) => {
     try {
@@ -27,10 +29,34 @@ createServer(async (request, response) => {
             return;
         }
         const bytes = await readFile(file);
-        response.writeHead(200, {
+        const headers = {
             'Content-Type': types[extname(file)] || 'application/octet-stream',
             'Cache-Control': 'no-store',
-        });
+            'Accept-Ranges': 'bytes',
+        };
+        // Browsers stream the soundtrack with byte ranges (and need them to seek).
+        const range = /^bytes=(\d*)-(\d*)$/.exec(request.headers.range ?? '');
+        if (range && (range[1] || range[2])) {
+            const start = range[1]
+                ? Number(range[1])
+                : Math.max(0, bytes.length - Number(range[2]));
+            const end =
+                range[1] && range[2]
+                    ? Math.min(Number(range[2]), bytes.length - 1)
+                    : bytes.length - 1;
+            if (start > end || start >= bytes.length) {
+                response.writeHead(416, { 'Content-Range': `bytes */${bytes.length}` }).end();
+                return;
+            }
+            response.writeHead(206, {
+                ...headers,
+                'Content-Range': `bytes ${start}-${end}/${bytes.length}`,
+                'Content-Length': end - start + 1,
+            });
+            response.end(bytes.subarray(start, end + 1));
+            return;
+        }
+        response.writeHead(200, headers);
         response.end(bytes);
     } catch {
         response.writeHead(404).end('Not found');

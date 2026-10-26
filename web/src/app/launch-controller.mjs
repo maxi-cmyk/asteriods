@@ -48,7 +48,7 @@ export class LaunchController {
         document.querySelector('.app-shell').inert = true;
         element('skipLaunch').focus();
         app.unlockAudio();
-        app.audio.setMode('off');
+        app.audio.setMusic(null);
         app.audio.startWarp();
         this.sequence.begin(app.clock.time, (started) => {
             overlay.hidden = true;

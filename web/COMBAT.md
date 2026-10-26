@@ -163,6 +163,37 @@ bridge takes half damage while a hardpoint lives; Tidecaller's bell is shielded
 by bubbles (the laser pops all three); the Warden's core opens in a two-second
 window every eight seconds or when all four S-stars are down.
 
+The Cinderforge's fire stays. A lob's lava pool (4 s) burns down into **scorched ground** for
+another 6 s (`HK_BURN`, `bs_scorch` in `native/boss/hazards.h`): standing in it burns you, the
+first time 500 ms after stepping in and then every 800 ms. Shooting a lob down still cancels the
+pool, but marks the ground (900 ms, shown as a dotted ring) and leaves a small patch that burns
+for 3 s. At most three scorches burn at once; a new one replaces the one nearest to going out, so
+they never crowd out the warnings. Dying clears them like every other threat. It also fights
+with geysers (lanes jetting up from random floor spots, each leaving a scorch at its base),
+anvil strikes (three full-height columns in a row), vent bursts (embers from blown-out hatches)
+and a magma barrage (three lobs at once), with 25% shorter rests.
+
+The last two bosses are built to be the hardest. The Tidecaller fires faster (shorter
+rests, 13 to 16 bulbs a stream) and less predictably: each sine stream leaves from a random
+height with a random aim error, and every bulb gets its own speed, wave size and gap. It
+adds three attacks: a *tidal wall* (pellets across the field with one marked gap), *spore
+rain* (spores fall from random columns) and *whirlpools* (two closing rings that open
+anywhere but on the pilot). The Horizon Warden fights with every attack of the five bosses
+before it (phase 1: Sentinel and Ringwarden, phase 2: Cinderforge and Bastion, phase 3: its
+own, with every other attack drawn from the whole gallery) and two abilities of its own:
+
+- **Cloak** (the Lens Imp's blink, whole). It shimmers for 600 ms, vanishes for 2.4 s and
+  returns at another height. While gone it cannot be hit or touched, and it fires fans of
+  needles from the dark behind 500 ms aim lines. It never cloaks while a core window is open
+  or about to open, and a window that would fall inside a cloak waits for it to end.
+- **Mirror** (from phase 2). Between core windows a mirror forms for 600 ms and then holds
+  (2.6 s in phase 2, 3.5 s in phase 3). Every player shot and the laser that hit it come
+  back: a shot returns as a fast shot aimed at the pilot who fired it (at most one per
+  pilot every 260 ms, the rest are absorbed), the laser as a beam with the usual 900 ms
+  warning (one per 1.5 s). The core and the plates take nothing; the S-stars, which orbit
+  outside it, can still be shot. Engine side: `BC_DEFLECT` circle, `bs_deflect` in
+  `native/boss/hits.h`.
+
 Defeat awards `1500 + 250 * min(10, wave / 5)` (minis `400 + 100 * region`) as one
 scoring event through the multiplier, +50% when no life was lost during the
 fight. Boss kills are separate from asteroid kills and appear in Results and

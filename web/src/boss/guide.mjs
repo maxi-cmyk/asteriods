@@ -107,7 +107,7 @@ export const GUIDE = [
         kind: 2,
         death: 'Hatches pop with fire jets, the shell splits down the middle on a column of fire, then embers rain.',
         mechanic:
-            'The shell blocks shots. Break a hatch with three hits, or hit a vent while it is open, to reach the core.',
+            'The shell blocks shots. Break a hatch with three hits, or hit a vent while it is open, to reach the core. Its fire stays: a lob’s pool burns down into scorched ground that keeps burning for 6 s.',
         attacks: [
             {
                 id: ATTACK.lob,
@@ -115,9 +115,9 @@ export const GUIDE = [
                 phase: 1,
                 at: 900,
                 tell: 'Pink ring on the floor, 1.2 s',
-                text: 'A plasma blob lands where you stood and leaves a pool for 4 s.',
+                text: 'A plasma blob lands where you stood and leaves a lava pool for 4 s. The pool then burns down into scorched ground that burns whoever stands in it (a hit every 0.8 s) for another 6 s.',
                 counter:
-                    'Move off the ring. Shooting the blob splits it into slow embers and cancels the pool.',
+                    'Move off the ring, and stay off the scorch. Shooting the blob splits it into slow embers and cancels the pool, but the marked ground still smoulders for 3 s.',
                 release: ['live', HAZARD.pool],
             },
             {
@@ -134,7 +134,7 @@ export const GUIDE = [
             {
                 id: ATTACK.ember,
                 name: 'Ember burst',
-                phase: 2,
+                phase: 1,
                 at: 800,
                 tell: 'Dotted arc, 600 ms',
                 text: 'A seven-spark fan at 2.4 px/tick aimed near you.',
@@ -150,6 +150,47 @@ export const GUIDE = [
                 text: 'Half the hatches blow out and a ring wave leaves the core.',
                 counter: 'Cross the 60° gap. The core is fully open for 2 s: shoot it.',
                 release: ['live', HAZARD.ring],
+            },
+            {
+                id: ATTACK.geyser,
+                name: 'Geysers',
+                phase: 1,
+                at: 1300,
+                tell: 'Dashed lanes rising from the floor, 900 ms',
+                text: 'Four geysers jet up from random spots on the floor, the first under you, and each leaves a scorch at its base for 4.5 s.',
+                counter: 'Leave the lane, then keep clear of the glowing patch it leaves.',
+                release: ['live', HAZARD.lane],
+            },
+            {
+                id: ATTACK.hammer,
+                name: 'Anvil strikes',
+                phase: 2,
+                at: 1300,
+                tell: 'Dashed full-height columns, 900 ms',
+                text: 'Three columns of fire strike one after another, the first on your column, the rest 70–110 px further along.',
+                counter: 'Step out of the first column, then read where the next one is marked.',
+                release: ['live', HAZARD.lane],
+            },
+            {
+                id: ATTACK.vent,
+                name: 'Vent burst',
+                phase: 2,
+                at: 800,
+                tell: 'Red aim lines from the hatches, 600 ms',
+                text: 'Each blown-out hatch (or two chosen at random) spits three embers at you.',
+                counter:
+                    'Broken hatches are windows and guns: shoot the core, then leave the line.',
+                release: ['shot', SHOT.ember],
+            },
+            {
+                id: ATTACK.barrage,
+                name: 'Magma barrage',
+                phase: 3,
+                at: 1800,
+                tell: 'Three pink rings, 1.2 s',
+                text: 'Three lobs land in a spread around you; each leaves a pool, then a scorch.',
+                counter: 'Find the gap between the rings, or shoot a blob down to cancel its pool.',
+                release: ['live', HAZARD.pool],
             },
         ],
     },
@@ -205,16 +246,17 @@ export const GUIDE = [
         kind: 4,
         death: 'The bell deflates, dissolves block by block into bubbles, and ends in a soft sonar ring.',
         mechanic:
-            'A bubble shield keeps the bell safe. Pop all three bubbles (the laser does it in one), then shoot the bell for 3 s.',
+            'A bubble shield keeps the bell safe. Pop all three bubbles (the laser does it in one), then shoot the bell. It fires fast and from all over the bell: no two streams start from the same place.',
         attacks: [
             {
                 id: ATTACK.sine,
                 name: 'Sine stream',
                 phase: 1,
                 at: 1500,
-                tell: 'Narrow dotted wedge, 600 ms',
-                text: 'Ten bulbs ride a ±24 px wave toward you (two interleaved streams from phase 2).',
-                counter: 'Stay in the trough between the waves.',
+                tell: 'Wide dotted wedge, 600 ms',
+                text: '13 bulbs (16 from phase 2, in two interleaved streams) ride a wave toward you. Each stream leaves from a random height with a random aim error, and every bulb has its own speed, wave size and gap.',
+                counter:
+                    'Read the dotted wedge, then stay in a trough; do not trust the straight line.',
                 release: ['shot', SHOT.sine],
             },
             {
@@ -247,18 +289,48 @@ export const GUIDE = [
                 counter: 'Find the gap and slide through.',
                 release: ['live', HAZARD.ring],
             },
+            {
+                id: ATTACK.wall,
+                name: 'Tidal wall',
+                phase: 1,
+                at: 1100,
+                tell: 'Two dotted lines mark the gap, 700 ms',
+                text: 'A wall of pellets across the whole field with one 68 px gap, twice (three times in phase 3). Every gap is somewhere new.',
+                counter: 'Fly to the gap between the dotted lines and hold still.',
+                release: ['shot', SHOT.pellet],
+            },
+            {
+                id: ATTACK.rain,
+                name: 'Spore rain',
+                phase: 1,
+                at: 1500,
+                tell: 'Spores appear at the top edge',
+                text: 'Five to seven spores fall from random columns and burst into needles after 2.3 s.',
+                counter: 'Shoot them early, far from you, or slide under the gaps.',
+                release: ['shot', SHOT.spore],
+            },
+            {
+                id: ATTACK.whirl,
+                name: 'Whirlpools',
+                phase: 2,
+                at: 1700,
+                tell: 'Pink rings, 1.1 s',
+                text: 'Two closing rings with a turning gap open anywhere except on top of you.',
+                counter: 'Stay out of the rings or step through a gap as it passes.',
+                release: ['live', HAZARD.ring],
+            },
         ],
     },
     {
         kind: 5,
         death: 'The S-stars spiral in, the whole machine collapses to a point, a silent beat, then rings of light.',
         mechanic:
-            'Four S-stars orbit and fire. The core opens for 2 s every 8 s (or when every star is down); the laser works any time.',
+            'Four S-stars orbit and fire. The core opens for 2 s every 8 s (or when every star is down). From phase 2 a mirror rises between the windows: every shot and the laser you fire at it comes straight back at you. It also cloaks, and fights with every attack of the five bosses before it.',
         attacks: [
             {
                 id: ATTACK.spiral,
                 name: 'Spiral bloom',
-                phase: 2,
+                phase: 1,
                 at: 1700,
                 tell: 'Halo flare, 700 ms',
                 text: 'Three arms of pellets spiral out from the lens at 1.7 px/tick.',
@@ -268,7 +340,7 @@ export const GUIDE = [
             {
                 id: ATTACK.curve,
                 name: 'Lens curve',
-                phase: 2,
+                phase: 1,
                 at: 1100,
                 tell: 'Red aim line, 500 ms',
                 text: 'Five shots that bend 0.012 rad/tick, always curving away from the core.',
@@ -294,6 +366,47 @@ export const GUIDE = [
                 text: 'A 1.5 s nudge toward the core at 0.8 px/tick.',
                 counter: 'Thrust against it. Off in the "calm forces" assist.',
                 release: ['live', HAZARD.pull],
+            },
+            {
+                id: ATTACK.ringBurst,
+                name: 'Ring burst',
+                phase: 2,
+                at: 900,
+                tell: 'Pink ring round the core, 700 ms',
+                text: 'About 14 shards fly outward from a ring round the core, leaving only the right-hand side clear.',
+                counter: 'Slip between two shards; they spread as they travel.',
+                release: ['shot', SHOT.shard],
+            },
+            {
+                id: ATTACK.fanJets,
+                name: 'Fan jets',
+                phase: 2,
+                at: 1100,
+                tell: 'Dashed lanes from the body, 900 ms',
+                text: 'Three 28 px lanes fan out to the left of the body for 500 ms.',
+                counter: 'Fly between the lanes, or out past the end.',
+                release: ['live', HAZARD.lane],
+            },
+            {
+                id: ATTACK.fireNova,
+                name: 'Nova ring',
+                phase: 3,
+                at: 1300,
+                tell: 'Pink ring, 1 s',
+                text: 'A ring grows from the core with a 60° gap that changes sides each time.',
+                counter: 'Find the gap and slide through.',
+                release: ['live', HAZARD.ring],
+            },
+            {
+                id: ATTACK.cloak,
+                name: 'Cloak',
+                phase: 3,
+                at: 1700,
+                tell: 'Shimmer and a pale ring, 600 ms',
+                text: 'It vanishes for 2.4 s and returns at another height. It cannot be hit or touched while gone, and it fires fans of needles from the dark (red aim lines, 500 ms).',
+                counter:
+                    'Hold fire; re-aim when it flickers back. It never cloaks during a core window.',
+                release: ['shot', SHOT.needle],
             },
         ],
     },
@@ -421,3 +534,28 @@ export const GUIDE = [
         ],
     },
 ];
+
+// The Horizon Warden also fights with every attack of the five bosses before it, run as they are
+// from its own position, so the guide lists them under it too. `phase` is where they first appear
+// in its fight: the first two phases borrow a few, phase 3 draws on the whole gallery.
+{
+    const warden = GUIDE.find((g) => g.kind === 5);
+    const first = new Map([
+        [ATTACK.lance, 1],
+        [ATTACK.fan, 1],
+        [ATTACK.prism, 1],
+        [ATTACK.pick, 1],
+        [ATTACK.lob, 2],
+        [ATTACK.ember, 2],
+        [ATTACK.cannon, 2],
+        [ATTACK.missile, 2],
+        [ATTACK.mines, 2],
+    ]);
+    // The Ringwarden, Cinderforge attacks that lean on their own parts run in an adapted form of
+    // the Warden's own (Ring burst, Fan jets, Nova ring above).
+    const adapted = new Set([ATTACK.burst, ATTACK.collapse, ATTACK.jets, ATTACK.nova, ATTACK.vent]);
+    for (const kind of [0, 1, 2, 3, 4])
+        for (const attack of GUIDE.find((g) => g.kind === kind).attacks)
+            if (!adapted.has(attack.id))
+                warden.attacks.push({ ...attack, phase: first.get(attack.id) ?? 3 });
+}

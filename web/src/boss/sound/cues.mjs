@@ -11,7 +11,11 @@ export const WINDOW_CUES = {
     [BOSS_KIND.cinderforge]: [{ field: auxField(BOSS_KIND.cinderforge, 'open'), rise: 'open' }],
     [BOSS_KIND.bastion]: [{ field: auxField(BOSS_KIND.bastion, 'pods'), rise: 'gate' }],
     [BOSS_KIND.tidecaller]: [{ field: auxField(BOSS_KIND.tidecaller, 'exposed'), rise: 'open' }],
-    [BOSS_KIND.warden]: [{ field: auxField(BOSS_KIND.warden, 'coreOpen'), rise: 'open' }],
+    [BOSS_KIND.warden]: [
+        { field: auxField(BOSS_KIND.warden, 'coreOpen'), rise: 'open' },
+        { field: auxField(BOSS_KIND.warden, 'mirror'), rise: 'mirror', fall: 'unmirror' },
+        { field: auxField(BOSS_KIND.warden, 'cloak'), rise: 'cloak', fall: 'uncloak' },
+    ],
 };
 
 // Kinds whose panels are blown out one at a time (state 2) rather than removed.

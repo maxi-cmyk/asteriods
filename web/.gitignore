@@ -1,2 +1,5 @@
 dist/
 node_modules/
+assets/*
+!assets/soundtracks/
+!assets/sfx/

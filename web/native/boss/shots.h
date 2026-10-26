@@ -19,7 +19,12 @@ static void bs_shot_end(BossShot& s, bool by_player) {
     if (was.family == SF_MINE) bs_burst(was.x, was.y, 8, 1.8f, .3f);
     else if (was.family == SF_SPORE) bs_burst(was.x, was.y, 4, 1.2f, bs_rand(0, 1.5f));
     else if (was.family == SF_LOB && by_player) {
-        if (was.link >= 0) boss.hz[was.link].active = false; // the pool never lands
+        if (was.link >= 0) {
+            // The pool never lands, but the ground it was aimed at is marked and smoulders.
+            float px = boss.hz[was.link].x, py = boss.hz[was.link].y;
+            boss.hz[was.link].active = false;
+            bs_scorch(px, py, 13, 3000, 900);
+        }
         bs_ember_split(was.x, was.y);
     }
 }

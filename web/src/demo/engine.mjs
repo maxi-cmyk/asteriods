@@ -1,6 +1,7 @@
 import { createRuntime } from '../runtime/runtime.mjs';
 
-// A separate WASM instance: no player profile, persistent storage, or audio.
+// A separate WASM instance: no player profile, persistent storage, or audio imports. The shell
+// reads its scene to pick the soundtrack for the stage it is showing.
 // Callers own the clock and must stop it whenever Home is hidden.
 export async function createDemo(bytes, renderer) {
     const runtime = await createRuntime(bytes);
@@ -25,6 +26,9 @@ export async function createDemo(bytes, renderer) {
         },
         render() {
             if (active) renderer?.render(runtime.scene());
+        },
+        scene() {
+            return runtime.scene();
         },
         snapshot() {
             return runtime.snapshot();

@@ -142,11 +142,58 @@ const tidecaller = (b) => {
     }
 };
 
+// The mirror: a bright rim and glints while it deflects; a thin dotted ring while it forms.
+function mirrorShell(b, strength) {
+    const { ctx, x, y, time } = b;
+    if (strength < 1) {
+        dottedRing(ctx, x, y, 104, COLOUR.white, 72, time / 500);
+        return;
+    }
+    glow(ctx, x, y, 118, '170,230,255', 0.16 + 0.04 * Math.sin(time / 120));
+    ctx.save();
+    ctx.beginPath();
+    ctx.arc(x, y, 104, 0, TAU);
+    ctx.globalAlpha = 0.1 + 0.03 * Math.sin(time / 150);
+    ctx.fillStyle = '#bfe8ff';
+    ctx.fill();
+    ctx.globalAlpha = 0.75;
+    ctx.strokeStyle = '#d8f4ff';
+    ctx.lineWidth = 1.5;
+    ctx.stroke();
+    ctx.restore();
+    dottedRing(ctx, x, y, 103, '#7fd0ff', 120, -time / 700);
+    // Two glints sliding round the rim.
+    for (let k = 0; k < 2; k++) {
+        const a = time / 420 + k * Math.PI;
+        glow(ctx, x + Math.cos(a) * 104, y + Math.sin(a) * 104, 14, '230,250,255', 0.5);
+    }
+}
+
 const warden = (b) => {
-    const { ctx, art, x, y, time, aux, parts, A } = b;
-    const open = aux[A.coreOpen] > 0.5;
-    glow(ctx, x, y, 170, '255,160,60', 0.14 + (open ? 0.26 + 0.1 * Math.sin(time / 90) : 0));
-    b.frame(open ? 'warden-1' : 'warden-0');
+    const { ctx, art, x, y, time, aux, parts, alpha, A } = b;
+    const open = aux[A.coreOpen] > 0.5,
+        cloak = aux[A.cloak],
+        mirror = aux[A.mirror];
+    // Cloaked it is gone but for a faint shimmer; it flickers on the way out and back in.
+    if (cloak > 0.9) {
+        dottedRing(ctx, x, y, 58 + 4 * Math.sin(time / 90), COLOUR.void, 24, time / 400);
+        return;
+    }
+    const flicker = cloak > 0;
+    if (flicker && Math.floor(time / 70) % 2) {
+        dottedRing(ctx, x, y, 80, COLOUR.void, 36, time / 300);
+        return;
+    }
+    const fade = flicker ? alpha * 0.55 : alpha;
+    glow(
+        ctx,
+        x,
+        y,
+        170,
+        '255,160,60',
+        (0.14 + (open ? 0.26 + 0.1 * Math.sin(time / 90) : 0)) * (flicker ? 0.5 : 1),
+    );
+    b.frame(open ? 'warden-1' : 'warden-0', { alpha: fade });
     b.overlay('warden');
     for (let i = 0; i < 4; i++)
         dottedOrbit(
@@ -159,7 +206,9 @@ const warden = (b) => {
             COLOUR.void,
         );
     for (const part of parts)
-        if (part.kind === PART.star) art.draw(ctx, 'rift', `star-${part.slot}`, part.x, part.y);
+        if (part.kind === PART.star)
+            art.draw(ctx, 'rift', `star-${part.slot}`, part.x, part.y, { alpha: fade });
+    if (mirror > 0.25) mirrorShell(b, mirror > 0.75 ? 1 : 0);
 };
 
 const picket = (b) => {

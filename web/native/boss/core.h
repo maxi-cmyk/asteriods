@@ -21,17 +21,19 @@ enum ShotFamily : uint8_t {
 };
 enum HazardKind : uint8_t {
     HK_LANE, HK_POOL, HK_BEAM, HK_RING, HK_ARM,         // lethal when live
-    HK_TELL, HK_ARC, HK_AIM, HK_PULL                    // warnings and forces
+    HK_TELL, HK_ARC, HK_AIM, HK_PULL,                   // warnings and forces
+    HK_BURN                                             // scorched ground: burns whoever stands in it
 };
 enum PartKind : uint8_t { PK_BLADE, PK_PANEL, PK_HARD, PK_BUBBLE, PK_STAR, PK_ORB };
-enum CircleType : uint8_t { BC_CORE, BC_BLOCK, BC_PART, BC_SHOT };
+// BC_DEFLECT throws player shots and the laser back at whoever fired them.
+enum CircleType : uint8_t { BC_CORE, BC_BLOCK, BC_PART, BC_SHOT, BC_DEFLECT };
 enum {
     SA_LANCE = 1, SA_FAN, SA_VOLLEY, SA_CROSS,
     RA_BURST = 10, RA_PRISM, RA_PICK, RA_COLLAPSE,
-    CA_LOB = 20, CA_JETS, CA_EMBER, CA_NOVA,
+    CA_LOB = 20, CA_JETS, CA_EMBER, CA_NOVA, CA_HAMMER, CA_BARRAGE, CA_GEYSER, CA_VENT,
     BA_CANNON = 30, BA_MISSILE, BA_MINES, BA_BROAD,
-    TA_SINE = 40, TA_TENDRIL, TA_SPORE, TA_PULSE,
-    WA_SPIRAL = 50, WA_CURVE, WA_ACCRETE, WA_PULL,
+    TA_SINE = 40, TA_TENDRIL, TA_SPORE, TA_PULSE, TA_WALL, TA_RAIN, TA_WHIRL,
+    WA_SPIRAL = 50, WA_CURVE, WA_ACCRETE, WA_PULL, WX_BURST, WX_JETS, WX_NOVA, WX_CLOAK,
     MA_BOLTS = 60, MA_SHARDS, MA_CURVE1, MA_BLINK, MA_SINE6
 };
 
@@ -93,12 +95,15 @@ struct BossState {
     unsigned long atk_t0 = 0, rest_until = 0;
     unsigned seq = 0, seq_total = 0;
     float aux[16] = {};
+    float scratch[8] = {};        // per-attack randomness; only one attack runs at a time
     unsigned long stamp[6] = {};
     bool touched[2] = {};
     unsigned killer = 0;
     bool life_lost = false;
     unsigned lives_at_start = 0;
     uint8_t drops = 0;
+    unsigned long shield_at = 0;  // Ringwarden: when the next timed shield drops
+    unsigned long deflect_at[2] = {};  // per pilot: when a mirror may throw the next shot back
     bool hold = false;            // keeps a wave open while a mini lives
     float armor = 0;
     unsigned hits_taken = 0;

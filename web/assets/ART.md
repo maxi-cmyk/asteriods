@@ -49,7 +49,7 @@ frame 0. Region ids, wave ranges, transitions and fallback colours are in
 - The five region transitions (orbital pass, atmospheric sweep, skyline emergence,
   cloud clearance, ring convergence) run below the sprites with static fallbacks;
   `../assets.html` has synthetic midpoint fixtures.
-- Bosses follow the boss-destroyed draft (`assets/screenshots/design-draft-boss.png`):
+- Bosses follow the boss-destroyed draft (`screenshots/design-draft-boss.png`):
   chunky 4 px blocks, flat low-poly facets in five flat shades with no gradients or fine
   dither, a dark silhouette with an amber rim on the lit upper-left edge, a few dark
   speckle blocks, angular shard-shaped rubble for the defeat. Glows are four flat

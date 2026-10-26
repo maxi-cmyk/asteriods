@@ -8,7 +8,14 @@ import { TAU, COLOUR, px, dotted, dottedRing, dottedArc, band, disc } from './dr
 // `m = { warning, urgency, blink, time }`: warning is true while only the telegraph shows.
 
 // Drawn under the boss body; the rest draw over it.
-export const BELOW_BODY = new Set([HAZARD.pool, HAZARD.tell, HAZARD.arc, HAZARD.aim, HAZARD.pull]);
+export const BELOW_BODY = new Set([
+    HAZARD.pool,
+    HAZARD.burn,
+    HAZARD.tell,
+    HAZARD.arc,
+    HAZARD.aim,
+    HAZARD.pull,
+]);
 
 export const HAZARD_PAINTERS = {
     [HAZARD.lane](ctx, h, { warning, blink }) {
@@ -25,6 +32,44 @@ export const HAZARD_PAINTERS = {
             band(ctx, x, y, h.a, h.b, half * 2, COLOUR.hot);
             band(ctx, x, y, h.a, h.b, Math.max(2, half * 0.45), COLOUR.white);
         }
+    },
+    // Scorched ground. Marked first by a dotted orange ring (a shot-down lob's landing), then a
+    // charred patch with embers that flicker and a thin lick of flame; it dims as it dies down.
+    [HAZARD.burn](ctx, h, { warning, time }) {
+        const r = h.c;
+        if (warning) {
+            dottedRing(
+                ctx,
+                h.x,
+                h.y,
+                r,
+                Math.floor(time / 110) % 2 ? COLOUR.white : COLOUR.hot,
+                Math.round(r * 2.4),
+                -time / 600,
+            );
+            return;
+        }
+        const fade = h.live < 1200 && Math.floor(time / 120) % 2 ? 0.45 : 1;
+        ctx.save();
+        ctx.globalAlpha = fade;
+        ctx.fillStyle = '#1c0b08';
+        disc(ctx, h.x, h.y, r);
+        ctx.fillStyle = '#4a1a0a';
+        disc(ctx, h.x, h.y, r - 3);
+        for (let i = 0; i < r * 2.6; i++) {
+            const a = i * 2.399 + Math.floor(time / 160) * 0.7,
+                d = (((i * 37) % 100) / 100) * (r - 4);
+            ctx.fillStyle = i % 3 ? '#ff7a1c' : '#ffd27a';
+            px(ctx, h.x + Math.cos(a) * d, h.y + Math.sin(a) * d);
+        }
+        dottedRing(ctx, h.x, h.y, r, '#c4501a', Math.round(r * 2.6), time / 900);
+        // A lick of flame rising from the middle.
+        ctx.fillStyle = '#ff9a2a';
+        const lift = 3 + (Math.floor(time / 90) % 3);
+        px(ctx, h.x - 1, h.y - lift, 2, lift);
+        ctx.fillStyle = '#ffe27a';
+        px(ctx, h.x, h.y - lift - 1, 1, 2);
+        ctx.restore();
     },
     [HAZARD.pool](ctx, h, { warning, urgency, time }) {
         const r = h.c;

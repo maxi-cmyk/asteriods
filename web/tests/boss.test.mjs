@@ -331,7 +331,7 @@ test('assists lengthen telegraphs by 30% and calm the lens bend', async () => {
 });
 
 test('boss pickups arrive once per phase boundary', async () => {
-    const game = await waveGame(10); // Ringwarden: three phases
+    const game = await waveGame(15); // Cinderforge: three phases (Ringwarden has timed shields)
     ticks(game, ENTRANCE);
     const max = bossState(game.scene()).maximum;
     set(game, 0, Math.ceil(max * 0.4)); // below 66%
@@ -540,4 +540,260 @@ test('boss practice can start in a later phase, frenzy included', async () => {
     frenzy.api.web_boss_practice(2, 2, 4);
     ticks(frenzy, ENTRANCE);
     assert.equal(bossState(frenzy.scene()).stage, 4);
+});
+
+// Shield spawn times (seconds into the fight) over `seconds` of an untouched fight.
+function shieldDrops(game, seconds) {
+    const times = [];
+    let was = false;
+    const start = game.scene()[S.GAME_MS];
+    for (let i = 0; i < seconds * 50; i++) {
+        game.step({});
+        const scene = game.scene();
+        const fresh = scene[S.PICKUP_ACTIVE] && scene[S.PICKUP_X] > 440;
+        if (fresh && !was) times.push((scene[S.GAME_MS] - start) / 1000);
+        was = fresh;
+    }
+    return times;
+}
+
+test('Ringwarden alone drops a shield every 7 seconds', async () => {
+    const ringwarden = await waveGame(10);
+    const drops = shieldDrops(ringwarden, 36);
+    assert(drops.length >= 4, `drops: ${drops}`);
+    drops.slice(1).forEach((t, i) => assert(Math.abs(t - drops[i] - 7) < 0.1, `gap ${drops}`));
+    // The first fight of the run (Sentinel) and the later bosses keep their phase-based drops.
+    for (const wave of [5, 15, 20]) {
+        const other = await waveGame(wave);
+        assert.equal(shieldDrops(other, 22).length, 0, `wave ${wave} drops nothing in phase 1`);
+    }
+});
+
+// A practice fight that starts in `phase`, with the pilot untouchable.
+async function phaseGame(kind, phase, seed = 7) {
+    const game = await newGame(seed);
+    game.start(true);
+    game.api.web_boss_practice(kind, 0, phase);
+    set(game, 5, 1e6);
+    return game;
+}
+const ENTRANCE_TICKS = ENTRANCE;
+const angleError = (a, b) => Math.abs(Math.atan2(Math.sin(a - b), Math.cos(a - b)));
+
+test('the Warden mirror throws shots back at the pilot instead of taking them', async () => {
+    const game = await phaseGame(5, 2);
+    ticks(game, ENTRANCE_TICKS);
+    until(game, (state) => state.aux[5] > 0.75, 3000);
+    const hp = bossState(game.scene()).health;
+    const centre = { x: bossState(game.scene()).x, y: bossState(game.scene()).y };
+    shoot(game, centre, 1, { from: 150 });
+    ticks(game, 3);
+    const scene = game.scene();
+    assert.equal(bossState(scene).health, hp, 'the core takes nothing through the mirror');
+    const back = bossShots(scene).filter((s) => s.family === SHOT.fast);
+    assert(back.length >= 1, 'a shot comes back');
+    for (const s of back)
+        assert(
+            angleError(s.angle, Math.atan2(scene[S.SHIP_Y] - s.y, scene[S.SHIP_X] - s.x)) < 0.2,
+            'and it is aimed at the pilot who fired',
+        );
+    // Held fire does not stack: shots within 260 ms of a return are absorbed.
+    const count = bossShots(game.scene()).filter((s) => s.family === SHOT.fast).length;
+    shoot(game, centre, 3, { from: 150 });
+    assert(
+        bossShots(game.scene()).filter((s) => s.family === SHOT.fast).length <= count + 2,
+        'returned shots are rate limited',
+    );
+});
+
+test('the Warden mirror reflects the laser as a warned beam, never an instant hit', async () => {
+    const game = await phaseGame(5, 3);
+    ticks(game, ENTRANCE_TICKS);
+    // Catch the mirror as it forms so it is up for the whole 1.5 s the laser takes to charge.
+    until(game, (state) => state.aux[5] > 0.25 && state.aux[5] < 0.75, 3000);
+    until(game, (state) => state.aux[5] > 0.75, 100);
+    const hp = bossState(game.scene()).health;
+    set(game, 3, 100);
+    set(game, 4, 135);
+    for (let i = 0; i < 80; i++) {
+        const scene = game.scene(),
+            dx = bossState(scene).x - scene[S.SHIP_X],
+            dy = bossState(scene).y - scene[S.SHIP_Y],
+            length = Math.hypot(dx, dy);
+        game.step({ y: 0, laser: true, aimX: dx / length, aimY: dy / length });
+    }
+    assert.equal(bossState(game.scene()).health, hp, 'the laser does nothing to the Warden');
+    const beam = bossHazards(game.scene()).find((h) => h.kind === HAZARD.beam);
+    assert(beam, 'the laser returns as a beam');
+    assert(beam.warn >= 800, `with its warning (${beam.warn} ms)`);
+});
+
+test('the Warden cloaks: nothing to hit, nothing to touch, then it is back', async () => {
+    const game = await phaseGame(5, 3);
+    ticks(game, ENTRANCE_TICKS);
+    until(game, (state) => state.aux[4] >= 1, 4000);
+    assert.equal(body(game).length, 0, 'a cloaked Warden cannot be touched');
+    const hp = bossState(game.scene()).health;
+    const centre = { x: bossState(game.scene()).x, y: bossState(game.scene()).y };
+    shoot(game, centre, 3, { from: 200 });
+    assert.equal(bossState(game.scene()).health, hp, 'shots pass through');
+    until(game, (state) => state.aux[4] === 0, 400);
+    assert(body(game).length > 0, 'it solidifies again');
+});
+
+test('the Warden uses every earlier boss attack across the fight', async () => {
+    const seen = new Set();
+    // The attacks are drawn at random, so look across a few fights.
+    for (const seed of [21, 22, 23, 24]) {
+        const game = await phaseGame(5, 3, seed);
+        for (let i = 0; i < 60 * 50 && bossState(game.scene()).active; i++) {
+            game.step({});
+            seen.add(bossState(game.scene()).attack);
+        }
+    }
+    const families = [
+        [
+            ATTACK.lance,
+            ATTACK.fan,
+            ATTACK.volley,
+            ATTACK.cross,
+            ATTACK.prism,
+            ATTACK.pick,
+            'Sentinel/Ringwarden',
+        ],
+        [
+            ATTACK.lob,
+            ATTACK.ember,
+            ATTACK.fanJets,
+            ATTACK.fireNova,
+            ATTACK.ringBurst,
+            'Cinderforge',
+        ],
+        [ATTACK.cannon, ATTACK.missile, ATTACK.mines, ATTACK.broadside, 'Bastion'],
+        [ATTACK.sine, ATTACK.tendril, ATTACK.spore, ATTACK.pulse, 'Tidecaller'],
+    ];
+    for (const family of families) {
+        const name = family.pop();
+        assert(
+            family.some((id) => seen.has(id)),
+            `${name} attacks appear in the last phases`,
+        );
+    }
+});
+
+test('the Tidecaller streams start from all over the bell and its three new attacks work', async () => {
+    const game = await phaseGame(4, 3, 11);
+    ticks(game, ENTRANCE_TICKS);
+    const columnYs = [],
+        sporeXs = [];
+    let wall = null,
+        rings = null;
+    const seen = new Set();
+    for (let i = 0; i < 90 * 50 && bossState(game.scene()).active; i++) {
+        game.step({});
+        const scene = game.scene(),
+            state = bossState(scene);
+        seen.add(state.attack);
+        for (const s of bossShots(scene)) {
+            if (s.family === SHOT.sine && s.age < 25) columnYs.push(s.y);
+            if (s.family === SHOT.spore && s.y < 14 && s.age < 25) sporeXs.push(s.x);
+        }
+        if (state.attack === ATTACK.wall && state.attackMs > 800 && state.attackMs < 860 && !wall)
+            wall = bossShots(scene)
+                .filter((s) => s.family === SHOT.pellet && s.age < 200)
+                .map((s) => s.y)
+                .sort((a, b) => a - b);
+        if (state.attack === ATTACK.whirl && state.attackMs > 1250 && !rings)
+            rings = {
+                ring: bossHazards(scene).filter((h) => h.kind === HAZARD.ring),
+                ship: { x: scene[S.SHIP_X], y: scene[S.SHIP_Y] },
+            };
+    }
+    assert(Math.max(...columnYs) - Math.min(...columnYs) > 60, 'streams use the whole bell');
+    for (const id of [ATTACK.wall, ATTACK.rain, ATTACK.whirl]) assert(seen.has(id), `attack ${id}`);
+    assert(wall && wall.length >= 8, 'a wall of pellets');
+    const biggestGap = Math.max(...wall.slice(1).map((y, i) => y - wall[i]));
+    assert(biggestGap >= 60, `with a gap to fly through (${biggestGap} px)`);
+    assert(Math.max(...sporeXs) - Math.min(...sporeXs) > 80, 'spores fall in random columns');
+    assert(rings && rings.ring.length >= 2, 'two whirlpools');
+    for (const r of rings.ring)
+        assert(
+            Math.hypot(r.x - rings.ship.x, r.y - rings.ship.y) >= 100,
+            'never opened on the pilot',
+        );
+});
+
+test('the Cinderforge: a lava pool burns down into scorched ground that burns while you stand in it', async () => {
+    // The Cinderling lobs the same pools and does nothing else, so a hit here is a pool or a burn.
+    const game = await phaseGame(8, 1, 5);
+    ticks(game, ENTRANCE_TICKS);
+    const burns = () => bossHazards(game.scene()).filter((h) => h.kind === HAZARD.burn);
+    const pools = () => bossHazards(game.scene()).filter((h) => h.kind === HAZARD.pool);
+    until(game, () => pools().length > 0, 2500);
+    const pool = pools()[0];
+    set(game, 3, 460); // out of the way: lobs are aimed at the pilot but clamped to the field
+    set(game, 4, 20);
+    until(
+        game,
+        () => burns().length > 0,
+        600,
+        () => ({ x: 2048, y: 2048 }),
+    );
+    const scorch = burns()[0];
+    assert(
+        Math.abs(scorch.x - pool.x) < 1 && Math.abs(scorch.y - pool.y) < 1,
+        'where the pool was',
+    );
+    assert.equal(scorch.warn, 0, 'it is already down: the pool was the warning');
+    assert(scorch.live > 5000, 'and it lasts about six seconds');
+    const before = bossState(game.scene()).hitsTaken;
+    ticks(game, 20);
+    assert.equal(bossState(game.scene()).hitsTaken, before, 'nothing burns while you are away');
+    set(game, 3, scorch.x);
+    set(game, 4, scorch.y);
+    ticks(game, 30); // the first burn comes 500 ms after stepping in
+    assert(bossState(game.scene()).hitsTaken > before, 'standing in it burns');
+});
+
+test('the Cinderforge: a shot-down lob cancels its pool but marks the ground, which then smoulders', async () => {
+    const game = await phaseGame(2, 1, 5);
+    ticks(game, ENTRANCE_TICKS);
+    const hz = (kind) => bossHazards(game.scene()).filter((h) => h.kind === kind);
+    until(game, () => bossShots(game.scene()).some((s) => s.family === SHOT.lob), 2500);
+    const lob = bossShots(game.scene()).find((s) => s.family === SHOT.lob);
+    shoot(game, lob, 2, { from: 40 });
+    assert.equal(hz(HAZARD.pool).length, 0, 'the pool never lands');
+    const mark = hz(HAZARD.burn);
+    assert(mark.length >= 1 && mark[0].warn > 0, 'but the ground is marked first');
+    until(game, () => hz(HAZARD.burn).length && hz(HAZARD.burn)[0].warn === 0, 100);
+    assert(hz(HAZARD.burn)[0].c < 15, 'a small patch');
+});
+
+test('the Cinderforge fights with fire that stays: geysers, hammers, vents and a barrage; at most three scorches burn', async () => {
+    const seen = new Set();
+    let most = 0,
+        geyserScorch = false;
+    for (const [phase, seed] of [
+        [1, 3],
+        [2, 4],
+        [2, 5],
+        [3, 6],
+        [3, 7],
+    ]) {
+        const game = await phaseGame(2, phase, seed);
+        for (let i = 0; i < 50 * 50 && bossState(game.scene()).active; i++) {
+            game.step({ x: 2048, y: 2048 });
+            const scene = game.scene(),
+                state = bossState(scene);
+            seen.add(state.attack);
+            const burning = bossHazards(scene).filter((h) => h.kind === HAZARD.burn);
+            most = Math.max(most, burning.length);
+            if (state.attack === ATTACK.geyser && burning.some((h) => h.y > 240))
+                geyserScorch = true;
+        }
+    }
+    for (const id of [ATTACK.geyser, ATTACK.hammer, ATTACK.vent, ATTACK.barrage, ATTACK.lob])
+        assert(seen.has(id), `attack ${id}`);
+    assert(most >= 1 && most <= 3, `${most} scorches at once`);
+    assert(geyserScorch, 'a geyser leaves a scorch at its base');
 });

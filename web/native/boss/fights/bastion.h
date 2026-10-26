@@ -34,6 +34,16 @@ static void bs_bastion_revive(int hp) {
         p.exists = true; p.hp = p.hp_max = hp;
     }
 }
+// Bolts wait on their aim lines (the Horizon Warden borrows this for its Bastion cannon).
+static void bs_bolts_tick() {
+    for (unsigned k = 0; k < 2; k++) {
+        float& fire = boss.aux[AUX_BOLTS + k * BOLT_STRIDE + BOLT_FIRE_AT];
+        if (fire > 0 && game_ms >= (unsigned long)fire) {
+            bs_shot_at(SF_BOLT, boss.aux[AUX_BOLTS + k * BOLT_STRIDE + BOLT_X], boss.aux[AUX_BOLTS + k * BOLT_STRIDE + BOLT_Y], boss.aux[AUX_BOLTS + k * BOLT_STRIDE + BOLT_ANGLE], 3.0f);
+            fire = 0;
+        }
+    }
+}
 static void bs_bastion_update() {
     for (unsigned i = 0; i < 3; i++) bs_bastion_xy(i, boss.parts[i].x, boss.parts[i].y);
     bool any = false;
@@ -48,14 +58,7 @@ static void bs_bastion_update() {
     boss.aux[AUX_BASTION_CANNON] = boss.atk == BA_CANNON || boss.atk == BA_BROAD ? 1.0f : 0.0f;
     boss.aux[AUX_BASTION_PODS] = boss.atk == BA_MISSILE || boss.atk == BA_MINES ? 1.0f : 0.0f;
     boss.aux[AUX_BASTION_ARMOUR] = .6f + .3f * (boss.phase > 1);
-    // Bolts wait on their aim lines.
-    for (unsigned k = 0; k < 2; k++) {
-        float& fire = boss.aux[AUX_BOLTS + k * BOLT_STRIDE + BOLT_FIRE_AT];
-        if (fire > 0 && game_ms >= (unsigned long)fire) {
-            bs_shot_at(SF_BOLT, boss.aux[AUX_BOLTS + k * BOLT_STRIDE + BOLT_X], boss.aux[AUX_BOLTS + k * BOLT_STRIDE + BOLT_Y], boss.aux[AUX_BOLTS + k * BOLT_STRIDE + BOLT_ANGLE], 3.0f);
-            fire = 0;
-        }
-    }
+    bs_bolts_tick();
 }
 static void bs_bolt(unsigned k, float x, float y, float tx, float ty, unsigned long delay) {
     float ang = bs_angle_to(x, y, tx, ty);

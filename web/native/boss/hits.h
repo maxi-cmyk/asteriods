@@ -64,6 +64,24 @@ static void bs_defeat(unsigned owner) {
     sound_play(SFX_ASTEROID_LARGE);
     display_shake(boss.mini ? 1 : 2);
 }
+// A mirror took a shot or the laser: throw it back along the line to the pilot who fired it.
+// A shot is returned at most every 260 ms per pilot (the rest are absorbed), the laser every
+// 1.5 s; the returned laser is a beam with the usual warning, never an instant hit.
+static void bs_deflect(const BossCircle& c, unsigned owner, bool laser) {
+    float px, py;
+    if (owner < boss_hull_n && bs_alive(owner)) {
+        px = boss_hulls[owner]->position_x;
+        py = boss_hulls[owner]->position_y;
+    } else if (!bs_nearest(c.x, c.y, px, py)) return;
+    unsigned slot = owner < 2 ? owner : 0;
+    if (game_ms < boss.deflect_at[slot]) return;
+    boss.deflect_at[slot] = game_ms + (laser ? 1500 : 260);
+    float a = bs_atan2(py - c.y, px - c.x);
+    float x = c.x + cosf(a) * (c.r + 3), y = c.y + sinf(a) * (c.r + 3);
+    particles_spawn(x, y);
+    if (laser) bs_hazard(HK_BEAM, x, y, a, 0, a, 900, 650);
+    else bs_shot_at(SF_FAST, x, y, a, 2.6f);
+}
 static void bs_core_damage(unsigned owner, unsigned damage, bool laser) {
     bs_damage(owner, bs_kind_soak(damage, laser));
 }
@@ -72,6 +90,10 @@ static void bs_circle_hit(unsigned index, unsigned owner, unsigned damage, bool 
     if (index >= boss_circle_count) return;
     const BossCircle c = boss_circles[index];
     if (c.type == BC_BLOCK) return;
+    if (c.type == BC_DEFLECT) {
+        bs_deflect(c, owner, laser);
+        return;
+    }
     boss_stat_hook(owner);
     if (c.type == BC_CORE)
         bs_core_damage(owner, laser ? damage * bs_ops().k : damage, laser);
@@ -126,6 +148,14 @@ static bool bs_beam_hits(float x, float y, float r) {
 static void bs_laser(unsigned owner) {
     if (!boss.active || boss.phase == 0) return;
     bs_build_circles();
+    // A mirror in the beam's path reflects it; nothing behind the mirror is touched.
+    for (unsigned i = 0; i < boss_circle_count; i++) {
+        const BossCircle c = boss_circles[i];
+        if (c.type == BC_DEFLECT && (c.flags & 2) && bs_beam_hits(c.x, c.y, c.r)) {
+            bs_deflect(c, owner, true);
+            return;
+        }
+    }
     for (unsigned i = 0; i < boss_circle_count; i++) {
         const BossCircle c = boss_circles[i];
         if (!(c.flags & 2) || c.type == BC_BLOCK) continue;

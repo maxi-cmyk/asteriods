@@ -1,5 +1,5 @@
 """Facet painter for the boss sprites: the look of the boss-destroyed draft
-(assets/screenshots/design-draft-boss.png). Chunky blocks (one logical pixel is Q
+(web/assets/screenshots/design-draft-boss.png). Chunky blocks (one logical pixel is Q
 screen pixels), flat low-poly facets in four or five flat shades, no gradients and
 no fine dither, a dark silhouette, an amber rim where the light catches an edge, and
 a sprinkle of single-block speckle for texture. Light comes from the upper left.

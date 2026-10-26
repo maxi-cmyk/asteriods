@@ -41,6 +41,8 @@ export function hazardHits(h, px, py, r = SHIP) {
         }
         case HAZARD.pool:
             return dx * dx + dy * dy < (h.c + r) ** 2;
+        case HAZARD.burn:
+            return dx * dx + dy * dy < (h.c + r * 0.6) ** 2;
         case HAZARD.ring: {
             const dist = Math.hypot(dx, dy);
             if (Math.abs(dist - h.b) >= 4 + r * 0.6) return false;
@@ -50,7 +52,8 @@ export function hazardHits(h, px, py, r = SHIP) {
             return false;
     }
 }
-const lethal = (h) => h.kind <= HAZARD.arm;
+// Scorched ground burns like a lethal hazard once it is down (before that it is only a mark).
+const lethal = (h) => h.kind <= HAZARD.arm || (h.kind === HAZARD.burn && h.warn === 0);
 
 export class BossBot {
     constructor(game, { shotsPerSecond = 6, margin = 12 } = {}) {
@@ -117,6 +120,8 @@ export class BossBot {
             case 10:
                 return { x, y: y - 25 };
             case 5: {
+                // A mirror throws shots back and a cloak makes the Warden untargetable: hold fire.
+                if (aux[5] > 0.25 || aux[4] > 0.1) return null;
                 const stars = parts.filter((p) => p.kind === PART.star);
                 if (aux[1] > 0.5 || !stars.length) return { x, y };
                 return nearest(stars);

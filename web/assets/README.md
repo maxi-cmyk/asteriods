@@ -52,3 +52,32 @@ cd web && npm run build && npm start       # then open http://127.0.0.1:4173/
 
 To regenerate art: `web/tools/make-*.py` (see `ART.md`); the Python scripts need
 `python3 -m venv v && v/bin/pip install pillow numpy fonttools brotli`.
+
+## Reference sheets
+
+Not shipped (the build skips them); kept for art direction and review:
+
+| Path | Contents |
+| --- | --- |
+| `bosses/attacks-bosses.png`, `attacks-minibosses.png` | Reference sheets of every boss attack, photographed from the live game (`/boss-attacks.html`) |
+| `bosses/attacks-deaths.png` | A filmstrip of all twelve defeat sequences |
+| `screenshots/` | Design drafts for the gameplay, home and boss-kill screens; the boss art and explosion follow `design-draft-boss.png` |
+
+The sheets are made by the gallery page: open `/boss-attacks.html`, then run
+`window.exportSheets(url)` and `window.exportDeaths(url)` in the console with a local
+server that saves `POST /save?name=<name>` bodies to `web/assets/bosses/`.
+
+## Soundtracks
+
+`soundtracks/` holds every music file the game streams; `sfx/launch.mp3` is the warp-jump sound.
+`soundtracks/soundtracks.json` is generated (length, where the music audibly ends, loudness gain)
+and read by the game. To rebuild the composed tracks or add one:
+
+```
+node web/tools/soundtracks/build.mjs                       # re-render the composed tracks
+node web/tools/soundtracks/build.mjs --import my-song x.mp4 # add a supplied track (audio copied, not re-encoded)
+node web/tools/soundtracks/build.mjs --manifest            # refresh the manifest after dropping in a file
+```
+
+The composed tracks are written as notes in `web/tools/soundtracks/tracks.mjs`. Which track plays
+when is `web/src/audio/soundtrack.mjs`.

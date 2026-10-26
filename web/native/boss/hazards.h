@@ -50,6 +50,22 @@ static unsigned bs_corridor() {
     }
     return widest;
 }
+// Scorched ground: what a lava pool leaves when it dies down (and a small, marked patch where a
+// shot-down lob would have landed). It burns each pilot standing in it every 800 ms; the first
+// burn comes 500 ms after stepping in. At most three smoulder at once: a new one replaces the
+// one closest to going out, so burns never crowd out the warnings.
+static void bs_scorch(float x, float y, float r, unsigned long live, unsigned long warn = 0) {
+    BossHazard *oldest = nullptr;
+    unsigned n = 0;
+    for (BossHazard& h : boss.hz)
+        if (h.active && h.kind == HK_BURN) {
+            n++;
+            if (!oldest || h.live_left < oldest->live_left) oldest = &h;
+        }
+    if (n >= 3 && oldest) oldest->active = false;
+    BossHazard *h = bs_hazard(HK_BURN, x, y, 0, 0, r, warn, live);
+    if (h) h->d = h->e = 500;
+}
 static void bs_hazards_update() {
     for (unsigned i = 0; i < BOSS_HAZARDS; i++) {
         BossHazard& h = boss.hz[i];
@@ -61,7 +77,13 @@ static void bs_hazards_update() {
             if (!h.live_left && !h.warn_left) h.active = false;
             continue;
         }
-        if (h.live_left <= FRAME_TIME_MS) { h.active = false; continue; }
+        if (h.live_left <= FRAME_TIME_MS) {
+            float x = h.x, y = h.y, r = h.c;
+            bool pool = h.kind == HK_POOL;
+            h.active = false;
+            if (pool) bs_scorch(x, y, r * .85f, 6000);
+            continue;
+        }
         h.live_left -= FRAME_TIME_MS;
         if (h.kind == HK_BEAM || h.kind == HK_ARM) h.a += h.d;
         if (h.kind == HK_RING) {
@@ -78,6 +100,18 @@ static void bs_hazards_update() {
                 s.position_x = bs_clamp(s.position_x + dx / len * h.b, SHIP_MIN_X, SHIP_MAX_X);
                 s.position_y = bs_clamp(s.position_y + dy / len * h.b, SHIP_MIN_Y, SHIP_MAX_Y);
             }
+        }
+        if (h.kind == HK_BURN) {
+            for (unsigned p = 0; p < boss_hull_n; p++) {
+                if (!bs_alive(p)) continue;
+                float& timer = p ? h.e : h.d;
+                float reach = h.c + SHIP_RADIUS * .6f;
+                float dx = boss_hulls[p]->position_x - h.x, dy = boss_hulls[p]->position_y - h.y;
+                if (dx * dx + dy * dy >= reach * reach) { timer = 500; continue; }
+                timer -= FRAME_TIME_MS;
+                if (timer <= 0) { timer = 800; bs_hit_pilot(p); }
+            }
+            continue;
         }
         if (!bs_lethal_kind(h.kind)) continue;
         for (unsigned p = 0; p < boss_hull_n; p++)

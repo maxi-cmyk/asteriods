@@ -1,7 +1,13 @@
 import { ATTACK, HAZARD, SHOT } from '../../scene.mjs';
 import { boom } from '../shapes.mjs';
+import { sentinel } from './sentinel.mjs';
+import { ringwarden } from './ringwarden.mjs';
+import { cinderforge } from './cinderforge.mjs';
+import { bastion } from './bastion.mjs';
+import { tidecaller } from './tidecaller.mjs';
 
-export const warden = {
+// The Warden's own voice: cosmic drones and bent pitches...
+const own = {
     sting: (v) => {
         v.tone({ f: 40, to: 90, type: 'sine', dur: 1.8, vol: 0.24, env: 'swell' });
         for (const d of [-9, 0, 9])
@@ -113,5 +119,54 @@ export const warden = {
         boom(v, 2.6, 1.7);
         for (const [i, f] of [660, 880, 1320, 1760].entries())
             v.tone({ f, type: 'sine', at: 2.0 + i * 0.12, dur: 1.8, vol: 0.06 });
+    },
+};
+
+// ...and, because it fights with every earlier boss's attacks, each of those keeps the sound it
+// has in its own fight (the Warden's own entries win where both have one).
+export const warden = {
+    ...own,
+    charge: {
+        ...sentinel.charge,
+        ...ringwarden.charge,
+        ...cinderforge.charge,
+        ...bastion.charge,
+        ...tidecaller.charge,
+        [ATTACK.ringBurst]: ringwarden.charge[ATTACK.burst],
+        [ATTACK.fanJets]: cinderforge.charge[ATTACK.jets],
+        [ATTACK.fireNova]: cinderforge.charge[ATTACK.nova],
+        ...own.charge,
+        [ATTACK.cloak]: own.charge[ATTACK.blink],
+    },
+    live: {
+        ...sentinel.live,
+        ...ringwarden.live,
+        ...cinderforge.live,
+        ...bastion.live,
+        ...tidecaller.live,
+        ...own.live,
+    },
+    shot: {
+        ...sentinel.shot,
+        ...ringwarden.shot,
+        ...cinderforge.shot,
+        ...bastion.shot,
+        ...tidecaller.shot,
+        ...own.shot,
+    },
+    // The mirror locking in: glass ringing high; it falling away again; the cloak.
+    mirror: (v) => {
+        for (const [i, f] of [2093, 3136, 4186].entries())
+            v.tone({ f, to: f * 1.12, type: 'sine', at: i * 0.04, dur: 0.6, vol: 0.06 });
+        v.noise({ dur: 0.25, vol: 0.05, f: 8000, type: 'highpass' });
+    },
+    unmirror: (v) => v.tone({ f: 3000, to: 900, type: 'sine', dur: 0.4, vol: 0.05 }),
+    cloak: (v) => {
+        v.noise({ dur: 0.7, vol: 0.09, f: 7000, to: 300, type: 'bandpass' });
+        v.tone({ f: 900, to: 90, type: 'sine', dur: 0.7, vol: 0.1 });
+    },
+    uncloak: (v) => {
+        v.noise({ dur: 0.5, vol: 0.07, f: 300, to: 7000, type: 'bandpass', env: 'swell' });
+        v.tone({ f: 90, to: 900, type: 'sine', dur: 0.5, vol: 0.09, env: 'swell' });
     },
 };

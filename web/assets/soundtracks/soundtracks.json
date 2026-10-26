@@ -1,0 +1,125 @@
+{
+  "target": -12,
+  "tracks": {
+    "boss_bastion": {
+      "file": "boss_bastion.mp3",
+      "title": "Bastion",
+      "seconds": 45.714,
+      "end": 45.714,
+      "lufs": -15,
+      "gain": 1
+    },
+    "boss_cinderforge": {
+      "file": "boss_cinderforge.mp3",
+      "title": "Cinderforge",
+      "seconds": 38.4,
+      "end": 38.4,
+      "lufs": -15.5,
+      "gain": 1
+    },
+    "boss_ringwarden": {
+      "file": "boss_ringwarden.mp3",
+      "title": "Ringwarden",
+      "seconds": 40,
+      "end": 40,
+      "lufs": -17.2,
+      "gain": 1
+    },
+    "boss_sentinel": {
+      "file": "boss_sentinel.mp3",
+      "title": "Sentinel",
+      "seconds": 41.739,
+      "end": 41.739,
+      "lufs": -15.3,
+      "gain": 1
+    },
+    "boss_tidecaller": {
+      "file": "boss_tidecaller.mp3",
+      "title": "Tidecaller",
+      "seconds": 43.636,
+      "end": 43.636,
+      "lufs": -14.3,
+      "gain": 1
+    },
+    "boss_warden": {
+      "file": "boss_warden.mp3",
+      "title": "Horizon Warden",
+      "seconds": 36,
+      "end": 36,
+      "lufs": -15.2,
+      "gain": 1
+    },
+    "ember": {
+      "file": "ember.mp3",
+      "title": "Ember orbit",
+      "seconds": 30.968,
+      "end": 30.968,
+      "lufs": -15.5,
+      "gain": 1
+    },
+    "frontier": {
+      "file": "frontier.mp3",
+      "title": "Celestial frontier",
+      "seconds": 34.286,
+      "end": 34.286,
+      "lufs": -14.6,
+      "gain": 1
+    },
+    "gravity-well-escape": {
+      "file": "gravity-well-escape.m4a",
+      "title": "Gravity Well Escape",
+      "seconds": 173.845,
+      "end": 171.699,
+      "lufs": -11.3,
+      "gain": 0.9226
+    },
+    "home": {
+      "file": "home.mp3",
+      "title": "Home screen",
+      "seconds": 172.8,
+      "end": 172.8,
+      "lufs": -13.7,
+      "gain": 1
+    },
+    "insert-another-coin": {
+      "file": "insert-another-coin.m4a",
+      "title": "Insert Another Coin",
+      "seconds": 171.729,
+      "end": 170.211,
+      "lufs": -11.1,
+      "gain": 0.9016
+    },
+    "lunar": {
+      "file": "lunar.mp3",
+      "title": "Lunar passage",
+      "seconds": 38.4,
+      "end": 38.4,
+      "lufs": -14.1,
+      "gain": 1
+    },
+    "rift": {
+      "file": "rift.mp3",
+      "title": "Outer rift",
+      "seconds": 29.091,
+      "end": 29.091,
+      "lufs": -15.8,
+      "gain": 1
+    },
+    "ruins": {
+      "file": "ruins.mp3",
+      "title": "Ruined moon",
+      "seconds": 45.714,
+      "end": 45.714,
+      "lufs": -15.6,
+      "gain": 1
+    },
+    "violet": {
+      "file": "violet.mp3",
+      "title": "Violet orbit",
+      "seconds": 41.739,
+      "end": 41.739,
+      "lufs": -14.1,
+      "gain": 1
+    }
+  }
+}

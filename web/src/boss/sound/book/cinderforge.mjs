@@ -35,6 +35,34 @@ export const cinderforge = {
                     q: 3,
                 });
         },
+        [ATTACK.hammer]: (v, d) => {
+            // anvil strikes: a rising clank-and-heat
+            for (let i = 0; i < 3; i++)
+                v.tone({ f: 330 + i * 40, type: 'square', at: (i * d) / 3, dur: 0.09, vol: 0.05 });
+            v.tone({ f: 60, to: 120, type: 'sawtooth', dur: d, vol: 0.09, env: 'swell' });
+        },
+        [ATTACK.geyser]: (v, d) => {
+            v.noise({ dur: d, vol: 0.14, f: 200, to: 1600, type: 'lowpass', env: 'swell' });
+            v.tone({ f: 45, to: 90, type: 'sine', dur: d, vol: 0.16, env: 'swell' });
+        },
+        [ATTACK.barrage]: (v, d) => {
+            for (let i = 0; i < 3; i++)
+                v.noise({
+                    at: (i * d) / 4,
+                    dur: 0.25,
+                    vol: 0.1,
+                    f: 300,
+                    to: 1800,
+                    type: 'bandpass',
+                    q: 1.5,
+                });
+            v.tone({ f: 70, to: 160, type: 'sawtooth', dur: d, vol: 0.07, env: 'swell' });
+        },
+        [ATTACK.vent]: (v, d) => {
+            v.noise({ dur: d, vol: 0.12, f: 1200, to: 5000, type: 'highpass', env: 'swell' });
+            for (let i = 0; i < 4; i++)
+                v.noise({ at: (i * d) / 4, dur: 0.05, vol: 0.07, f: 4500, type: 'bandpass', q: 3 });
+        },
         [ATTACK.nova]: (v, d) => {
             v.tone({ f: 40, to: 160, type: 'sine', dur: d, vol: 0.22, env: 'swell' });
             v.noise({ dur: d, vol: 0.16, f: 100, to: 2000, type: 'lowpass', env: 'swell' });
@@ -58,6 +86,19 @@ export const cinderforge = {
                     type: 'bandpass',
                     q: 4,
                 });
+        },
+        // A shot-down lob's marked ground catching light: a soft crackle.
+        [HAZARD.burn]: (v) => {
+            for (let i = 0; i < 6; i++)
+                v.noise({
+                    at: i * 0.05,
+                    dur: 0.04,
+                    vol: 0.06,
+                    f: 3500 + i * 300,
+                    type: 'bandpass',
+                    q: 3,
+                });
+            v.tone({ f: 120, to: 70, type: 'sine', dur: 0.25, vol: 0.08 });
         },
         [HAZARD.ring]: (v) => {
             boom(v, 1.5);

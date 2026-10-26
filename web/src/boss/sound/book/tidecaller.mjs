@@ -63,6 +63,26 @@ export const tidecaller = {
             v.tone({ f: 1100, type: 'sine', dur: 0.5, vol: 0.1 });
             v.tone({ f: 1100, type: 'sine', at: 0.35, dur: 0.5, vol: 0.06 });
         },
+        [ATTACK.wall]: (v, d) => {
+            // a swelling surge: the whole sea standing up
+            v.tone({ f: 90, to: 260, type: 'sine', dur: d, vol: 0.14, env: 'swell' });
+            v.noise({ dur: d, vol: 0.06, f: 200, to: 900, type: 'bandpass', env: 'swell' });
+        },
+        [ATTACK.rain]: (v, d) => {
+            for (let i = 0; i < 5; i++) pop(v, 760 - i * 70, (i * d) / 5, 0.05);
+        },
+        [ATTACK.whirl]: (v, d) => {
+            v.tone({
+                f: 620,
+                to: 180,
+                type: 'sine',
+                dur: d,
+                vol: 0.1,
+                env: 'swell',
+                vib: { rate: 7, depth: 60 },
+            });
+            v.tone({ f: 930, to: 270, type: 'sine', dur: d, vol: 0.05, env: 'swell', detune: 14 });
+        },
         [ATTACK.sine6]: (v, d) => {
             for (let i = 0; i < 4; i++) pop(v, 400 + i * 90, (i * d) / 4, 0.05);
         },

@@ -9,7 +9,7 @@
 /nextSteps*.md
 /.clang-format
 /inspo/
-/assets/
+./assets
 /docs/
 /tools/
 node_modules/
