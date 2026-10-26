@@ -5,6 +5,7 @@ import { TAU, COLOUR, dottedRing, dottedOrbit } from './draw-kit.mjs';
 // One painter per boss kind (the index is the engine's BossKind). Each receives `b`:
 //   ctx, art, scene, time     what to draw onto, from, and when
 //   state, aux, parts         the decoded boss state, its 16 floats and its sub-targets
+//   A                         this kind's named aux slots (KINDS[kind].aux)
 //   x, y, alpha, flash        position, entrance fade and damage flash
 //   frame(key, extra)         draws the body sprite `key` from the boss's own sheet
 //   overlay(key)              draws the damage-state overlay for the current damage level
@@ -16,8 +17,8 @@ const WARDEN_ORBIT = [
 ];
 
 const sentinel = (b) => {
-    const { ctx, x, y, time, aux, state } = b;
-    const open = aux[0],
+    const { ctx, x, y, time, aux, state, A } = b;
+    const open = aux[A.open],
         index = Math.round(open * 3);
     glow(
         ctx,
@@ -37,10 +38,10 @@ const sentinel = (b) => {
 };
 
 const ringwarden = (b) => {
-    const { ctx, art, x, y, aux, parts } = b;
-    const scale = aux[0] || 1;
-    glow(ctx, x, y, 110, '120,90,255', 0.12 + (aux[3] ? 0.14 : 0));
-    b.frame(`ringwarden-core-${aux[3] ? 1 : 0}`);
+    const { ctx, art, x, y, aux, parts, A } = b;
+    const scale = aux[A.scale] || 1;
+    glow(ctx, x, y, 110, '120,90,255', 0.12 + (aux[A.charging] ? 0.14 : 0));
+    b.frame(`ringwarden-core-${aux[A.charging] ? 1 : 0}`);
     b.overlay('ringwarden');
     ctx.fillStyle = '#5a3caa';
     for (const radius of [106 * scale, 70 * scale])
@@ -57,9 +58,9 @@ const ringwarden = (b) => {
 };
 
 const cinderforge = (b) => {
-    const { ctx, art, scene, sheet, x, y, time, aux, alpha } = b;
-    glow(ctx, x, y, 190, '255,90,30', 0.2 + 0.06 * Math.sin(time / 210) + (aux[1] ? 0.18 : 0));
-    const heat = aux[0] < 0.5 ? 0 : aux[0] < 0.62 ? 1 : 2;
+    const { ctx, art, scene, sheet, x, y, time, aux, alpha, A } = b;
+    glow(ctx, x, y, 190, '255,90,30', 0.2 + 0.06 * Math.sin(time / 210) + (aux[A.open] ? 0.18 : 0));
+    const heat = aux[A.heat] < 0.5 ? 0 : aux[A.heat] < 0.62 ? 1 : 2;
     b.frame(`forge-${heat}`);
     b.overlay('forge');
     // Fire churning behind the lattice: a few slow-orbiting additive flares.
@@ -85,11 +86,11 @@ const cinderforge = (b) => {
         art.draw(ctx, sheet, key, part.x, part.y, { alpha });
         if (part.state) glow(ctx, part.x, part.y, 22, '255,150,50', 0.4);
     }
-    if (aux[1]) glow(ctx, x, y, 70, '255,244,200', 0.5 + 0.2 * Math.sin(time / 90));
+    if (aux[A.open]) glow(ctx, x, y, 70, '255,244,200', 0.5 + 0.2 * Math.sin(time / 90));
 };
 
 const bastion = (b) => {
-    const { ctx, art, state, x, y, time, aux, parts, alpha, flash } = b;
+    const { ctx, art, state, x, y, time, aux, parts, alpha, flash, A } = b;
     b.frame('bastion-hull');
     if (state.stage >= 2) art.draw(ctx, 'ruins', 'bastion-flare', x, y, { alpha });
     const alive = [false, false, false];
@@ -101,7 +102,7 @@ const bastion = (b) => {
     art.draw(
         ctx,
         'ruins',
-        alive[1] ? (aux[1] ? 'bastion-pods-open' : 'bastion-pods') : 'bastion-pods-dead',
+        alive[1] ? (aux[A.pods] ? 'bastion-pods-open' : 'bastion-pods') : 'bastion-pods-dead',
         x,
         y,
         { alpha, flash: alive[1] ? flash : 0 },
@@ -109,7 +110,7 @@ const bastion = (b) => {
     art.draw(
         ctx,
         'ruins',
-        alive[2] ? (aux[1] ? 'bastion-mine-open' : 'bastion-mine') : 'bastion-mine-dead',
+        alive[2] ? (aux[A.pods] ? 'bastion-mine-open' : 'bastion-mine') : 'bastion-mine-dead',
         x,
         y,
         { alpha, flash: alive[2] ? flash : 0 },
@@ -121,7 +122,7 @@ const bastion = (b) => {
         y + 2,
         26,
         '255,110,60',
-        0.2 + (aux[0] ? 0.3 : 0) + 0.1 * Math.sin(time / 200),
+        0.2 + (aux[A.cannon] ? 0.3 : 0) + 0.1 * Math.sin(time / 200),
     );
     for (const part of parts) {
         if (part.kind !== PART.hard) continue;
@@ -130,8 +131,8 @@ const bastion = (b) => {
 };
 
 const tidecaller = (b) => {
-    const { ctx, art, x, y, time, aux, parts } = b;
-    const exposed = aux[2] > 0.5;
+    const { ctx, art, x, y, time, aux, parts, A } = b;
+    const exposed = aux[A.exposed] > 0.5;
     b.frame(`tide-${Math.floor(time / 280) % 4}-${exposed ? 1 : 0}`);
     b.overlay('tide');
     if (exposed) glow(ctx, x, y - 37, 80, '255,120,220', 0.25 + 0.12 * Math.sin(time / 100));
@@ -142,8 +143,8 @@ const tidecaller = (b) => {
 };
 
 const warden = (b) => {
-    const { ctx, art, x, y, time, aux, parts } = b;
-    const open = aux[1] > 0.5;
+    const { ctx, art, x, y, time, aux, parts, A } = b;
+    const open = aux[A.coreOpen] > 0.5;
     glow(ctx, x, y, 170, '255,160,60', 0.14 + (open ? 0.26 + 0.1 * Math.sin(time / 90) : 0));
     b.frame(open ? 'warden-1' : 'warden-0');
     b.overlay('warden');
@@ -162,18 +163,18 @@ const warden = (b) => {
 };
 
 const picket = (b) => {
-    const { ctx, x, y, aux } = b;
-    b.frame(`picket-${Math.round(aux[0] * 2)}`);
+    const { ctx, x, y, aux, A } = b;
+    b.frame(`picket-${Math.round(aux[A.open] * 2)}`);
     b.overlay('picket');
-    if (aux[0] > 0.5) glow(ctx, x, y, 28, '255,200,120', 0.35);
+    if (aux[A.open] > 0.5) glow(ctx, x, y, 28, '255,200,120', 0.35);
 };
 
 const shardling = (b) => {
-    const { ctx, art, x, y, aux, alpha, state } = b;
+    const { ctx, art, x, y, aux, alpha, state, A } = b;
     b.frame(`shardling-${state.attack ? 1 : 0}`);
     b.overlay('shardling');
     for (let k = 0; k < 3; k++) {
-        const a = aux[2] + (k * TAU) / 3,
+        const a = aux[A.spin] + (k * TAU) / 3,
             bx = x + Math.cos(a) * 46,
             by = y + Math.sin(a) * 46;
         art.draw(
@@ -188,17 +189,17 @@ const shardling = (b) => {
 };
 
 const cinderling = (b) => {
-    const { ctx, x, y, aux } = b;
-    glow(ctx, x, y, 90, '255,90,30', 0.2 + (aux[1] ? 0.2 : 0));
-    b.frame(aux[1] > 0.5 ? 'cinderling-1' : 'cinderling-0');
+    const { ctx, x, y, aux, A } = b;
+    glow(ctx, x, y, 90, '255,90,30', 0.2 + (aux[A.open] ? 0.2 : 0));
+    b.frame(aux[A.open] > 0.5 ? 'cinderling-1' : 'cinderling-0');
     b.overlay('cinderling');
 };
 
 const gunnery = (b) => {
-    const { ctx, x, y, aux } = b;
-    b.frame(aux[0] > 0.5 ? 'gunnery-1' : 'gunnery-0');
+    const { ctx, x, y, aux, A } = b;
+    b.frame(aux[A.firing] > 0.5 ? 'gunnery-1' : 'gunnery-0');
     b.overlay('gunnery');
-    glow(ctx, x + 68, y, 18, '255,120,80', 0.2 + (aux[0] ? 0.3 : 0));
+    glow(ctx, x + 68, y, 18, '255,120,80', 0.2 + (aux[A.firing] ? 0.3 : 0));
 };
 
 const moonjelly = (b) => {
@@ -207,13 +208,13 @@ const moonjelly = (b) => {
 };
 
 const lensimp = (b) => {
-    const { ctx, art, x, y, time, aux, alpha } = b;
-    const blink = aux[1] > 0.5;
+    const { ctx, art, x, y, time, aux, alpha, A } = b;
+    const blink = aux[A.blink] > 0.5;
     if (blink && Math.floor(time / 70) % 2) return; // flickers while blinking
     glow(ctx, x, y, 70, '255,170,70', 0.12);
-    b.frame(aux[1] ? 'lensimp-1' : 'lensimp-0', { alpha: blink ? 0.5 : alpha });
+    b.frame(aux[A.blink] ? 'lensimp-1' : 'lensimp-0', { alpha: blink ? 0.5 : alpha });
     b.overlay('lensimp');
-    const a = aux[0] * 1.4,
+    const a = aux[A.clock] * 1.4,
         sx = x + Math.cos(a) * 74,
         sy = y + Math.sin(a) * 40;
     dottedOrbit(ctx, x, y, 74, 40, 0, COLOUR.void);

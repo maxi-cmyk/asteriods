@@ -2,7 +2,7 @@
 // telegraphs. Everything is a pure function of the scene and the visual clock, so pausing
 // freezes it. The painters live next door: body-painters (one per boss), hazard-painters
 // and shot-painters.
-import { REGION_SHEETS, bossHazards, bossParts, bossShots, bossState } from './scene.mjs';
+import { KINDS, REGION_SHEETS, bossHazards, bossParts, bossShots, bossState } from './scene.mjs';
 import { BODY_PAINTERS } from './body-painters.mjs';
 import { BELOW_BODY, HAZARD_PAINTERS } from './hazard-painters.mjs';
 import { SHOT_PAINTERS } from './shot-painters.mjs';
@@ -46,6 +46,7 @@ export class BossLayer {
             alpha,
             flash,
             aux: state.aux,
+            A: KINDS[state.kind].aux,
             parts: bossParts(scene),
             frame: (key, extra = {}) => art.draw(ctx, sheet, key, x, y, { alpha, flash, ...extra }),
             overlay: (key) => {
