@@ -19,7 +19,10 @@ test('every world strip fits inside worlds.png and has whole frames', () => {
 });
 
 test('every sprite a region background draws exists in the sheet', () => {
-    const source = readFileSync(new URL('../src/render/backgrounds.mjs', import.meta.url), 'utf8');
+    const source = readFileSync(
+        new URL('../src/render/backgrounds/region-painters.mjs', import.meta.url),
+        'utf8',
+    );
     const used = [...source.matchAll(/drawWorld\(ctx, worlds, '([a-z-]+)'/g)].map((m) => m[1]);
     assert.ok(used.length >= REGIONS.length);
     for (const name of new Set(used)) assert.ok(meta[name], `missing world ${name}`);
