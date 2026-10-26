@@ -95,11 +95,6 @@ body[data-screen='play'] canvas,
 body[data-screen='pause'] canvas {
     outline: 0;
 }
-.pause-menu {
-    box-shadow:
-        0 0 0 100vmax #02040bb3,
-        6px 6px 0 #040716;
-}
 .console .combat-hud,
 .console .live-stats {
     font-size: var(--size-small) !important;
@@ -185,7 +180,6 @@ body[data-screen='pause'] .screen {
 #launchHint p {
     margin: 0;
     padding: 4px 12px;
-    background: #03060fe8;
 }
 
 /* Header actions stay reachable on compact windows. */

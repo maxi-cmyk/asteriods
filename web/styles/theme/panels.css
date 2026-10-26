@@ -7,14 +7,7 @@ dialog {
     border-radius: 0;
 }
 .home-menu {
-    background: #070c1fe6;
     border-color: var(--edge);
-    box-shadow: 6px 6px 0 #040716;
-}
-.pause-menu {
-    background: #0a1230f7;
-    box-shadow: 6px 6px 0 #040716;
-    padding: var(--space-4);
 }
 .help-layout > section,
 [data-settings-panel] {

@@ -12,7 +12,6 @@ body:is([data-screen='play'], [data-screen='pause']):not([data-coop='true']) .co
     grid-template-columns: 1fr auto 1fr;
     align-items: start;
     gap: 12px;
-    background: linear-gradient(#080416c7, #08041600);
     pointer-events: none;
     text-shadow: none;
 }

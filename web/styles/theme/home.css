@@ -47,21 +47,16 @@
 .home-menu button.primary {
     display: flex;
     align-items: center;
-    gap: 10px;
     background: transparent;
     border: 0;
     box-shadow: none;
-    min-height: 36px;
     padding: 6px 4px;
-    font-size: clamp(20px, 2vw, 28px);
     color: #aa8cd2;
     transition: color 0.12s;
 }
 .home-menu button::before {
     content: '';
     flex: none;
-    width: 14px;
-    height: 14px;
     background: url('../../assets/ui/chevron.png') center / 14px 14px no-repeat;
     image-rendering: pixelated;
     opacity: 0;
