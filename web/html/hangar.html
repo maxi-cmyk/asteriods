@@ -1,0 +1,18 @@
+            <section data-view="hangar" class="utility-view hangar" hidden inert aria-label="Hangar">
+                <h1 tabindex="-1">Hangar</h1>
+                <div class="hangar-pilots" role="group" aria-label="Choose for which pilot">
+                    <button type="button" data-pilot="0" aria-pressed="true">Player 1</button>
+                    <button type="button" data-pilot="1" aria-pressed="false">Player 2</button>
+                </div>
+                <div class="hangar-stage">
+                    <canvas id="hangarStage" width="240" height="135" aria-hidden="true"></canvas>
+                    <div class="hangar-info">
+                        <em id="hangarTag">EQUIPPED</em>
+                        <h2 id="hangarName">Vanguard</h2>
+                        <p id="hangarBlurb"></p>
+                        <p class="hangar-note">Cosmetic only.</p>
+                        <p id="hangarStatus" role="status"></p>
+                    </div>
+                </div>
+                <div id="hangarBay" class="hangar-bay" role="radiogroup" aria-label="Hulls"></div>
+            </section>

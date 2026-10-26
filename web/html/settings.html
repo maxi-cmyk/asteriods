@@ -1,0 +1,298 @@
+            <section
+                data-view="settings"
+                class="utility-view"
+                hidden
+                inert
+                aria-label="Settings"
+            >
+                <h1 tabindex="-1">Settings</h1>
+                <div id="settingsDialog">
+                    <label class="profile-picker" for="inputProfile"
+                        >Input profile
+                        <select id="inputProfile">
+                            <option value="0">Player 1</option>
+                            <option value="1">Player 2</option>
+                        </select>
+                    </label>
+                    <p id="settingsProfileNote"></p>
+                    <nav class="settings-tabs" aria-label="Settings categories">
+                        <button data-category="controls" aria-pressed="true">
+                            Controls</button
+                        ><button
+                            data-category="calibration"
+                            aria-pressed="false"
+                        >
+                            Calibration</button
+                        ><button data-category="audio" aria-pressed="false">
+                            Audio</button
+                        ><button data-category="display" aria-pressed="false">
+                            Display
+                        </button>
+                    </nav>
+                    <section data-settings-panel="controls">
+                        <h2>Controls</h2>
+                        <div class="settings-sliders">
+                            <label for="deadzone"
+                                >Left-stick deadzone
+                                <output id="deadzoneValue"></output
+                                ><input
+                                    id="deadzone"
+                                    type="range"
+                                    min="0.05"
+                                    max="0.45"
+                                    step="0.01"
+                            /></label>
+                            <label for="aimDeadzone"
+                                >Right-stick deadzone
+                                <output id="aimDeadzoneValue"></output
+                                ><input
+                                    id="aimDeadzone"
+                                    type="range"
+                                    min="0.05"
+                                    max="0.8"
+                                    step="0.01"
+                            /></label>
+                            <label for="aimSensitivity"
+                                >Controller / keyboard aim response
+                                <output id="aimSensitivityValue"></output
+                                ><input
+                                    id="aimSensitivity"
+                                    type="range"
+                                    min="0.25"
+                                    max="2"
+                                    step="0.05"
+                            /></label>
+                            <label for="mouseAimSensitivity"
+                                >Mouse aim response
+                                <output id="mouseAimSensitivityValue"></output
+                                ><input
+                                    id="mouseAimSensitivity"
+                                    type="range"
+                                    min="0.25"
+                                    max="2"
+                                    step="0.05"
+                            /></label>
+                            <label for="movementSensitivity"
+                                >Controller movement response
+                                <output id="movementSensitivityValue"></output
+                                ><input
+                                    id="movementSensitivity"
+                                    type="range"
+                                    min="0.25"
+                                    max="2"
+                                    step="0.05"
+                            /></label>
+                        </div>
+                        <div class="settings-bindings">
+                            <section>
+                                <h3>Keyboard</h3>
+                                <p>Select a key, then press its replacement. Esc cancels.</p>
+                                <div id="keyBindings"></div>
+                            </section>
+                            <section>
+                                <h3>Controller</h3>
+                                <div id="padBindings"></div>
+                            </section>
+                        </div>
+                    </section>
+                    <section data-settings-panel="calibration" hidden inert>
+                        <section
+                            id="calibration"
+                            aria-labelledby="calibrationTitle"
+                        >
+                            <h3 id="calibrationTitle">Test your controls</h3>
+                            <p id="calibrationController">
+                                Connect a controller and press a button.
+                            </p>
+                            <div class="stick-plots">
+                                <figure>
+                                    <svg
+                                        id="moveStick"
+                                        viewBox="0 0 100 100"
+                                        role="img"
+                                        aria-label="Left stick: raw and adjusted movement"
+                                    >
+                                        <circle
+                                            class="stick-bound"
+                                            cx="50"
+                                            cy="50"
+                                            r="44"
+                                        />
+                                        <path
+                                            class="stick-axis"
+                                            d="M6 50H94M50 6V94"
+                                        />
+                                        <circle
+                                            class="deadzone"
+                                            cx="50"
+                                            cy="50"
+                                            r="11"
+                                        />
+                                        <circle
+                                            class="raw"
+                                            cx="50"
+                                            cy="50"
+                                            r="5"
+                                        />
+                                        <circle
+                                            class="adjusted"
+                                            cx="50"
+                                            cy="50"
+                                            r="2.5"
+                                        />
+                                    </svg>
+                                    <figcaption>
+                                        Movement <span id="moveValues"></span>
+                                    </figcaption>
+                                </figure>
+                                <figure>
+                                    <svg
+                                        id="aimStick"
+                                        viewBox="0 0 100 100"
+                                        role="img"
+                                        aria-label="Right stick: raw and adjusted aim"
+                                    >
+                                        <circle
+                                            class="stick-bound"
+                                            cx="50"
+                                            cy="50"
+                                            r="44"
+                                        />
+                                        <path
+                                            class="stick-axis"
+                                            d="M6 50H94M50 6V94"
+                                        />
+                                        <circle
+                                            class="deadzone"
+                                            cx="50"
+                                            cy="50"
+                                            r="11"
+                                        />
+                                        <circle
+                                            class="raw"
+                                            cx="50"
+                                            cy="50"
+                                            r="5"
+                                        />
+                                        <circle
+                                            class="adjusted"
+                                            cx="50"
+                                            cy="50"
+                                            r="2.5"
+                                        />
+                                    </svg>
+                                    <figcaption>
+                                        Aim <span id="aimValues"></span>
+                                    </figcaption>
+                                </figure>
+                            </div>
+                            <p>Outlined: raw · Filled: adjusted · Circle: deadzone</p>
+                            <div class="calibration-actions">
+                                <button id="sampleDrift" disabled>
+                                    Sample stick drift</button
+                                ><button id="applyDeadzone" disabled>
+                                    Use suggested deadzone
+                                </button>
+                            </div>
+                            <p id="calibrationStatus" role="status">Release both sticks, then sample.</p>
+                            <svg
+                                id="inputPreview"
+                                viewBox="0 0 320 130"
+                                tabindex="0"
+                                role="img"
+                                aria-label="Control preview. Focus to move with your movement keys or arrows; aim with mouse, aim keys, or right stick. No shots are fired."
+                                aria-describedby="previewHelp"
+                            >
+                                <g
+                                    id="previewShip"
+                                    transform="translate(160 65)"
+                                >
+                                    <path class="preview-aim" d="M12 0H48" />
+                                    <path
+                                        class="preview-ship"
+                                        d="M12 0L-9 -7L-5 0L-9 7Z"
+                                    />
+                                </g>
+                            </svg>
+                            <p id="previewHelp">Move and aim here to test. No shots are fired.</p>
+                        </section>
+                    </section>
+                    <section data-settings-panel="audio" hidden inert>
+                        <h2>Audio</h2>
+                        <label class="toggle-label"
+                            ><input id="audioEnabled" type="checkbox" /> Sound
+                            effects</label
+                        ><label class="toggle-label"
+                            ><input id="musicEnabled" type="checkbox" /> Theme
+                            music</label
+                        >
+                        <div class="settings-sliders">
+                            <label for="volume"
+                                >Volume <output id="volumeValue"></output
+                                ><input
+                                    id="volume"
+                                    type="range"
+                                    min="0"
+                                    max="1"
+                                    step="0.05"
+                            /></label>
+                        </div>
+                                            </section>
+                    <section data-settings-panel="display" hidden inert>
+                        <h2>Display</h2>
+                        <div class="settings-sliders">
+                            <label for="shake"
+                                >Screen shake <output id="shakeValue"></output
+                                ><input
+                                    id="shake"
+                                    type="range"
+                                    min="0"
+                                    max="1"
+                                    step="0.1"
+                            /></label>
+                        </div>
+                        <div class="settings-sliders">
+                            <label for="backgroundMotion"
+                                >Background motion
+                                <output id="backgroundMotionValue"></output
+                                ><input
+                                    id="backgroundMotion"
+                                    type="range"
+                                    min="0"
+                                    max="1"
+                                    step="0.1" /></label
+                            ><label for="backgroundBrightness"
+                                >Scenery brightness
+                                <output id="backgroundBrightnessValue"></output
+                                ><input
+                                    id="backgroundBrightness"
+                                    type="range"
+                                    min="0.25"
+                                    max="1"
+                                    step="0.05"
+                            /></label>
+                        </div>
+                        <h3>Boss assists</h3>
+                        <label class="toggle-label"
+                            ><input id="bossLongWarnings" type="checkbox" /> Longer boss
+                            warnings (+30%)</label
+                        ><label class="toggle-label"
+                            ><input id="bossCalm" type="checkbox" /> Calm boss
+                            forces (no pull, straight lens shots)</label
+                        >
+                        <p>
+                            Background motion affects decoration only;
+                            brightness dims gameplay scenery. Reduce shake for a
+                            calmer playfield. Fullscreen is available in the top
+                            bar.
+                        </p>
+                    </section>
+                    <div class="settings-footer">
+                        <button id="applySettings" disabled>Apply</button
+                        ><button id="resetSettings">Reset this profile</button
+                        ><span id="settingsStatus" role="status"
+                            >Saved locally</span
+                        >
+                    </div>
+                </div>
+            </section>

@@ -1,0 +1,178 @@
+            <section
+                class="console"
+                data-view="play"
+                hidden
+                inert
+                aria-label="Asteroids game"
+            >
+                <div class="status">
+                    <span id="runLabel">Solo flight</span
+                    ><span id="runDevice" role="status"></span
+                    ><span id="state">LOADING</span>
+                </div>
+
+                <div class="hud" aria-label="Run status">
+                    <span class="practice-tag">Practice</span>
+                    <span class="practice-note" role="status">No lives lost · scores aren’t saved</span>
+                    <div class="hud-group">
+                        <span>SHIPS <b id="lives">03</b></span
+                        ><span>WAVE <b id="wave">01</b></span>
+                    </div>
+                    <div class="score">
+                        <b id="score">000000</b
+                        ><span class="chain"
+                            ><span id="multiplier">x1</span
+                            ><span class="track"><i id="chainFill"></i></span
+                        ></span>
+                    </div>
+                </div>
+                <div id="coopHud" class="coop-hud" hidden aria-label="Two-player run status">
+                    <div id="coopHud0" class="pilot-hud" data-player="0"></div>
+                    <div class="team-hud"><b id="coopTeamScore">0</b><span id="coopWave">WAVE 1</span><span id="coopRules">FRIENDLY FIRE OFF</span></div>
+                    <div id="coopHud1" class="pilot-hud" data-player="1"></div>
+                </div>
+                <div class="screen">
+                    <canvas
+                        id="game"
+                        width="480"
+                        height="270"
+                        tabindex="0"
+                        aria-label="Asteroids game screen. Move with arrow keys or left stick. Aim with mouse, IJKL or right stick. Fire with left click, Space or R2. Hold right click, F or L2 to charge laser. Pause with Escape or Options."
+                        >Your browser needs Canvas and WebAssembly to
+                        play.</canvas
+                    >
+                    <div id="bossIntro" class="boss-intro" hidden aria-hidden="true" data-beat="in"><span class="boss-tier"></span><b></b><span class="boss-region"></span></div>
+                    <div id="bossBar" class="boss-bar" hidden role="progressbar" aria-label="Boss health" aria-valuemin="0" aria-valuemax="100"><span class="boss-name"></span><div class="boss-track"><i></i></div></div>
+                    <div id="unlockToast" class="unlock-toast" role="status" hidden></div>
+                    <div id="pauseMenu" class="pause-menu" hidden>
+                        <h2>Paused</h2>
+                        <button id="resume" class="primary">Resume</button>
+                        <div id="practiceTools" class="practice-tools" hidden>
+                            <button id="resetTargets">Reset targets</button>
+                            <button id="practiceMultishot">Try multishot</button>
+                            <button id="practiceDoubleFire">Try 2× fire</button>
+                            <div class="boss-picker" role="group" aria-label="Boss practice">
+                                <label>Boss
+                                    <select id="bossPick">
+                                        <optgroup label="Bosses">
+                                            <option value="0">Sentinel · wave 5</option>
+                                            <option value="1">Ringwarden · wave 10</option>
+                                            <option value="2">Cinderforge · wave 15</option>
+                                            <option value="3">Bastion · wave 20</option>
+                                            <option value="4">Tidecaller · wave 25</option>
+                                            <option value="5">Horizon Warden · wave 30</option>
+                                        </optgroup>
+                                        <optgroup label="Mini-bosses">
+                                            <option value="6">Picket · wave 3</option>
+                                            <option value="7">Shardling · wave 8</option>
+                                            <option value="8">Cinderling · wave 13</option>
+                                            <option value="9">Gunnery · wave 18</option>
+                                            <option value="10">Moonjelly · wave 23</option>
+                                            <option value="11">Lens Imp · wave 28</option>
+                                        </optgroup>
+                                    </select>
+                                </label>
+                                <label>Tier
+                                    <select id="bossTier">
+                                        <option value="0">I</option><option value="1">II</option>
+                                        <option value="2">III</option><option value="3">IV</option>
+                                    </select>
+                                </label>
+                                <label>Start in
+                                    <select id="bossPhase">
+                                        <option value="1">Phase 1</option><option value="2">Phase 2</option>
+                                        <option value="3">Phase 3</option><option value="4">Frenzy</option>
+                                    </select>
+                                </label>
+                                <button id="bossPracticeStart">Fight boss</button>
+                            </div>
+                            <button id="endPractice" class="primary">End practice</button>
+                        </div>
+                        <button id="pauseSettings">Settings</button
+                        ><button data-go="help">How to Play</button
+                        ><button id="quitRun">Quit to Home</button>
+                        <button id="coopReassign" hidden>Reassign inputs</button>
+                        <div id="coopReconnect" hidden>
+                            <p>Assign each player a different input before resuming.</p>
+                            <label>P1 device<select id="reconnectDevice0"></select></label>
+                            <label>P2 device<select id="reconnectDevice1"></select></label>
+                        </div>
+                        <p id="pauseSettingsHint"></p>
+                    </div>
+                    <div
+                        id="runSummary"
+                        class="run-summary"
+                        hidden
+                        role="region"
+                        aria-labelledby="personalBest"
+                        tabindex="-1"
+                    >
+                        <div class="run-summary-content">
+                            <h2 id="personalBest"></h2>
+                            <div class="result-hero">
+                                <span class="result-label">Score</span>
+                                <b id="resultScore"></b>
+                                <p id="resultRegion"></p>
+                                <p id="resultBosses" hidden></p>
+                            </div>
+                            <div id="coopResults" hidden></div>
+                            <dl>
+                                <div>
+                                    <dt>Accuracy</dt>
+                                    <dd id="resultAccuracy"></dd>
+                                </div>
+                                <div>
+                                    <dt>Longest chain</dt>
+                                    <dd id="resultChain"></dd>
+                                </div>
+                                <div>
+                                    <dt>Multiplier</dt>
+                                    <dd id="resultMultiplier"></dd>
+                                </div>
+                                <div>
+                                    <dt>Asteroids</dt>
+                                    <dd id="resultKills"></dd>
+                                </div>
+                                <div>
+                                    <dt>Survived</dt>
+                                    <dd id="resultTime"></dd>
+                                </div>
+                                <div>
+                                    <dt>Peak CPS</dt>
+                                    <dd id="resultCps"></dd>
+                                </div>
+                            </dl>
+                            <p id="resultLaser"></p>
+                            <button id="continueResults" class="primary">
+                                Continue
+                            </button>
+                        </div>
+                    </div>
+                </div>
+                <div class="combat-hud" aria-label="Weapon abilities">
+                    <span class="ability" data-ability="laser"
+                        ><kbd>L2</kbd> LASER <b id="laserStatus">READY</b
+                        ><span class="track"><i id="laserFill"></i></span
+                    ></span>
+                    <span class="ability" data-ability="shield"
+                        ><kbd>L1</kbd> SHIELD <b id="shieldStatus">EMPTY</b></span
+                    >
+                    <span class="ability" data-ability="double"
+                        ><kbd>2×</kbd> FIRE <b id="doubleFireStatus">INACTIVE</b></span
+                    >
+                    <span id="precisionStatus">PRECISION</span>
+                </div>
+                <div class="live-stats" aria-label="Primary-fire statistics">
+                    <span>CPS <b id="liveCps">0</b></span
+                    ><span>ACCURACY <b id="liveAccuracy">—</b></span
+                    ><span>LONGEST CHAIN <b id="liveChain">0</b></span>
+                </div>
+                <div class="toolbar">
+                    <span id="hint" role="status">Loading game…</span>
+                    <div class="actions">
+                        <button id="fire" disabled>Start / Fire</button
+                        ><button id="pause" disabled>Pause</button
+                        ><button id="gameHome" hidden>Home</button>
+                    </div>
+                </div>
+            </section>

@@ -100,6 +100,11 @@ const coreObjects = ['scoring', 'difficulty', 'score_table'].map((name) => {
     if (result.status !== 0) process.exit(result.status || 1);
     return output;
 });
+function assembleHtml(file) {
+    return readFileSync(file, 'utf8').replace(/^[ \t]*<!-- @include (\S+) -->\n/gm, (_, name) =>
+        readFileSync(resolve(root, name), 'utf8'),
+    );
+}
 const args = [
     '--target=wasm32',
     '-std=c++17',
@@ -154,8 +159,11 @@ if (!test && !oled) {
     rmSync(resolve(root, 'dist/coop-browser.html'), { force: true });
     // Every module under src/ ships as-is (a new file can never be forgotten); the dev
     // pages keep their old URLs at the site root, their scripts live under dist/dev.
-    for (const file of ['index.html', 'style.css', 'theme.css'])
+    for (const file of ['style.css', 'theme.css'])
         copyFileSync(resolve(root, file), resolve(root, 'dist', file));
+    // index.html is a template: each `<!-- @include html/name.html -->` line is replaced by that
+    // partial, so every screen's markup lives in its own file.
+    writeFileSync(resolve(root, 'dist/index.html'), assembleHtml(resolve(root, 'index.html')));
     for (const folder of ['src', 'styles', 'dev']) {
         rmSync(resolve(root, 'dist', folder), { recursive: true, force: true });
         cpSync(resolve(root, folder), resolve(root, 'dist', folder), { recursive: true });

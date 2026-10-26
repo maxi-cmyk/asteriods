@@ -1,0 +1,19 @@
+            <section data-view="lobby" class="utility-view coop-lobby" hidden inert>
+                <h1 tabindex="-1">Local co-op</h1>
+                <div class="crew-slots">
+                    <fieldset class="crew-slot" data-player="0"><legend>P1 · Diamond</legend>
+                        <label>Input device<select id="coopDevice0"></select></label>
+                        <label>Local profile<select id="coopProfile0"><option value="0">Profile 1</option><option value="1">Profile 2</option></select></label>
+                        <button id="coopReady0" aria-pressed="false">Ready P1</button>
+                    </fieldset>
+                    <fieldset class="crew-slot" data-player="1"><legend>P2 · Square</legend>
+                        <label>Input device<select id="coopDevice1"></select></label>
+                        <label>Local profile<select id="coopProfile1"><option value="0">Profile 1</option><option value="1">Profile 2</option></select></label>
+                        <button id="coopReady1" aria-pressed="false">Ready P2</button>
+                    </fieldset>
+                </div>
+                <label class="friendly-option"><input type="checkbox" id="coopFriendly"> Friendly fire</label>
+                <p>Shots can cost your teammate a life.</p>
+                <p id="coopLobbyStatus" role="status">Assign a different device and profile to each player.</p>
+                <button id="coopStart" class="primary" disabled>Launch together</button>
+            </section>
