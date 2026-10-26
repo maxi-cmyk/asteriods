@@ -1,3 +1,4 @@
+import { S, BOSS, BOSS_AT, BLOCKS } from '../scene-layout.mjs';
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { readFile } from 'node:fs/promises';
@@ -84,7 +85,7 @@ test('death clears only victim state, world continues, respawn uses active time'
     set(g, 0, 7, 0);
     const old = players(g);
     assert.equal(old[0].alive, false);
-    assert.equal(old[1].scene[256], 1);
+    assert.equal(old[1].scene[BLOCKS.BULLETS.at], 1);
     ticks(g, 24);
     assert.equal(players(g)[0].alive, false);
     g.pause();
@@ -93,7 +94,7 @@ test('death clears only victim state, world continues, respawn uses active time'
     g.step({ pause: true });
     g.step();
     assert.equal(players(g)[0].alive, true);
-    assert(players(g)[0].scene[8] > 0);
+    assert(players(g)[0].scene[S.INVINCIBLE_MS] > 0);
     assert.equal(players(g)[0].stats.spawned, 1);
 });
 test('simultaneous pickup has one collector and only one world drift', async () => {
@@ -169,22 +170,22 @@ test('boss roster, alternating target locks, attribution and piercing laser appl
     for (let p = 0; p < 2; p++) set(g, p, 3, 100000);
     g.api.web_test_boss(5, 2, 0);
     let scene = players(g)[0].scene;
-    assert.equal(scene[516], 18 * 3 * 2);
-    assert.equal(scene[521], 2);
+    assert.equal(scene[S.BOSS_MAXIMUM], 18 * 3 * 2);
+    assert.equal(scene[S.BOSS_PLAYERS], 2);
     ticks(g, 76, { players: [{ laser: true, aimX: 1 }, {}] }); // the 1.5 s windup lands as the boss opens
-    assert.equal(players(g)[0].scene[515], 18 * 3 * 2 - 8 * 3);
+    assert.equal(players(g)[0].scene[S.BOSS_HEALTH], 18 * 3 * 2 - 8 * 3);
     assert.equal(players(g)[0].stats.laserShots, 1);
     ticks(g, 20, { players: [{ laser: true, aimX: 1 }, {}] });
-    assert.equal(players(g)[0].scene[515], 18 * 3 * 2 - 8 * 3);
+    assert.equal(players(g)[0].scene[S.BOSS_HEALTH], 18 * 3 * 2 - 8 * 3);
     // The first lock goes to the nearer pilot, the next to the farther one.
-    const lock = () => [players(g)[0].scene[524], players(g)[0].scene[519]];
+    const lock = () => [players(g)[0].scene[S.BOSS_TARGET_X], players(g)[0].scene[S.BOSS_TARGET_Y]];
     let guard = 0;
-    while (players(g)[0].scene[605] === 0 && guard++ < 400) g.step();
+    while (players(g)[0].scene[BOSS_AT + BOSS.ATTACK] === 0 && guard++ < 400) g.step();
     assert.deepEqual(lock(), [170, 210]);
-    while (players(g)[0].scene[605] !== 0 && guard++ < 900) g.step();
-    while (players(g)[0].scene[605] === 0 && guard++ < 1500) g.step();
+    while (players(g)[0].scene[BOSS_AT + BOSS.ATTACK] !== 0 && guard++ < 900) g.step();
+    while (players(g)[0].scene[BOSS_AT + BOSS.ATTACK] === 0 && guard++ < 1500) g.step();
     assert.deepEqual(lock(), [100, 135]);
-    assert.equal(players(g)[0].scene[516], 18 * 3 * 2);
+    assert.equal(players(g)[0].scene[S.BOSS_MAXIMUM], 18 * 3 * 2);
 });
 test('boss defeat credits the killing pilot and counts participation for every pilot who touched it', async () => {
     const g = await game();
@@ -196,9 +197,9 @@ test('boss defeat credits the killing pilot and counts participation for every p
     g.api.web_test_boss(5, 2, 1);
     ticks(g, 75);
     let guard = 0;
-    while (players(g)[0].scene[512] && guard++ < 900)
+    while (players(g)[0].scene[S.BOSS_ACTIVE] && guard++ < 900)
         g.step({ players: [{ firePressed: guard % 3 === 0, aimX: 1 }, {}] });
-    assert.equal(players(g)[0].scene[512], 0);
+    assert.equal(players(g)[0].scene[S.BOSS_ACTIVE], 0);
     assert.equal(players(g)[0].participation, 1);
     assert.equal(players(g)[1].participation, 0);
     assert.equal(players(g)[0].score, 2625);
@@ -288,7 +289,7 @@ test('sustained dual multishot/echo load stays bounded over ten thousand ticks',
             }
     }
     assert.equal(g.state, 'playing');
-    assert.equal(players(g)[0].scene[2], 200000);
+    assert.equal(players(g)[0].scene[S.GAME_MS], 200000);
 });
 
 test('co-op reset clears both team contexts and personal bests while preserving settings', async () => {

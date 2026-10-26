@@ -1,3 +1,4 @@
+import { S } from './scene-layout.mjs';
 import { ThemeMusic } from './music.mjs';
 import { bossHazards } from './boss-scene.mjs';
 import { BossSound } from './boss-sound.mjs';
@@ -130,9 +131,9 @@ export class GameAudio {
     observe(scene) {
         const old = this.previous;
         if (this.context) {
-            const charging = scene[47] && scene[0] === 2 && !this.suspended;
+            const charging = scene[S.CHARGING] && scene[S.STATE] === 2 && !this.suspended;
             this.charge.frequency.setTargetAtTime(
-                180 + (scene[48] / 1500) * 900,
+                180 + (scene[S.CHARGE_MS] / 1500) * 900,
                 this.context.currentTime,
                 0.025,
             );
@@ -142,11 +143,11 @@ export class GameAudio {
                 0.025,
             );
         }
-        if (old && scene[2] >= old[2] && scene[0] === 2) {
-            if (scene[50] > old[50]) this.cue('discharge');
-            if (old[49] > 0 && scene[49] === 0) this.cue('ready');
+        if (old && scene[S.GAME_MS] >= old[S.GAME_MS] && scene[S.STATE] === 2) {
+            if (scene[S.BEAM_MS] > old[S.BEAM_MS]) this.cue('discharge');
+            if (old[S.LASER_COOLDOWN_MS] > 0 && scene[S.LASER_COOLDOWN_MS] === 0) this.cue('ready');
             this.bossSound.observe(old, scene);
-            if (scene[512] && old[512]) {
+            if (scene[S.BOSS_ACTIVE] && old[S.BOSS_ACTIVE]) {
                 const before = new Map(bossHazards(old).map((h) => [h.index, h]));
                 for (const h of bossHazards(scene)) {
                     const prev = before.get(h.index);

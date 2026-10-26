@@ -79,6 +79,7 @@ long rock_random_range(long lower, long upper) {
 #include "coop.h"
 extern "C" void web_coop_pause(int pause);
 #endif
+#include "scene.h"
 
 extern "C" {
 void web_init() {
@@ -342,194 +343,8 @@ int web_height() {
     return SCREEN_H;
 }
 const float *web_scene() {
-    // First 512 floats retain the original layout; 512..575 keep the boss header
-    // and the co-op ABI slots; the boss detail block starts at 600 (see
-    // boss-scene.mjs, which owns the offsets).
-    static float scene[1408];
-    memset(scene, 0, sizeof(scene));
-    scene[0] = state;
-    scene[1] = browser_ms;
-    scene[2] = game_ms;
-    scene[3] = browser_ms - state_entered_ms;
-    scene[4] = ship.position_x;
-    scene[5] = ship.position_y;
-    scene[6] = ship.alive;
-    scene[7] = ship.lives;
-    scene[8] = ship.invincible_left;
-    // Reserved legacy heat/delay slots; primary fire is unrestricted.
-    scene[9] = 0;
-    scene[10] = 0;
-    scene[11] = ship.weapon.last_shot_ms;
-    scene[12] = 0;
-    scene[13] = 0;
-    scene[14] = ship.effects.multishot_left_ms;
-    scene[15] = ship.effects.shield;
-    scene[16] = score;
-    scene[17] = scoring_multiplier();
-    scene[18] = scoring_chain_left(game_ms);
-    scene[19] = wave_number;
-    scene[20] = pending_asteroids;
-    scene[21] = pending_spawn_y;
-    scene[22] = pending_asteroids
-                && (game_ms >= next_spawn_ms
-                    || next_spawn_ms - game_ms <= SPAWN_WARNING_MS);
-    scene[23] = game_ms - wave_started_ms < WAVE_CUE_MS;
-    scene[24] = collection_cue_left;
-    scene[25] = collection_x;
-    scene[26] = collection_y;
-    scene[27] = final_score;
-    scene[28] = selected_initial;
-    scene[29] = saved_rank;
-    scene[30] = save_failed;
-    scene[31] = highscore_count();
-    for (int i = 0; i < 3; i++) {
-        scene[32 + i] = entered_initials[i];
-    }
-    scene[35] = SHIP_RADIUS;
-    scene[36] = wave_difficulty.speed;
-    scene[37] = visual_ms;
-    scene[38] = SCREEN_W;
-    scene[39] = SCREEN_H;
-    scene[40] = SHIP_MAX_SPEED;
-    scene[41] = SHIP_MIN_X;
-    scene[42] = SHIP_MAX_X;
-    scene[43] = SHIP_MIN_Y;
-    scene[44] = SHIP_MAX_Y;
-#ifdef WEB_HD
-    scene[45] = combat.aim_x;
-    scene[46] = combat.aim_y;
-    scene[47] = combat.charging;
-    scene[48] = combat.charging ? game_ms - combat.charge_started_ms : 0;
-    scene[49] = combat.cooldown_left_ms;
-    scene[50] = combat.beam_left_ms;
-    scene[51] = combat.beam_x;
-    scene[52] = combat.beam_y;
-    scene[53] = combat.beam_direction_x;
-    scene[54] = combat.beam_direction_y;
-    scene[55] = combat.shield_stored;
-    scene[56] = combat_input.precision && state == STATE_PLAYING;
-    scene[60] = practice_mode;
-    scene[62] = practice_goals;
-#endif
-    scene[57] = run_destroyed;
-    scene[58] = run_best_multiplier;
-    scene[59] = run_prior_best;
-    scene[61] = display_get().display_offset;
-    scene[63] = pending_spawn_size() == AST_SMALL;
-    for (int i = 0; i < ASTEROID_MAX; i++) {
-        int offset = 64 + i * 8;
-        scene[offset] = rocks[i].active;
-        scene[offset + 1] = rocks[i].position_x;
-        scene[offset + 2] = rocks[i].position_y;
-        scene[offset + 3] = rocks[i].radius;
-        scene[offset + 4] = rocks[i].angle;
-        scene[offset + 5] = rocks[i].size;
-        scene[offset + 6] = rocks[i].velocity_x;
-        scene[offset + 7] = rocks[i].velocity_y;
-    }
-    for (int i = 0; i < BULLET_MAX; i++) {
-        int offset = 256 + i * 6;
-        scene[offset] = bullets[i].active;
-        scene[offset + 1] = bullets[i].position_x;
-        scene[offset + 2] = bullets[i].position_y;
-        scene[offset + 3] = bullets[i].velocity_x;
-        scene[offset + 4] = bullets[i].velocity_y;
-    }
-    for (int i = 0; i < PARTICLE_MAX; i++) {
-        int offset = 328 + i * 5;
-        scene[offset] = pool[i].active;
-        scene[offset + 1] = pool[i].position_x;
-        scene[offset + 2] = pool[i].position_y;
-        scene[offset + 3] = pool[i].life;
-    }
-    scene[478] = pickup.active;
-    scene[479] = pickup.position_x;
-    scene[480] = pickup.position_y;
-    scene[481] = pickup.kind;
-#ifdef WEB_HD
-    scene[512] = boss.active;
-    scene[513] = boss.x;
-    scene[514] = boss.y;
-    scene[515] = boss.health;
-    scene[516] = boss.maximum;
-    scene[517] = boss.phase;
-    scene[518] = bs_since(boss.phase_started);
-    scene[519] = boss.target_y;
-    scene[520] = boss.cycle % 2;
-    scene[521] = boss.players;
-    scene[522] = boss.wave;
-    scene[523] = boss.kills;
-    scene[524] = boss.target_x;
-    {
-        const int B = 600;
-        scene[B] = boss.kind;
-        scene[B + 1] = boss.mini;
-        scene[B + 2] = boss.tier;
-        scene[B + 3] = boss.maximum == 0 ? 0 : boss.health * 3 > boss.maximum * 2 ? 0
-                       : boss.health * 3 > boss.maximum ? 1 : 2;
-        scene[B + 4] = game_ms < boss.flash_until ? boss.flash_until - game_ms : 0;
-        scene[B + 5] = boss.atk;
-        scene[B + 6] = boss.atk ? game_ms - boss.atk_t0 : 0;
-        scene[B + 7] = boss.aux[0];
-        scene[B + 8] = bs_since(boss.born) >= BOSS_ENTRANCE_MS ? 1
-                       : bs_since(boss.born) / float(BOSS_ENTRANCE_MS);
-        scene[B + 9] = boss.practice;
-        scene[B + 10] = boss.defeated_mask;
-        scene[B + 11] = boss.hits_taken;
-        scene[B + 12] = boss.violations;
-        scene[B + 13] = boss.max_shots;
-        scene[B + 14] = boss.max_hazards;
-        scene[B + 15] = boss.min_corridor;
-        for (int i = 0; i < 16; i++) scene[B + 16 + i] = boss.aux[i];
-        for (unsigned i = 0; i < BOSS_PARTS; i++) {
-            const BossPart& p = boss.parts[i];
-            int at = B + 32 + i * 8;
-            scene[at] = p.exists;
-            scene[at + 1] = p.kind;
-            scene[at + 2] = p.x;
-            scene[at + 3] = p.y;
-            scene[at + 4] = p.r;
-            scene[at + 5] = p.hp;
-            scene[at + 6] = p.state;
-            scene[at + 7] = p.slot;
-        }
-        for (unsigned i = 0; i < BOSS_SHOTS; i++) {
-            const BossShot& sh = boss.shots[i];
-            int at = B + 288 + i * 8;
-            scene[at] = sh.active;
-            scene[at + 1] = sh.family;
-            scene[at + 2] = sh.x;
-            scene[at + 3] = sh.y;
-            scene[at + 4] = bs_atan2(sh.dy, sh.dx);
-            scene[at + 5] = sh.hp;
-            scene[at + 6] = game_ms - sh.born;
-            scene[at + 7] = sh.family == SF_LOB ? sh.life : sh.amp;
-        }
-        for (unsigned i = 0; i < BOSS_HAZARDS; i++) {
-            const BossHazard& h = boss.hz[i];
-            int at = B + 672 + i * 12;
-            scene[at] = h.active;
-            scene[at + 1] = h.kind;
-            scene[at + 2] = h.x;
-            scene[at + 3] = h.y;
-            scene[at + 4] = h.a;
-            scene[at + 5] = h.b;
-            scene[at + 6] = h.c;
-            scene[at + 7] = h.d;
-            scene[at + 8] = h.e;
-            scene[at + 9] = h.warn_left;
-            scene[at + 10] = h.warn_total;
-            scene[at + 11] = h.live_left;
-        }
-    }
-#endif
-    for (int i = 0; i < HIGHSCORE_CAPACITY; i++) {
-        int offset = 486 + i * 5;
-        scene[offset] = highscore_entries()[i].score;
-        for (int j = 0; j < 3; j++) {
-            scene[offset + 1 + j] = highscore_entries()[i].initials[j];
-        }
-    }
+    static float scene[SCENE_FLOATS];
+    scene_fill(scene);
     return scene;
 }
 // Co-op ABI version 1: two independent inputs, legacy read-only player scenes.
@@ -570,19 +385,19 @@ void web_coop_input(int owner, float x, float y, int fire, float aim_x,
 #endif
 }
 const float *web_coop_player(int owner) {
-    static float snapshot[1408];
+    static float snapshot[SCENE_FLOATS];
 #ifdef WEB_HD
     if (coop_active && owner >= 0 && owner < 2) {
         coop_load(owner);
         memcpy(snapshot, web_scene(), sizeof(snapshot));
-        snapshot[552] = 1; // ABI version
-        snapshot[553] = owner;
-        snapshot[554] = coop_players[owner].respawn_at;
-        snapshot[555] = coop_players[owner].boss_participation;
-        snapshot[556] = coop_players[0].points + coop_players[1].points;
-        snapshot[557] = coop_friendly;
+        snapshot[SCENE_COOP_VERSION] = 1; // ABI version
+        snapshot[SCENE_COOP_ID] = owner;
+        snapshot[SCENE_COOP_RESPAWN_AT] = coop_players[owner].respawn_at;
+        snapshot[SCENE_COOP_PARTICIPATION] = coop_players[owner].boss_participation;
+        snapshot[SCENE_COOP_TEAM_SCORE] = coop_players[0].points + coop_players[1].points;
+        snapshot[SCENE_COOP_FRIENDLY_FIRE] = coop_friendly;
         // Statistics share the existing stats field ordering.
-        memcpy(snapshot + 560, web_stats(), 16 * sizeof(float));
+        memcpy(snapshot + SCENE_COOP_STATS_AT, web_stats(), SCENE_COOP_STATS_COUNT * sizeof(float));
         coop_load(0);
     }
 #endif

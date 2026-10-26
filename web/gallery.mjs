@@ -1,3 +1,4 @@
+import { S, SCENE_FLOATS } from './scene-layout.mjs';
 import { PixelRenderer, loadArt } from './renderer.mjs';
 try {
     new PixelRenderer(document.querySelector('#comparison'), await loadArt()).comparison();
@@ -12,23 +13,23 @@ import { REGIONS } from './regions.mjs';
 const review = document.querySelector('#presentationReview');
 const reviewArt = await loadArt();
 function reviewScene(wave, time) {
-    const scene = new Float32Array(1408);
-    scene[0] = 2;
-    scene[2] = time;
-    scene[37] = time;
-    scene[19] = wave;
-    scene[4] = 110;
-    scene[5] = 150;
-    scene[6] = 1;
-    scene[7] = 3;
-    scene[45] = 1;
-    scene[22] = 1;
-    scene[21] = 110;
-    scene[20] = 4;
-    scene[63] = 1;
-    scene[15] = 1;
-    scene[55] = 1;
-    scene[14] = 3000;
+    const scene = new Float32Array(SCENE_FLOATS);
+    scene[S.STATE] = 2;
+    scene[S.GAME_MS] = time;
+    scene[S.VISUAL_MS] = time;
+    scene[S.WAVE] = wave;
+    scene[S.SHIP_X] = 110;
+    scene[S.SHIP_Y] = 150;
+    scene[S.SHIP_ALIVE] = 1;
+    scene[S.LIVES] = 3;
+    scene[S.AIM_X] = 1;
+    scene[S.SPAWN_WARNING] = 1;
+    scene[S.SPAWN_Y] = 110;
+    scene[S.PENDING_ROCKS] = 4;
+    scene[S.PENDING_FAST] = 1;
+    scene[S.SHIELD] = 1;
+    scene[S.SHIELD_STORED] = 1;
+    scene[S.MULTISHOT_MS] = 3000;
     for (let i = 0; i < 24; i++) {
         const offset = 64 + i * 8;
         scene.set([1, 185 + ((i * 53) % 280), 45 + ((i * 31) % 200), 6, 0, i % 3, -2, 0], offset);
@@ -63,7 +64,7 @@ for (let i = 1; i < REGIONS.length; i++) {
                 run: true,
             });
             renderer.backgrounds.timeline.observe({ wave: region.first, time: 1000, run: true });
-            scene[37] = 1000 + region.enter.ms * 0.5;
+            scene[S.VISUAL_MS] = 1000 + region.enter.ms * 0.5;
         },
     );
 }

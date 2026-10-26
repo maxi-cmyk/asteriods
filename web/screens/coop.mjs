@@ -1,3 +1,4 @@
+import { S } from '../scene-layout.mjs';
 import { element } from '../dom.mjs';
 import { accuracyText } from '../records.mjs';
 import { supportedPad } from '../coop-input.mjs';
@@ -146,7 +147,7 @@ export function createCoopScreen({ input, getPads, getRuntime, getNavigation, la
             element('reconnectDevice' + i).value = input.devices[i];
         });
         write(element('coopTeamScore'), `TEAM ${players[0].teamScore}`);
-        write(element('coopWave'), `WAVE ${players[0].scene[19]}`);
+        write(element('coopWave'), `WAVE ${players[0].scene[S.WAVE]}`);
         write(element('coopRules'), `FRIENDLY FIRE ${runtime.coop.friendlyFire ? 'ON' : 'OFF'}`);
         if (navigation.screen === 'pause') {
             element('resume').disabled = !input.valid(pads);

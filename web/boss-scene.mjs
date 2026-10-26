@@ -1,17 +1,17 @@
 // Boss scene ABI. The engine (native/bridge.cpp) writes the legacy boss header at
 // 512..524 and the detail block at BOSS_AT; everything the UI knows about a fight
 // is decoded here so no other module carries magic offsets.
-export const SCENE_FLOATS = 1408;
-export const BOSS_AT = 600;
-const PARTS_AT = BOSS_AT + 32,
-    PART_STRIDE = 8,
-    PART_COUNT = 32;
-const SHOTS_AT = BOSS_AT + 288,
-    SHOT_STRIDE = 8,
-    SHOT_COUNT = 48;
-const HAZARDS_AT = BOSS_AT + 672,
-    HAZARD_STRIDE = 12,
-    HAZARD_COUNT = 10;
+import { S, BOSS, BOSS_AT, SCENE_FLOATS } from './scene-layout.mjs';
+export { BOSS_AT, SCENE_FLOATS };
+const PARTS_AT = BOSS_AT + BOSS.PARTS.at,
+    PART_STRIDE = BOSS.PARTS.stride,
+    PART_COUNT = BOSS.PARTS.count;
+const SHOTS_AT = BOSS_AT + BOSS.SHOTS.at,
+    SHOT_STRIDE = BOSS.SHOTS.stride,
+    SHOT_COUNT = BOSS.SHOTS.count;
+const HAZARDS_AT = BOSS_AT + BOSS.HAZARDS.at,
+    HAZARD_STRIDE = BOSS.HAZARDS.stride,
+    HAZARD_COUNT = BOSS.HAZARDS.count;
 
 export const SHOT = Object.freeze({
     needle: 0,
@@ -203,27 +203,27 @@ export const bossNames = (mask) => KINDS.filter((_, i) => mask & (1 << i)).map((
 export function bossState(scene) {
     const at = BOSS_AT;
     return {
-        active: !!scene[512],
-        x: scene[513],
-        y: scene[514],
-        health: scene[515],
-        maximum: scene[516],
-        stage: scene[517],
-        wave: scene[522],
-        kills: scene[523],
-        kind: scene[at],
-        mini: !!scene[at + 1],
-        tier: scene[at + 2],
-        damage: scene[at + 3],
-        flash: scene[at + 4],
-        attack: scene[at + 5],
-        attackMs: scene[at + 6],
-        gate: scene[at + 7],
-        entrance: scene[at + 8],
-        practice: !!scene[at + 9],
-        defeated: scene[at + 10],
-        hitsTaken: scene[at + 11],
-        aux: scene.subarray(at + 16, at + 32),
+        active: !!scene[S.BOSS_ACTIVE],
+        x: scene[S.BOSS_X],
+        y: scene[S.BOSS_Y],
+        health: scene[S.BOSS_HEALTH],
+        maximum: scene[S.BOSS_MAXIMUM],
+        stage: scene[S.BOSS_STAGE],
+        wave: scene[S.BOSS_WAVE],
+        kills: scene[S.BOSS_KILLS],
+        kind: scene[at + BOSS.KIND],
+        mini: !!scene[at + BOSS.MINI],
+        tier: scene[at + BOSS.TIER],
+        damage: scene[at + BOSS.DAMAGE],
+        flash: scene[at + BOSS.FLASH_MS],
+        attack: scene[at + BOSS.ATTACK],
+        attackMs: scene[at + BOSS.ATTACK_MS],
+        gate: scene[at + BOSS.GATE],
+        entrance: scene[at + BOSS.ENTRANCE],
+        practice: !!scene[at + BOSS.PRACTICE],
+        defeated: scene[at + BOSS.DEFEATED_MASK],
+        hitsTaken: scene[at + BOSS.HITS_TAKEN],
+        aux: scene.subarray(at + BOSS.AUX, at + BOSS.AUX + BOSS.AUX_COUNT),
     };
 }
 export function bossParts(scene) {

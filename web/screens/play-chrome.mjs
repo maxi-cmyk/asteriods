@@ -1,3 +1,4 @@
+import { S, leaderboardEntries } from '../scene-layout.mjs';
 import { element } from '../dom.mjs';
 import { renderLeaderboard } from './leaderboard.mjs';
 export function renderPlayChrome({
@@ -25,7 +26,7 @@ export function renderPlayChrome({
     fireButton.hidden = !['initials', 'game-over'].includes(state);
     fireButton.textContent =
         state === 'initials'
-            ? scene[30]
+            ? scene[S.SAVE_FAILED]
                 ? 'Retry saving initials'
                 : 'Save initials'
             : 'Play again';
@@ -36,17 +37,11 @@ export function renderPlayChrome({
         navigation.screen === 'pause';
     const leaderboard = element('leaderboard');
     if (!(navigation.screen === 'records' && element('recordsMode').value !== 'solo')) {
-        const entries = Array.from({ length: Math.min(5, scene[31]) }, (_, i) => {
-            const at = 486 + i * 5;
-            return {
-                initials: String.fromCharCode(...scene.subarray(at + 1, at + 4)),
-                score: scene[at],
-            };
-        });
-        renderLeaderboard(leaderboard, entries, { highlight: scene[29] });
+        const entries = leaderboardEntries(scene);
+        renderLeaderboard(leaderboard, entries, { highlight: scene[S.SAVED_RANK] });
     }
     if (state === 'initials')
-        hint.textContent = scene[30]
+        hint.textContent = scene[S.SAVE_FAILED]
             ? 'Could not save initials. Allow browser storage, then choose Retry saving initials.'
             : 'Choose your initials with the direction keys, then Save initials.';
     if (state !== lastState) {

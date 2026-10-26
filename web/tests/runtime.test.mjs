@@ -1,3 +1,4 @@
+import { S } from '../scene-layout.mjs';
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { readFile } from 'node:fs/promises';
@@ -75,12 +76,12 @@ test('rapid primary presses never accumulate heat or a firing delay; holds do no
     }
     g.api.web_scenario(4);
     tick(g, 2, { fire: true });
-    const shot = g.scene()[11];
+    const shot = g.scene()[S.LAST_SHOT_MS];
     tick(g, 10, { fire: true });
-    assert.equal(g.scene()[11], shot);
+    assert.equal(g.scene()[S.LAST_SHOT_MS], shot);
     tick(g, 2);
     tick(g, 2, { fire: true });
-    assert(g.scene()[11] > shot);
+    assert(g.scene()[S.LAST_SHOT_MS] > shot);
 });
 
 test('multishot fires three bullets without heat', async () => {

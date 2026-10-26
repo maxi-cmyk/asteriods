@@ -1,3 +1,4 @@
+import { S } from '../scene-layout.mjs';
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { readFile } from 'node:fs/promises';
@@ -87,26 +88,34 @@ test('sensitivity changes partial movement in WASM, preserving full speed, preci
         const p = pad();
         p.axes[0] = 0.6;
         const c = new Controls({ ...defaults(), movementSensitivity });
-        let x = g.scene()[4];
+        let x = g.scene()[S.SHIP_X];
         g.step(c.sample(p));
-        distances.push(g.scene()[4] - x);
+        distances.push(g.scene()[S.SHIP_X] - x);
         p.axes[0] = 1;
         p.axes[1] = 1;
         let before = [...g.scene().slice(4, 6)];
         g.step(c.sample(p));
-        near(Math.hypot(g.scene()[4] - before[0], g.scene()[5] - before[1]), 3.65625, 0.002);
+        near(
+            Math.hypot(g.scene()[S.SHIP_X] - before[0], g.scene()[S.SHIP_Y] - before[1]),
+            3.65625,
+            0.002,
+        );
         p.buttons[5].pressed = true;
         p.buttons[4].pressed = true;
         before = [...g.scene().slice(4, 6)];
         g.step(c.sample(p));
-        near(Math.hypot(g.scene()[4] - before[0], g.scene()[5] - before[1]), 3.65625 * 0.5, 0.002);
+        near(
+            Math.hypot(g.scene()[S.SHIP_X] - before[0], g.scene()[S.SHIP_Y] - before[1]),
+            3.65625 * 0.5,
+            0.002,
+        );
         p.axes = [0, 0, 0, 0];
         before = [...g.scene().slice(4, 6)];
         g.step(c.sample(p));
         assert.deepEqual([...g.scene().slice(4, 6)], before);
         for (let i = 0; i < 200; i++) g.step({ x: 4095, y: 4095 });
-        assert.equal(g.scene()[4], g.scene()[42]);
-        assert.equal(g.scene()[5], g.scene()[44]);
+        assert.equal(g.scene()[S.SHIP_X], g.scene()[S.SHIP_MAX_X]);
+        assert.equal(g.scene()[S.SHIP_Y], g.scene()[S.SHIP_MAX_Y]);
     }
     assert(distances[1] > distances[0]);
 });
@@ -168,17 +177,17 @@ test('right-stick drift cannot override retained aim or movement deadzone', asyn
         assert.equal(input.aimY, 0);
         assert(input.x > 2048);
         g.step(input);
-        near(g.scene()[45], 1);
-        near(g.scene()[46], 0);
+        near(g.scene()[S.AIM_X], 1);
+        near(g.scene()[S.AIM_Y], 0);
     }
     p.axes[3] = 1;
     g.step(c.sample(p));
     p.axes[3] = 0.34;
     const neutral = c.sample(p);
     assert.equal(neutral.aimY, 0);
-    const before = g.scene()[46];
+    const before = g.scene()[S.AIM_Y];
     g.step(neutral);
-    near(g.scene()[46], before);
+    near(g.scene()[S.AIM_Y], before);
 });
 
 test('independent right-stick deadzone migrates, validates and persists without changing movement settings', () => {

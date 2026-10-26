@@ -1,3 +1,4 @@
+import { S, BOSS, BOSS_AT } from './scene-layout.mjs';
 import { CoopInput } from './coop-input.mjs';
 import { createCoopScreen } from './screens/coop.mjs';
 import { renderDiagnostics } from './screens/diagnostics.mjs';
@@ -297,14 +298,14 @@ function findController() {
 }
 // A first defeat of a mini-boss in a real run earns its Hangar hull.
 function trackBossUnlocks(scene) {
-    const mask = scene[610] | 0;
+    const mask = scene[BOSS_AT + BOSS.DEFEATED_MASK] | 0;
     if (!mask) {
         lastBossMask = 0;
         return;
     }
     const fresh = mask & ~lastBossMask;
     lastBossMask = mask;
-    if (!fresh || scene[609]) return;
+    if (!fresh || scene[BOSS_AT + BOSS.PRACTICE]) return;
     const profiles = runtime.coop ? (coopInput.profileIds ?? [0, 1]) : [profileStore.activeProfile];
     for (const hull of unlocks.hullsFor(fresh))
         if (profiles.map((profile) => unlocks.grant(profile, hull)).some(Boolean)) {
@@ -594,8 +595,8 @@ function advanceSimulation(now, pad) {
                     ? runtime.coopPlayers()[Math.max(0, coopInput.keyboardSlot())].scene
                     : runtime.scene();
             keyboardControls()?.aimAt(
-                ((pointerPosition[0] - rect.left) * WIDTH) / rect.width - scene[4],
-                ((pointerPosition[1] - rect.top) * HEIGHT) / rect.height - scene[5],
+                ((pointerPosition[0] - rect.left) * WIDTH) / rect.width - scene[S.SHIP_X],
+                ((pointerPosition[1] - rect.top) * HEIGHT) / rect.height - scene[S.SHIP_Y],
             );
         }
         if (navigation.screen === 'home') demoEngine?.step();

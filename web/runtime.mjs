@@ -1,3 +1,4 @@
+import { S, BOSS, BOSS_AT, BLOCKS, SCENE_FLOATS, recordAt } from './scene-layout.mjs';
 import { CoopLeaderboard } from './coop-records.mjs';
 import { decodeCoopPlayer } from './coop-scene.mjs';
 import { PersonalBests, clearBrowserRecords } from './records.mjs';
@@ -100,7 +101,7 @@ export async function createRuntime(
         return [0, 1].map((owner) =>
             decodeCoopPlayer(
                 new Float32Array(
-                    new Float32Array(api.memory.buffer, api.web_coop_player(owner), 1408),
+                    new Float32Array(api.memory.buffer, api.web_coop_player(owner), SCENE_FLOATS),
                 ),
             ),
         );
@@ -118,8 +119,8 @@ export async function createRuntime(
             hits: p.stats.hits,
             laserShots: p.stats.laserShots,
             laserKills: p.stats.laserKills,
-            destroyed: p.scene[57],
-            bestMultiplier: p.scene[58],
+            destroyed: p.scene[S.RUN_DESTROYED],
+            bestMultiplier: p.scene[S.RUN_BEST_MULTIPLIER],
             bossParticipation: p.participation,
         }));
         result = {
@@ -127,13 +128,15 @@ export async function createRuntime(
             profile: coop.profiles[0],
             players: summaries,
             score: players[0].teamScore,
-            wave: players[0].scene[19],
-            elapsedMs: players[0].scene[2],
-            bossKills: players[0].scene[523],
-            bossMask: players[0].scene[610],
+            wave: players[0].scene[S.WAVE],
+            elapsedMs: players[0].scene[S.GAME_MS],
+            bossKills: players[0].scene[S.BOSS_KILLS],
+            bossMask: players[0].scene[BOSS_AT + BOSS.DEFEATED_MASK],
         };
         summaries.forEach((p) => records.record(p.profile, run.rules, p));
-        summaries.forEach((p) => bossRecords.record(p.profile, players[0].scene[610]));
+        summaries.forEach((p) =>
+            bossRecords.record(p.profile, players[0].scene[BOSS_AT + BOSS.DEFEATED_MASK]),
+        );
         run = null;
         coopPhase = 'results';
         initialReady = false;
@@ -208,7 +211,7 @@ export async function createRuntime(
             scene = runtime.scene();
         result = {
             ...run,
-            score: scene[16],
+            score: scene[S.SCORE],
             wave: stats.highestWave,
             peakCps: stats.peakCps,
             longestChain: stats.longestChain,
@@ -216,12 +219,12 @@ export async function createRuntime(
             hits: stats.hits,
             laserShots: stats.laserShots,
             laserKills: stats.laserKills,
-            bossKills: scene[523],
-            bossMask: scene[610],
-            bossHits: scene[611],
-            elapsedMs: scene[2],
-            destroyed: scene[57],
-            bestMultiplier: scene[58],
+            bossKills: scene[S.BOSS_KILLS],
+            bossMask: scene[BOSS_AT + BOSS.DEFEATED_MASK],
+            bossHits: scene[BOSS_AT + BOSS.HITS_TAKEN],
+            elapsedMs: scene[S.GAME_MS],
+            destroyed: scene[S.RUN_DESTROYED],
+            bestMultiplier: scene[S.RUN_BEST_MULTIPLIER],
         };
         records.record(run.profile, run.rules, result);
         if (!run.rules.practice) bossRecords.record(run.profile, result.bossMask || 0);
@@ -438,20 +441,22 @@ export async function createRuntime(
             return [...new Uint32Array(api.memory.buffer, api.web_fire_diagnostics(), 4)];
         },
         scene() {
-            if (!coop) return new Float32Array(api.memory.buffer, api.web_scene(), 1408);
+            if (!coop) return new Float32Array(api.memory.buffer, api.web_scene(), SCENE_FLOATS);
             const scene = coopPlayers()[0].scene;
-            scene[16] = scene[556];
-            scene[27] = scene[556];
+            scene[S.SCORE] = scene[S.COOP_TEAM_SCORE];
+            scene[S.FINAL_SCORE] = scene[S.COOP_TEAM_SCORE];
             if (coopPhase) {
-                scene[57] = result.players.reduce((sum, p) => sum + p.destroyed, 0);
-                scene[58] = Math.max(...result.players.map((p) => p.bestMultiplier));
-                scene[0] = coopPhase === 'initials' ? 5 : 6;
-                scene[28] = initialSlot;
-                scene[30] = +teamSaveFailed;
-                scene[31] = teamBoard.entries.length;
-                initials.forEach((c, i) => (scene[32 + i] = c.charCodeAt(0)));
+                scene[S.RUN_DESTROYED] = result.players.reduce((sum, p) => sum + p.destroyed, 0);
+                scene[S.RUN_BEST_MULTIPLIER] = Math.max(
+                    ...result.players.map((p) => p.bestMultiplier),
+                );
+                scene[S.STATE] = coopPhase === 'initials' ? 5 : 6;
+                scene[S.SELECTED_INITIAL] = initialSlot;
+                scene[S.SAVE_FAILED] = +teamSaveFailed;
+                scene[S.SCORE_COUNT] = teamBoard.entries.length;
+                initials.forEach((c, i) => (scene[BLOCKS.INITIALS.at + i] = c.charCodeAt(0)));
                 teamBoard.entries.forEach((e, i) => {
-                    const at = 486 + i * 5;
+                    const at = recordAt(BLOCKS.HIGHSCORES, i);
                     scene[at] = e.score;
                     [...e.initials].forEach((c, j) => (scene[at + 1 + j] = c.charCodeAt(0)));
                 });

@@ -1,3 +1,4 @@
+import { S, BOSS } from '../scene-layout.mjs';
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { readFile } from 'node:fs/promises';
@@ -98,9 +99,9 @@ test('the game plays the right sounds as each fight unfolds', async () => {
         for (let i = 0; i < 150 * 50; i++) {
             bot.step();
             const scene = game.scene();
-            if (old && scene[2] > old[2]) sound.observe(old, scene);
+            if (old && scene[S.GAME_MS] > old[S.GAME_MS]) sound.observe(old, scene);
             old = new Float32Array(scene);
-            if (!scene[512] && i > 100) break;
+            if (!scene[S.BOSS_ACTIVE] && i > 100) break;
         }
         const name = KINDS[kind].name;
         assert.equal(heard.get('sting'), 1, `${name}: entrance sting`);
@@ -163,10 +164,10 @@ test('the field guide documents every attack the engine actually runs, and every
         for (let i = 0; i < 150 * 50; i++) {
             bot.step();
             const scene = game.scene();
-            if (scene[BOSS_AT + 5]) seen.add(scene[BOSS_AT + 5]);
-            if (game.api.web_test_boss_set && scene[512] && i % 400 === 399)
-                game.api.web_test_boss_set(0, Math.floor(scene[515] * 0.6)); // push through the phases
-            if (!scene[512] && i > 100) break;
+            if (scene[BOSS_AT + BOSS.ATTACK]) seen.add(scene[BOSS_AT + BOSS.ATTACK]);
+            if (game.api.web_test_boss_set && scene[S.BOSS_ACTIVE] && i % 400 === 399)
+                game.api.web_test_boss_set(0, Math.floor(scene[S.BOSS_HEALTH] * 0.6)); // push through the phases
+            if (!scene[S.BOSS_ACTIVE] && i > 100) break;
         }
         const documented = new Set(GUIDE.find((g) => g.kind === kind).attacks.map((a) => a.id));
         for (const id of seen)

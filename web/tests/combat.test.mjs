@@ -1,3 +1,4 @@
+import { S } from '../scene-layout.mjs';
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { readFile } from 'node:fs/promises';
@@ -44,7 +45,7 @@ test('right stick aims actual primary shots and retains aim through the deadzone
     near(s[259], 0);
     near(s[260], -18.75);
     g.step({ aimX: 0.1, aimY: 0.1 });
-    near(g.scene()[46], -1);
+    near(g.scene()[S.AIM_Y], -1);
 });
 
 test('multishot spread rotates with aim; left-facing projectiles leave the pool', async () => {
@@ -110,17 +111,17 @@ test('precision halves straight and diagonal speed and stays unchanged after rep
     g.api.web_scenario(13);
     before = new Float32Array(g.scene());
     g.step({ x: 4095, precision: true });
-    near(g.scene()[4] - before[4], 3.65625 * 0.5);
+    near(g.scene()[S.SHIP_X] - before[4], 3.65625 * 0.5);
 });
 
 test('laser winds up for exactly 1500ms, fires once, and cools for exactly 5000ms', async () => {
     const g = await game();
     g.step({ laser: true, aimX: 1 });
-    assert.equal(g.scene()[47], 1);
-    assert.equal(g.scene()[48], 0);
+    assert.equal(g.scene()[S.CHARGING], 1);
+    assert.equal(g.scene()[S.CHARGE_MS], 0);
     ticks(g, 74, { laser: true });
-    assert.equal(g.scene()[48], 1480);
-    assert.equal(g.scene()[50], 0);
+    assert.equal(g.scene()[S.CHARGE_MS], 1480);
+    assert.equal(g.scene()[S.BEAM_MS], 0);
     g.step({ laser: true });
     let s = g.scene();
     assert.equal(s[47], 0);
@@ -128,16 +129,16 @@ test('laser winds up for exactly 1500ms, fires once, and cools for exactly 5000m
     assert.equal(s[50], 400);
     assert.equal(s[9], 0);
     ticks(g, 249, { laser: true });
-    assert.equal(g.scene()[49], 20);
-    assert.equal(g.scene()[47], 0);
+    assert.equal(g.scene()[S.LASER_COOLDOWN_MS], 20);
+    assert.equal(g.scene()[S.CHARGING], 0);
     g.step({ laser: true });
-    assert.equal(g.scene()[49], 0);
-    assert.equal(g.scene()[47], 0);
+    assert.equal(g.scene()[S.LASER_COOLDOWN_MS], 0);
+    assert.equal(g.scene()[S.CHARGING], 0);
     ticks(g, 200, { laser: true });
-    assert.equal(g.scene()[47], 0);
+    assert.equal(g.scene()[S.CHARGING], 0);
     g.step();
     g.step({ laser: true });
-    assert.equal(g.scene()[47], 1);
+    assert.equal(g.scene()[S.CHARGING], 1);
 });
 
 test('early laser release cancels without spending heat or cooldown; primary cannot fire during windup', async () => {
@@ -145,11 +146,11 @@ test('early laser release cancels without spending heat or cooldown; primary can
     g.step({ laser: true });
     ticks(g, 50, { laser: true, fire: true });
     assert.equal(g.snapshot()[9], 0);
-    assert.equal(g.scene()[9], 0);
+    assert.equal(g.scene()[S.RESERVED_9], 0);
     g.step();
-    assert.equal(g.scene()[47], 0);
-    assert.equal(g.scene()[49], 0);
-    assert.equal(g.scene()[9], 0);
+    assert.equal(g.scene()[S.CHARGING], 0);
+    assert.equal(g.scene()[S.LASER_COOLDOWN_MS], 0);
+    assert.equal(g.scene()[S.RESERVED_9], 0);
 });
 
 test('laser destroys every intersected target without fragments', async () => {
@@ -159,7 +160,7 @@ test('laser destroys every intersected target without fragments', async () => {
     assert.equal(g.snapshot()[10], 2);
     ticks(g, 20, { laser: true });
     assert.equal(g.snapshot()[4], 120);
-    assert.equal(g.scene()[50], 0);
+    assert.equal(g.scene()[S.BEAM_MS], 0);
 });
 
 test('laser uses its firing-time aim and freezes its visual ray after discharge', async () => {
@@ -184,29 +185,29 @@ test('pause freezes charge and cooldown; triggers pressed during pause are not q
     g.step({ laser: true });
     ticks(g, 40, { laser: true });
     g.step({ laser: true, pause: true });
-    const progress = g.scene()[48];
+    const progress = g.scene()[S.CHARGE_MS];
     ticks(g, 400, { laser: true, aimY: 1 });
-    assert.equal(g.scene()[48], progress);
-    near(g.scene()[46], 0);
+    assert.equal(g.scene()[S.CHARGE_MS], progress);
+    near(g.scene()[S.AIM_Y], 0);
     g.step({ laser: true, pause: true });
     ticks(g, 35, { laser: true });
-    assert.equal(g.scene()[49], 5000);
+    assert.equal(g.scene()[S.LASER_COOLDOWN_MS], 5000);
     g.step({ laser: true, pause: true });
     ticks(g, 400, { laser: true });
-    assert.equal(g.scene()[49], 5000);
+    assert.equal(g.scene()[S.LASER_COOLDOWN_MS], 5000);
     const menu = await game();
     menu.step({ pause: true });
     ticks(menu, 2, { laser: true });
     menu.step({ pause: true, laser: true });
     menu.step({ laser: true });
-    assert.equal(menu.scene()[47], 0);
+    assert.equal(menu.scene()[S.CHARGING], 0);
 });
 
 test('laser remains available after repeated primary shots', async () => {
     const g = await game(13);
     g.step({ laser: true });
-    assert.equal(g.scene()[47], 1);
-    assert.equal(g.scene()[9], 0);
+    assert.equal(g.scene()[S.CHARGING], 1);
+    assert.equal(g.scene()[S.RESERVED_9], 0);
 });
 
 test('laser destroys large asteroids even with a full rock pool', async () => {
@@ -222,9 +223,9 @@ test('HD primary fire has no heat or delay after repeated presses', async () => 
     for (let i = 0; i < 100; i++) {
         ticks(g, 2, { fire: true });
         ticks(g, 2);
-        assert.equal(g.scene()[9], 0);
-        assert.equal(g.scene()[10], 0);
-        assert.equal(g.scene()[12], 0);
+        assert.equal(g.scene()[S.RESERVED_9], 0);
+        assert.equal(g.scene()[S.RESERVED_10], 0);
+        assert.equal(g.scene()[S.RESERVED_12], 0);
     }
 });
 
@@ -233,30 +234,30 @@ test('shield pickup is stored; L1 alone arms it; a precision chord never spends 
     const p = pad();
     const c = new Controls();
     g.step();
-    assert.equal(g.scene()[55], 1);
-    assert.equal(g.scene()[15], 0);
+    assert.equal(g.scene()[S.SHIELD_STORED], 1);
+    assert.equal(g.scene()[S.SHIELD], 0);
     p.buttons[4].pressed = true;
     g.step(c.sample(p));
-    assert.equal(g.scene()[15], 0);
+    assert.equal(g.scene()[S.SHIELD], 0);
     p.buttons[5].pressed = true;
     g.step(c.sample(p));
-    assert.equal(g.scene()[56], 1);
+    assert.equal(g.scene()[S.PRECISION], 1);
     p.buttons[4].pressed = false;
     g.step(c.sample(p));
-    assert.equal(g.scene()[15], 0);
-    assert.equal(g.scene()[55], 1);
+    assert.equal(g.scene()[S.SHIELD], 0);
+    assert.equal(g.scene()[S.SHIELD_STORED], 1);
     p.buttons[5].pressed = false;
     g.step(c.sample(p));
     p.buttons[4].pressed = true;
     g.step(c.sample(p));
     p.buttons[4].pressed = false;
     g.step(c.sample(p));
-    assert.equal(g.scene()[15], 1);
-    assert.equal(g.scene()[55], 0);
+    assert.equal(g.scene()[S.SHIELD], 1);
+    assert.equal(g.scene()[S.SHIELD_STORED], 0);
     g.api.web_test_overlap();
     g.step();
     assert.equal(g.snapshot()[3], 3);
-    assert.equal(g.scene()[15], 0);
+    assert.equal(g.scene()[S.SHIELD], 0);
 });
 
 test('manual shield protects in the activation frame and cannot create free charges', async () => {
@@ -264,9 +265,9 @@ test('manual shield protects in the activation frame and cannot create free char
     g.step({ shield: true });
     assert.equal(g.state, 'playing');
     assert.equal(g.snapshot()[3], 3);
-    assert.equal(g.scene()[55], 0);
+    assert.equal(g.scene()[S.SHIELD_STORED], 0);
     ticks(g, 10, { shield: true });
-    assert.equal(g.scene()[15], 0);
+    assert.equal(g.scene()[S.SHIELD], 0);
     assert.equal(g.snapshot()[3], 3);
 });
 
@@ -275,16 +276,16 @@ test('death cancels windup and inventory; laser cooldown freezes during death an
     charge(g);
     g.api.web_test_overlap();
     g.step();
-    const cooldown = g.scene()[49];
+    const cooldown = g.scene()[S.LASER_COOLDOWN_MS];
     assert.equal(g.state, 'death');
-    assert.equal(g.scene()[47], 0);
-    assert.equal(g.scene()[50], 0);
+    assert.equal(g.scene()[S.CHARGING], 0);
+    assert.equal(g.scene()[S.BEAM_MS], 0);
     ticks(g, 25);
     assert.equal(g.state, 'playing');
-    assert.equal(g.scene()[49], cooldown);
+    assert.equal(g.scene()[S.LASER_COOLDOWN_MS], cooldown);
     g.api.web_scenario(9);
-    assert.equal(g.scene()[49], 0);
-    near(g.scene()[45], 1);
+    assert.equal(g.scene()[S.LASER_COOLDOWN_MS], 0);
+    near(g.scene()[S.AIM_X], 1);
 });
 
 test('shoulder chords work in either order; keyboard equivalents and clear do not leak shield actions', () => {

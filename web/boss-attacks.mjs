@@ -1,3 +1,4 @@
+import { S } from './scene-layout.mjs';
 // Boss attack gallery: runs every attack in the real engine (boss practice, starting
 // in the attack's phase), photographs it with the real renderer, and plays its sounds.
 // `window.exportSheets(url)` composes the whole guide into PNG sheets and posts them.
@@ -86,8 +87,8 @@ async function photograph(kind, entry) {
         const scene = game.scene();
         // Walk the ship to a readable spot, then hold still.
         game.step({
-            x: scene[4] < 110 ? 2048 + 1500 : 2048,
-            y: scene[5] < 145 ? 2048 + 1200 : scene[5] > 155 ? 2048 - 1200 : 2048,
+            x: scene[S.SHIP_X] < 110 ? 2048 + 1500 : 2048,
+            y: scene[S.SHIP_Y] < 145 ? 2048 + 1200 : scene[S.SHIP_Y] > 155 ? 2048 - 1200 : 2048,
             aimX: 1,
             aimY: 0,
         });

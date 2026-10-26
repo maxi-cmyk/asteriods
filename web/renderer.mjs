@@ -1,3 +1,12 @@
+import {
+    S,
+    BOSS,
+    BLOCKS,
+    recordAt,
+    records,
+    enteredInitials,
+    leaderboardEntries,
+} from './scene-layout.mjs';
 import { Backgrounds } from './backgrounds.mjs';
 import { gradeAtlas } from './art-grade.mjs';
 import { DEFAULT_HULL, hullSprite } from './hangar.mjs';
@@ -17,10 +26,6 @@ const COLOUR = {
     amber: '#efb963',
     hot: '#ed7659',
 };
-const record = (scene, offset, stride, count) =>
-    Array.from({ length: count }, (_, i) =>
-        scene.subarray(offset + i * stride, offset + (i + 1) * stride),
-    );
 
 async function loadImage(url) {
     const image = new Image();
@@ -168,69 +173,79 @@ export class PixelRenderer {
         }
     }
     scenery(scene) {
-        const state = scene[0],
+        const state = scene[S.STATE],
             hold = state === 5 || state === 6;
         const dim = [1, 2, 3, 4, 7].includes(state);
         this.cue = this.backgrounds.draw(this.context, {
-            time: scene[37],
-            wave: scene[19],
+            time: scene[S.VISUAL_MS],
+            wave: scene[S.WAVE],
             hold,
             dim,
             run: state >= 1 && state !== 0,
-            practice: this.calm || !!scene[60] || state === 7,
+            practice: this.calm || !!scene[S.PRACTICE] || state === 7,
             fight:
-                scene[512] && scene[BOSS_AT + 2] >= 3
-                    ? { kind: scene[BOSS_AT], tier: scene[BOSS_AT + 2] }
+                scene[S.BOSS_ACTIVE] && scene[BOSS_AT + BOSS.TIER] >= 3
+                    ? { kind: scene[BOSS_AT + BOSS.KIND], tier: scene[BOSS_AT + BOSS.TIER] }
                     : null,
         });
     }
     observe(scene) {
         const old = this.previous;
-        if (old && old[49] > 0 && scene[49] === 0 && scene[0] === 2)
-            this.readyUntil = scene[37] + 1100;
-        if (old && scene[2] < old[2]) this.readyUntil = 0;
-        if (old && old[2] <= scene[2] && [2, 4].includes(scene[0])) {
-            for (let i = 0; i < 24; i++) {
-                const at = 64 + i * 8;
+        if (
+            old &&
+            old[S.LASER_COOLDOWN_MS] > 0 &&
+            scene[S.LASER_COOLDOWN_MS] === 0 &&
+            scene[S.STATE] === 2
+        )
+            this.readyUntil = scene[S.VISUAL_MS] + 1100;
+        if (old && scene[S.GAME_MS] < old[S.GAME_MS]) this.readyUntil = 0;
+        if (old && old[S.GAME_MS] <= scene[S.GAME_MS] && [2, 4].includes(scene[S.STATE])) {
+            for (let i = 0; i < BLOCKS.ROCKS.count; i++) {
+                const at = recordAt(BLOCKS.ROCKS, i);
                 if (old[at] && (!scene[at] || scene[at + 5] !== old[at + 5]) && old[at + 1] > -16) {
                     this.effects.push({
                         x: old[at + 1],
                         y: old[at + 2],
-                        time: scene[37],
+                        time: scene[S.VISUAL_MS],
                         size: old[at + 5],
                     });
                 }
             }
-            if (old[6] && !scene[6])
-                this.effects.push({ x: scene[4], y: scene[5], time: scene[37], size: 3 });
-            if (old[512] && !scene[512]) {
+            if (old[S.SHIP_ALIVE] && !scene[S.SHIP_ALIVE])
+                this.effects.push({
+                    x: scene[S.SHIP_X],
+                    y: scene[S.SHIP_Y],
+                    time: scene[S.VISUAL_MS],
+                    size: 3,
+                });
+            if (old[S.BOSS_ACTIVE] && !scene[S.BOSS_ACTIVE]) {
                 const kind = old[BOSS_AT];
                 this.finale = {
-                    x: old[513],
-                    y: old[514],
-                    time: scene[37],
+                    x: old[S.BOSS_X],
+                    y: old[S.BOSS_Y],
+                    time: scene[S.VISUAL_MS],
                     kind,
-                    mini: !!old[BOSS_AT + 1],
+                    mini: !!old[BOSS_AT + BOSS.MINI],
                     snap: new Float32Array(old),
                 };
             }
         }
-        if (old && scene[2] < old[2]) {
+        if (old && scene[S.GAME_MS] < old[S.GAME_MS]) {
             this.effects = [];
             this.finale = null;
         }
         this.effects = this.effects
-            .filter((effect) => scene[37] - effect.time < SMALL_BLAST_MS)
+            .filter((effect) => scene[S.VISUAL_MS] - effect.time < SMALL_BLAST_MS)
             .slice(-20);
-        if (this.finale && scene[37] - this.finale.time >= deathMs(this.finale.kind))
+        if (this.finale && scene[S.VISUAL_MS] - this.finale.time >= deathMs(this.finale.kind))
             this.finale = null;
         this.previous = new Float32Array(scene);
     }
     world(scene) {
         const ctx = this.context;
-        const time = scene[37];
+        const time = scene[S.VISUAL_MS];
         this.bosses.draw(ctx, scene, time);
-        for (const [i, rock] of record(scene, 64, 8, 24).entries()) {
+        for (const [i, rock] of records(scene, BLOCKS.ROCKS).entries()) {
             if (!rock[0]) continue;
             const size = rock[5],
                 diameter = [32, 20, 12][size];
@@ -241,43 +256,43 @@ export class PixelRenderer {
                 rock[2] - diameter / 2,
             );
         }
-        if (scene[22]) {
-            const y = Math.round(scene[21]);
-            ctx.fillStyle = scene[63] ? COLOUR.hot : COLOUR.amber;
-            if (scene[63])
+        if (scene[S.SPAWN_WARNING]) {
+            const y = Math.round(scene[S.SPAWN_Y]);
+            ctx.fillStyle = scene[S.PENDING_FAST] ? COLOUR.hot : COLOUR.amber;
+            if (scene[S.PENDING_FAST])
                 this.text('FAST', WIDTH - 8, Math.max(0, y - 14), COLOUR.hot, 1, 'right');
             for (let i = 0; i < 4; i++) ctx.fillRect(WIDTH - 2 - i, y - i, 1, i * 2 + 1);
         }
-        if (scene[478]) {
+        if (scene[S.PICKUP_ACTIVE]) {
             glow(
                 ctx,
-                scene[479],
-                scene[480],
+                scene[S.PICKUP_X],
+                scene[S.PICKUP_Y],
                 11,
-                scene[481] === 0 ? '239,185,99' : '110,240,255',
+                scene[S.PICKUP_KIND] === 0 ? '239,185,99' : '110,240,255',
                 0.45 + 0.15 * Math.sin(time / 180),
             );
-            if (scene[481] === 2) {
+            if (scene[S.PICKUP_KIND] === 2) {
                 this.box(
-                    Math.round(scene[479]) - 8,
-                    Math.round(scene[480]) - 7,
+                    Math.round(scene[S.PICKUP_X]) - 8,
+                    Math.round(scene[S.PICKUP_Y]) - 7,
                     17,
                     15,
                     COLOUR.cyan,
                 );
-                this.text('2X', scene[479], scene[480] - 3, COLOUR.cyan, 1, 'center');
+                this.text('2X', scene[S.PICKUP_X], scene[S.PICKUP_Y] - 3, COLOUR.cyan, 1, 'center');
             } else
                 this.sprite(
-                    scene[481] === 0 ? 'multishot' : 'shield',
-                    scene[479] - 6,
-                    scene[480] - 6,
+                    scene[S.PICKUP_KIND] === 0 ? 'multishot' : 'shield',
+                    scene[S.PICKUP_X] - 6,
+                    scene[S.PICKUP_Y] - 6,
                 );
         }
-        if (scene[24]) {
-            const radius = 8 + Math.floor((400 - scene[24]) / 80);
+        if (scene[S.COLLECT_CUE_MS]) {
+            const radius = 8 + Math.floor((400 - scene[S.COLLECT_CUE_MS]) / 80);
             this.box(
-                Math.round(scene[25]) - radius,
-                Math.round(scene[26]) - radius,
+                Math.round(scene[S.COLLECT_X]) - radius,
+                Math.round(scene[S.COLLECT_Y]) - radius,
                 radius * 2 + 1,
                 radius * 2 + 1,
                 COLOUR.cyan,
@@ -286,7 +301,7 @@ export class PixelRenderer {
         for (const [owner, playerScene] of (
             this.coopPlayers?.map((p) => p.scene) || [scene]
         ).entries()) {
-            for (const bullet of record(playerScene, 256, 6, 12)) {
+            for (const bullet of records(playerScene, BLOCKS.BULLETS)) {
                 if (!bullet[0]) continue;
                 const length = Math.hypot(bullet[3], bullet[4]) || 1;
                 const dx = bullet[3] / length,
@@ -297,7 +312,7 @@ export class PixelRenderer {
                             ? COLOUR.ink
                             : this.coopPlayers
                               ? ['#70d9ed', '#efb963'][owner]
-                              : playerScene[14] > 0
+                              : playerScene[S.MULTISHOT_MS] > 0
                                 ? COLOUR.cyan
                                 : COLOUR.amber;
                     ctx.fillRect(
@@ -309,19 +324,22 @@ export class PixelRenderer {
                 }
                 const tint = this.coopPlayers
                     ? ['112,217,237', '239,185,99'][owner]
-                    : playerScene[14] > 0
+                    : playerScene[S.MULTISHOT_MS] > 0
                       ? '112,217,237'
                       : '239,185,99';
                 glow(ctx, bullet[1], bullet[2], 6, tint, 0.55);
                 // A bullet still inside the muzzle zone gets a brief flash.
                 if (
-                    playerScene[6] &&
-                    Math.hypot(bullet[1] - playerScene[4], bullet[2] - playerScene[5]) < 22
+                    playerScene[S.SHIP_ALIVE] &&
+                    Math.hypot(
+                        bullet[1] - playerScene[S.SHIP_X],
+                        bullet[2] - playerScene[S.SHIP_Y],
+                    ) < 22
                 )
                     glow(ctx, bullet[1], bullet[2], 9, '255,222,160', 0.8);
             }
         }
-        for (const particle of record(scene, 328, 5, 30)) {
+        for (const particle of records(scene, BLOCKS.PARTICLES)) {
             if (!particle[0]) continue;
             ctx.fillStyle = particle[3] > 10 ? '#d8b890' : '#8a5a58';
             ctx.fillRect(Math.round(particle[1]), Math.round(particle[2]), 1, 1);
@@ -338,7 +356,7 @@ export class PixelRenderer {
             this.playerMarkers();
         } else {
             this.laser(scene);
-            if (scene[6]) this.ship(scene);
+            if (scene[S.SHIP_ALIVE]) this.ship(scene);
         }
         for (const effect of this.effects) smallBlast(ctx, effect, time);
         if (this.finale) {
@@ -359,9 +377,9 @@ export class PixelRenderer {
             }
             this.finaleBanner(time);
         }
-        if (!scene[60] && scene[23] && scene[0] === 2)
-            this.text(`WAVE ${scene[19]}`, WIDTH / 2, 14, COLOUR.muted, 1, 'center');
-        if (this.cue && !scene[60] && scene[0] !== 3) {
+        if (!scene[S.PRACTICE] && scene[S.WAVE_CUE] && scene[S.STATE] === 2)
+            this.text(`WAVE ${scene[S.WAVE]}`, WIDTH / 2, 14, COLOUR.muted, 1, 'center');
+        if (this.cue && !scene[S.PRACTICE] && scene[S.STATE] !== 3) {
             this.context.globalAlpha = this.cue.alpha;
             this.text(this.cue.name.toUpperCase(), WIDTH / 2, 44, COLOUR.cyan, 1, 'center');
             this.context.globalAlpha = 1;
@@ -390,15 +408,15 @@ export class PixelRenderer {
         }
     }
     laser(scene) {
-        if (scene[47] && scene[6]) {
-            const progress = Math.min(1, scene[48] / 1500);
-            const x = scene[4] + scene[45] * 13,
-                y = scene[5] + scene[46] * 13;
+        if (scene[S.CHARGING] && scene[S.SHIP_ALIVE]) {
+            const progress = Math.min(1, scene[S.CHARGE_MS] / 1500);
+            const x = scene[S.SHIP_X] + scene[S.AIM_X] * 13,
+                y = scene[S.SHIP_Y] + scene[S.AIM_Y] * 13;
             this.ray(
                 x,
                 y,
-                scene[45],
-                scene[46],
+                scene[S.AIM_X],
+                scene[S.AIM_Y],
                 560,
                 progress > 0.8 ? this.playerColour || COLOUR.cyan : '#28536b',
                 1,
@@ -407,28 +425,36 @@ export class PixelRenderer {
             this.box(Math.round(x) - 2, Math.round(y) - 2, 5, 5, this.playerColour || COLOUR.cyan);
             this.context.fillStyle = this.playerColour || COLOUR.cyan;
             this.context.fillRect(
-                Math.round(scene[4]) - 12,
-                Math.min(HEIGHT - 3, Math.round(scene[5]) + 24),
+                Math.round(scene[S.SHIP_X]) - 12,
+                Math.min(HEIGHT - 3, Math.round(scene[S.SHIP_Y]) + 24),
                 Math.ceil(24 * progress),
                 2,
             );
         }
-        if (scene[50]) {
-            this.ray(scene[51], scene[52], scene[53], scene[54], 560, '#205d78', 7);
+        if (scene[S.BEAM_MS]) {
             this.ray(
-                scene[51],
-                scene[52],
-                scene[53],
-                scene[54],
+                scene[S.BEAM_X],
+                scene[S.BEAM_Y],
+                scene[S.BEAM_DX],
+                scene[S.BEAM_DY],
+                560,
+                '#205d78',
+                7,
+            );
+            this.ray(
+                scene[S.BEAM_X],
+                scene[S.BEAM_Y],
+                scene[S.BEAM_DX],
+                scene[S.BEAM_DY],
                 560,
                 this.playerColour || COLOUR.cyan,
                 4,
             );
             this.ray(
-                scene[51],
-                scene[52],
-                scene[53],
-                scene[54],
+                scene[S.BEAM_X],
+                scene[S.BEAM_Y],
+                scene[S.BEAM_DX],
+                scene[S.BEAM_DY],
                 560,
                 COLOUR.ink,
                 2,
@@ -438,13 +464,13 @@ export class PixelRenderer {
     }
     ship(scene) {
         const ctx = this.context,
-            x = Math.round(scene[4]),
-            y = Math.round(scene[5]);
-        const time = scene[37],
-            dx = scene[45] || 0,
-            dy = scene[46] || 0;
+            x = Math.round(scene[S.SHIP_X]),
+            y = Math.round(scene[S.SHIP_Y]);
+        const time = scene[S.VISUAL_MS],
+            dx = scene[S.AIM_X] || 0,
+            dy = scene[S.AIM_Y] || 0;
         const direction = ((Math.round((Math.atan2(dy, dx) * 8) / Math.PI) % 16) + 16) % 16;
-        if (scene[15]) {
+        if (scene[S.SHIELD]) {
             ctx.fillStyle = this.playerColour || COLOUR.cyan;
             for (let step = 0; step < 48; step++) {
                 if (step % (this.playerOwner === 1 ? 6 : 12) === 0) continue;
@@ -457,7 +483,8 @@ export class PixelRenderer {
                 );
             }
         }
-        const visible = !scene[8] || Math.floor(scene[8] / 100) % 2 !== 0;
+        const visible =
+            !scene[S.INVINCIBLE_MS] || Math.floor(scene[S.INVINCIBLE_MS] / 100) % 2 !== 0;
         if (visible) {
             const flame = 3 + (Math.floor(time / 80) % 3);
             glow(ctx, x - dx * 15, y - dy * 15, 13, '255,130,60', 0.6);
@@ -467,17 +494,17 @@ export class PixelRenderer {
             this.ray(x - dx * 11, y - dy * 11, -dx, -dy, flame + 2, COLOUR.amber, 1);
             this.sprite(hullSprite(this.hulls[this.playerOwner ?? 0], direction), x - 16, y - 16);
         }
-        if (scene[14]) {
+        if (scene[S.MULTISHOT_MS]) {
             ctx.fillStyle = this.playerColour || COLOUR.cyan;
-            ctx.fillRect(x - 9, y + 20, Math.ceil((18 * scene[14]) / 6000), 1);
+            ctx.fillRect(x - 9, y + 20, Math.ceil((18 * scene[S.MULTISHOT_MS]) / 6000), 1);
         }
         // Ability state lives in the HUD strip; only a brief flash marks the laser coming back.
-        if (!this.coopPlayers && this.readyUntil > scene[37])
+        if (!this.coopPlayers && this.readyUntil > scene[S.VISUAL_MS])
             this.text('LASER READY', WIDTH / 2, 28, this.playerColour || COLOUR.cyan, 1, 'center');
         // A small pixel reticle shows the last deliberate aim direction.
         const targetX = Math.round(x + dx * 38),
             targetY = Math.round(y + dy * 38);
-        ctx.fillStyle = scene[56] ? this.playerColour || COLOUR.cyan : COLOUR.muted;
+        ctx.fillStyle = scene[S.PRECISION] ? this.playerColour || COLOUR.cyan : COLOUR.muted;
         ctx.fillRect(targetX - 3, targetY, 2, 1);
         ctx.fillRect(targetX + 2, targetY, 2, 1);
         ctx.fillRect(targetX, targetY - 3, 1, 2);
@@ -513,22 +540,21 @@ export class PixelRenderer {
         ctx.fillRect(78, 77, 324, 112);
         this.text(title, WIDTH / 2, 99, COLOUR.ink, 2, 'center');
         this.text(subtitle, WIDTH / 2, 137, COLOUR.muted, 1, 'center');
-        if (scene[0] === 3)
+        if (scene[S.STATE] === 3)
             this.text('OPTIONS / ESC TO RESUME', WIDTH / 2, 159, COLOUR.cyan, 1, 'center');
     }
     menu(scene) {
         this.sprite('ship', WIDTH / 2 - 12, 53, 1);
         this.text('ASTEROIDS', WIDTH / 2, 91, COLOUR.ink, 3, 'center');
         this.text('PRESS FIRE TO START', WIDTH / 2, 139, COLOUR.cyan, 1, 'center');
-        const leader = scene[31]
-            ? `${String.fromCharCode(...scene.subarray(487, 490))}  ${scene[486]}`
-            : '---  0';
+        const [top] = leaderboardEntries(scene);
+        const leader = top ? `${top.initials}  ${top.score}` : '---  0';
         this.text(`BEST  ${leader}`, WIDTH / 2, 169, COLOUR.muted, 1, 'center');
         this.text('MOVE  /  SHOOT  /  SURVIVE', WIDTH / 2, 223, COLOUR.muted, 1, 'center');
     }
     summary(scene) {
         this.text(
-            scene[0] === 5 ? 'TOP FIVE!' : 'GAME OVER',
+            scene[S.STATE] === 5 ? 'TOP FIVE!' : 'GAME OVER',
             WIDTH / 2,
             29,
             COLOUR.ink,
@@ -536,7 +562,7 @@ export class PixelRenderer {
             'center',
         );
         this.text(
-            `SCORE ${scene[27]}${scene[27] > scene[59] ? ' / NEW BEST' : ''}`,
+            `SCORE ${scene[S.FINAL_SCORE]}${scene[S.FINAL_SCORE] > scene[S.RUN_PRIOR_BEST] ? ' / NEW BEST' : ''}`,
             WIDTH / 2,
             54,
             COLOUR.amber,
@@ -544,17 +570,17 @@ export class PixelRenderer {
             'center',
         );
         this.text(
-            `WAVE ${scene[19]} / ${Math.floor(scene[2] / 1000)}s / ${scene[57]} KILLS / x${scene[58]}`,
+            `WAVE ${scene[S.WAVE]} / ${Math.floor(scene[S.GAME_MS] / 1000)}s / ${scene[S.RUN_DESTROYED]} KILLS / x${scene[S.RUN_BEST_MULTIPLIER]}`,
             WIDTH / 2,
             70,
             COLOUR.muted,
             1,
             'center',
         );
-        if (scene[0] === 5) {
-            const letters = String.fromCharCode(...scene.subarray(32, 35));
+        if (scene[S.STATE] === 5) {
+            const letters = enteredInitials(scene);
             this.text(letters, WIDTH / 2, 96, COLOUR.ink, 3, 'center');
-            const x = WIDTH / 2 - 27 + scene[28] * 18;
+            const x = WIDTH / 2 - 27 + scene[S.SELECTED_INITIAL] * 18;
             this.context.fillStyle = COLOUR.cyan;
             this.context.fillRect(x, 122, 15, 2);
             this.text(
@@ -566,26 +592,23 @@ export class PixelRenderer {
                 'center',
             );
             this.text(
-                scene[30] ? 'SAVE FAILED - PRESS FIRE TO RETRY' : 'PRESS FIRE TO SAVE',
+                scene[S.SAVE_FAILED] ? 'SAVE FAILED - PRESS FIRE TO RETRY' : 'PRESS FIRE TO SAVE',
                 WIDTH / 2,
                 181,
-                scene[30] ? COLOUR.hot : COLOUR.cyan,
+                scene[S.SAVE_FAILED] ? COLOUR.hot : COLOUR.cyan,
                 1,
                 'center',
             );
         } else {
+            const board = leaderboardEntries(scene);
             for (let i = 0; i < 5; i++) {
-                const offset = 486 + i * 5;
-                const initials =
-                    i < scene[31]
-                        ? String.fromCharCode(...scene.subarray(offset + 1, offset + 4))
-                        : '---';
-                const score = i < scene[31] ? String(scene[offset]).padStart(6, ' ') : '     -';
+                const initials = board[i] ? board[i].initials : '---';
+                const score = board[i] ? String(board[i].score).padStart(6, ' ') : '     -';
                 this.text(
                     `${i + 1}  ${initials}   ${score}`,
                     WIDTH / 2,
                     92 + i * 20,
-                    i === scene[29] ? COLOUR.cyan : COLOUR.muted,
+                    i === scene[S.SAVED_RANK] ? COLOUR.cyan : COLOUR.muted,
                     1,
                     'center',
                 );
@@ -603,27 +626,29 @@ export class PixelRenderer {
     render(scene, players = null) {
         this.coopPlayers = players;
         this.observe(scene);
-        this.bossArt.prepare(scene[19]);
+        this.bossArt.prepare(scene[S.WAVE]);
         this.scenery(scene);
-        if (scene[0] === 0) this.menu(scene);
-        else if (scene[0] === 5 || scene[0] === 6) this.summary(scene);
+        if (scene[S.STATE] === 0) this.menu(scene);
+        else if (scene[S.STATE] === 5 || scene[S.STATE] === 6) this.summary(scene);
         else {
-            if (scene[0] !== 1) {
+            if (scene[S.STATE] !== 1) {
                 this.context.save();
-                const offset = scene[61] > 31 ? scene[61] - 64 : scene[61];
-                if (scene[0] !== 3) this.context.translate(0, Math.round(offset * this.shake * 2));
-                if (scene[0] !== 3 && this.finale && !this.reduced) {
-                    const kick = bossShake(scene[37], this.finale) * 5 * this.shake * 2;
+                const offset =
+                    scene[S.SHAKE_OFFSET] > 31 ? scene[S.SHAKE_OFFSET] - 64 : scene[S.SHAKE_OFFSET];
+                if (scene[S.STATE] !== 3)
+                    this.context.translate(0, Math.round(offset * this.shake * 2));
+                if (scene[S.STATE] !== 3 && this.finale && !this.reduced) {
+                    const kick = bossShake(scene[S.VISUAL_MS], this.finale) * 5 * this.shake * 2;
                     this.context.translate(
-                        Math.round(Math.sin(scene[37] * 0.09) * kick),
-                        Math.round(Math.cos(scene[37] * 0.11) * kick),
+                        Math.round(Math.sin(scene[S.VISUAL_MS] * 0.09) * kick),
+                        Math.round(Math.cos(scene[S.VISUAL_MS] * 0.11) * kick),
                     );
                 }
                 this.world(scene);
                 this.context.restore();
             }
-            if (scene[0] === 1) {
-                const count = 3 - Math.floor(scene[3] / 500);
+            if (scene[S.STATE] === 1) {
+                const count = 3 - Math.floor(scene[S.STATE_AGE_MS] / 500);
                 this.text(count > 0 ? count : 'GO', WIDTH / 2, 111, COLOUR.ink, 4, 'center');
             }
             // Pause is drawn by the DOM pause menu over a scrim; the canvas stays clean.

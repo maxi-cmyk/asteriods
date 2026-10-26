@@ -1,3 +1,4 @@
+import { S, BLOCKS } from '../scene-layout.mjs';
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { readFile } from 'node:fs/promises';
@@ -54,9 +55,9 @@ test('HD entity data matches the planned sprite sizes and projectile origin', as
     ticks(g, 1, { fire: true });
     let scene = g.scene();
     assert.equal(g.snapshot()[9], 3);
-    assert.equal(scene[9], 0);
-    assert.equal(scene[256 + 1], scene[4] + 13 + 18.75);
-    assert(scene[262 + 2] < scene[5] && scene[268 + 2] > scene[5]);
+    assert.equal(scene[S.RESERVED_9], 0);
+    assert.equal(scene[256 + 1], scene[S.SHIP_X] + 13 + 18.75);
+    assert(scene[262 + 2] < scene[S.SHIP_Y] && scene[268 + 2] > scene[S.SHIP_Y]);
     ticks(g, 10);
     assert(g.snapshot()[4] >= 20);
 });
@@ -76,7 +77,7 @@ test('spawn warning and scaled asteroid speed keep the same gameplay timing', as
     assert(Math.abs(s[70] + 1.275) < 0.0001);
     const before = s[65];
     ticks(g);
-    assert(Math.abs(before - g.scene()[65] - 1.275) < 0.0001);
+    assert(Math.abs(before - g.scene()[BLOCKS.ROCKS.at + 1] - 1.275) < 0.0001);
 });
 
 test('pause freezes exported world, pickup, effect, and animation time', async () => {
@@ -91,7 +92,7 @@ test('pause freezes exported world, pickup, effect, and animation time', async (
         assert.equal(after[index], before[index]);
     g.step({ pause: true });
     g.step();
-    assert(g.scene()[37] > before[37]);
+    assert(g.scene()[S.VISUAL_MS] > before[37]);
 });
 
 test('HD scores use a separate key without touching the original leaderboard', async () => {

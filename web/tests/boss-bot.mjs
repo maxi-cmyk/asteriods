@@ -1,3 +1,4 @@
+import { S } from '../scene-layout.mjs';
 // A scripted pilot for the boss tests: it reads the same scene the renderer reads,
 // picks the sub-target a person would, keeps clear of every shot, lethal hazard and
 // body, and fires at a human rate. It proves a fight is beatable and measures how
@@ -74,7 +75,7 @@ export class BossBot {
     // The point a player would shoot at, or null to hold fire.
     target(scene, boss, parts) {
         const { x, y, aux } = boss,
-            ship = { x: scene[4], y: scene[5] };
+            ship = { x: scene[S.SHIP_X], y: scene[S.SHIP_Y] };
         const nearest = (list) =>
             list.sort(
                 (a, b) =>
@@ -168,8 +169,8 @@ export class BossBot {
             shots = bossShots(scene),
             hazards = bossHazards(scene),
             body = this.body();
-        const sx = scene[4],
-            sy = scene[5];
+        const sx = scene[S.SHIP_X],
+            sy = scene[S.SHIP_Y];
         const tgt = this.target(scene, boss, parts);
         // Prefer a standing spot near x=110 and the target's height, away from the body.
         const home = { x: 110, y: tgt ? Math.max(40, Math.min(230, tgt.y)) : 135 };

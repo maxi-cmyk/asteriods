@@ -1,26 +1,28 @@
-// Co-op scene ABI v1 wraps legacy read-only scenes (1408 floats). Keep decoding
+import { S, BLOCKS, SCENE_FLOATS } from './scene-layout.mjs';
+// Co-op scene ABI v1 wraps legacy read-only scenes (SCENE_FLOATS floats). Keep decoding
 // here so UI controllers do not acquire another set of magic offsets.
 export function decodeCoopPlayer(scene) {
-    if (scene.length !== 1408 || scene[552] !== 1) throw Error('Unsupported co-op scene');
+    if (scene.length !== SCENE_FLOATS || scene[S.COOP_VERSION] !== 1)
+        throw Error('Unsupported co-op scene');
     return {
         scene,
-        id: scene[553],
-        x: scene[4],
-        y: scene[5],
-        alive: !!scene[6],
-        lives: scene[7],
-        score: scene[16],
-        multiplier: scene[17],
-        chainMs: scene[18],
-        multishotMs: scene[14],
-        shield: scene[15] ? 'ARMED' : scene[55] ? 'STORED' : 'EMPTY',
-        laserMs: scene[49],
-        charging: !!scene[47],
-        chargeMs: scene[48],
-        respawnMs: Math.max(0, scene[554] - scene[2]),
-        participation: scene[555],
-        teamScore: scene[556],
-        friendlyFire: !!scene[557],
+        id: scene[S.COOP_ID],
+        x: scene[S.SHIP_X],
+        y: scene[S.SHIP_Y],
+        alive: !!scene[S.SHIP_ALIVE],
+        lives: scene[S.LIVES],
+        score: scene[S.SCORE],
+        multiplier: scene[S.MULTIPLIER],
+        chainMs: scene[S.CHAIN_MS],
+        multishotMs: scene[S.MULTISHOT_MS],
+        shield: scene[S.SHIELD] ? 'ARMED' : scene[S.SHIELD_STORED] ? 'STORED' : 'EMPTY',
+        laserMs: scene[S.LASER_COOLDOWN_MS],
+        charging: !!scene[S.CHARGING],
+        chargeMs: scene[S.CHARGE_MS],
+        respawnMs: Math.max(0, scene[S.COOP_RESPAWN_AT] - scene[S.GAME_MS]),
+        participation: scene[S.COOP_PARTICIPATION],
+        teamScore: scene[S.COOP_TEAM_SCORE],
+        friendlyFire: !!scene[S.COOP_FRIENDLY_FIRE],
         stats: Object.fromEntries(
             [
                 'cps',
@@ -34,7 +36,7 @@ export function decodeCoopPlayer(scene) {
                 'laserKills',
                 'presses',
                 'pending',
-            ].map((k, i) => [k, scene[560 + i]]),
+            ].map((k, i) => [k, scene[BLOCKS.COOP_STATS.at + i]]),
         ),
     };
 }

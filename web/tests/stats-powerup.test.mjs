@@ -1,3 +1,4 @@
+import { S } from '../scene-layout.mjs';
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { readFile } from 'node:fs/promises';
@@ -179,11 +180,11 @@ test('laser stats are separate; longest chain keeps growing beyond the multiplie
     assert.equal(g.stats().laserShots, 1);
     assert.equal(g.stats().laserKills, 24);
     assert.equal(g.stats().longestChain, 24);
-    assert.equal(g.scene()[17], 5);
+    assert.equal(g.scene()[S.MULTIPLIER], 5);
     assert.equal(g.stats().hits, 0);
     assert.equal(g.stats().spawned, 0);
     ticks(g, 160);
-    assert.equal(g.scene()[17], 1);
+    assert.equal(g.scene()[S.MULTIPLIER], 1);
     assert.equal(g.stats().longestChain, 24);
 });
 
@@ -194,7 +195,7 @@ test('laser windup suppresses both primary events without changing laser behavio
     assert.equal(g.stats().spawned, 1);
     assert.equal(g.stats().pending, 0);
     assert.equal(g.fireDiagnostics()[3], 1);
-    assert.equal(g.scene()[47], 1);
+    assert.equal(g.scene()[S.CHARGING], 1);
 });
 
 test('records isolate profiles, modes, friendly fire, modifiers and practice and reload safely', () => {

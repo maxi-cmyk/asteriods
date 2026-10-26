@@ -1,3 +1,4 @@
+import { S } from '../scene-layout.mjs';
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { readFile } from 'node:fs/promises';
@@ -149,7 +150,7 @@ test('the entrance is harmless for 1.4 s and then the body hurts', async () => {
     set(game, 4, 135);
     set(game, 5, 0);
     ticks(game, 60);
-    assert.equal(game.scene()[7], 3);
+    assert.equal(game.scene()[S.LIVES], 3);
     assert.equal(stats(game).entranceHits, 0);
     assert(bossState(game.scene()).entrance < 1);
     // Shots pass through an unfinished entrance without scratching it.
@@ -179,13 +180,13 @@ test('the laser is one 8-point hit on an open boss and cannot repeat on a hold',
     set(game, 4, 135);
     for (let i = 0; i < 76; i++) {
         const scene = game.scene(),
-            dx = 366 - scene[4],
-            dy = 135 - scene[5],
+            dx = 366 - scene[S.SHIP_X],
+            dy = 135 - scene[S.SHIP_Y],
             length = Math.hypot(dx, dy);
         game.step({ y: 0, laser: true, aimX: dx / length, aimY: dy / length });
     }
     assert.equal(game.state, 'playing');
-    assert.equal(game.scene()[7], 3);
+    assert.equal(game.scene()[S.LIVES], 3);
     assert.equal(bossState(game.scene()).health, 54 - 8 * K[0]);
     assert.equal(game.stats().laserShots, 1);
     ticks(game, 15, { laser: true, aimX: 1 });
@@ -205,12 +206,12 @@ test('dying never resets the boss; threats are cleared and the ship returns prot
     assert.equal(game.state, 'death');
     assert.equal(bossShots(game.scene()).length, 0);
     assert(bossHazards(game.scene()).every((h) => h.kind > HAZARD.arm));
-    until(game, (_, scene) => scene[0] === 2 && scene[6] === 1, 400);
+    until(game, (_, scene) => scene[S.STATE] === 2 && scene[S.SHIP_ALIVE] === 1, 400);
     const back = bossState(game.scene());
     assert(back.active);
     assert.equal(back.health, wounded);
     assert.equal(back.wave, wave);
-    assert(game.scene()[8] > 0, 'respawn protection');
+    assert(game.scene()[S.INVINCIBLE_MS] > 0, 'respawn protection');
 });
 
 test('a flawless fight pays 50% more, losing a life pays the base', async () => {
@@ -224,22 +225,22 @@ test('a flawless fight pays 50% more, losing a life pays the base', async () => 
             ticks(game, 3);
             until(game, (_, s) => s[0] === 2 && s[6] === 1, 400);
         }
-        const before = game.scene()[16];
+        const before = game.scene()[S.SCORE];
         until(game, (state) => state.attack === 0 && state.gate > 0.9, 800);
         const s = bossState(game.scene());
         shoot(game, { x: s.x, y: s.y }, 3);
         ticks(game, 40);
         assert.equal(bossState(game.scene()).active, false);
-        assert.equal(game.scene()[523], 1);
-        assert.equal(game.scene()[16] - before, flawless ? 2625 : 1750);
-        assert.equal(game.scene()[57], 0, 'boss kills never count as asteroids');
-        assert.equal(game.scene()[19], 5);
+        assert.equal(game.scene()[S.BOSS_KILLS], 1);
+        assert.equal(game.scene()[S.SCORE] - before, flawless ? 2625 : 1750);
+        assert.equal(game.scene()[S.RUN_DESTROYED], 0, 'boss kills never count as asteroids');
+        assert.equal(game.scene()[S.WAVE], 5);
         ticks(game, 20);
-        assert.equal(game.scene()[19], 5);
+        assert.equal(game.scene()[S.WAVE], 5);
         // The overlap rock the unflawless run spawned sits still forever, so only check clean runs.
         if (flawless) {
             ticks(game, 700);
-            assert(game.scene()[19] >= 6);
+            assert(game.scene()[S.WAVE] >= 6);
         }
     }
 });
@@ -248,7 +249,7 @@ test('a mini-boss shares its wave with half the rocks and holds the wave open', 
     const game = await waveGame(3);
     assert.equal(bossState(game.scene()).mini, true);
     ticks(game, 50 * 30); // rocks all gone, wave must wait
-    assert.equal(game.scene()[19], 3);
+    assert.equal(game.scene()[S.WAVE], 3);
     assert(bossState(game.scene()).active);
     const hp = 1;
     set(game, 1, hp);
@@ -258,7 +259,7 @@ test('a mini-boss shares its wave with half the rocks and holds the wave open', 
     ticks(game, 10);
     assert.equal(bossState(game.scene()).active, false);
     ticks(game, 300);
-    assert(game.scene()[19] >= 4, 'the wave moves on once the mini is down');
+    assert(game.scene()[S.WAVE] >= 4, 'the wave moves on once the mini is down');
     assert.equal(bossState(game.scene()).defeated & (1 << 6), 1 << 6);
 });
 
@@ -266,11 +267,11 @@ test('practice and a fresh retry do not inherit a previous boss', async () => {
     const game = await waveGame(5);
     game.start(true);
     ticks(game, 100);
-    assert.equal(game.scene()[512], 0);
-    assert.equal(game.scene()[523], 0);
+    assert.equal(game.scene()[S.BOSS_ACTIVE], 0);
+    assert.equal(game.scene()[S.BOSS_KILLS], 0);
     game.start();
     ticks(game, 80);
-    assert.equal(game.scene()[512], 0);
+    assert.equal(game.scene()[S.BOSS_ACTIVE], 0);
 });
 
 test('boss practice never costs a life and reports hits taken', async () => {
@@ -280,7 +281,7 @@ test('boss practice never costs a life and reports hits taken', async () => {
     set(game, 4, 135);
     set(game, 5, 0);
     ticks(game, 60);
-    assert.equal(game.scene()[7], 3);
+    assert.equal(game.scene()[S.LIVES], 3);
     assert.equal(game.state, 'playing');
     assert(stats(game).hitsTaken > 0);
     assert.equal(bossState(game.scene()).practice, true);
@@ -303,7 +304,7 @@ test('multishot plus 2x fire keeps per-projectile accounting while damaging the 
     assert(game.stats().hits >= 1);
     assert(game.stats().hits <= 6);
     assert(bossState(game.scene()).health < 54);
-    assert.equal(game.scene()[523], 0);
+    assert.equal(game.scene()[S.BOSS_KILLS], 0);
 });
 
 test('stored shield absorbs a boss lance and holds cannot cause repeated life loss', async () => {
@@ -314,8 +315,8 @@ test('stored shield absorbs a boss lance and holds cannot cause repeated life lo
     set(game, 3, 150);
     set(game, 4, 135);
     ticks(game, 175);
-    assert.equal(game.scene()[7], 3);
-    assert.equal(game.scene()[15], 0, 'the shield took the lance');
+    assert.equal(game.scene()[S.LIVES], 3);
+    assert.equal(game.scene()[S.SHIELD], 0, 'the shield took the lance');
 });
 
 test('assists lengthen telegraphs by 30% and calm the lens bend', async () => {
@@ -335,8 +336,8 @@ test('boss pickups arrive once per phase boundary', async () => {
     const max = bossState(game.scene()).maximum;
     set(game, 0, Math.ceil(max * 0.4)); // below 66%
     ticks(game, 2);
-    assert.equal(game.scene()[478], 1);
-    assert.equal(game.scene()[481], 1);
+    assert.equal(game.scene()[S.PICKUP_ACTIVE], 1);
+    assert.equal(game.scene()[S.PICKUP_KIND], 1);
     assert.equal(bossState(game.scene()).stage, 2);
 });
 
@@ -350,8 +351,8 @@ test('every fight keeps its promises: warnings, caps, corridor, entrance, body r
             for (; steps < 150 * 50; steps++) {
                 bot.step();
                 const scene = game.scene();
-                if (!scene[512] && steps > 100) break;
-                if (scene[517] > 0 && steps % 25 === 0)
+                if (!scene[S.BOSS_ACTIVE] && steps > 100) break;
+                if (scene[S.BOSS_STAGE] > 0 && steps % 25 === 0)
                     for (const [i, c] of body(game).entries()) {
                         if (kind === 5 && i > 0) continue; // the S-stars are satellites, not the body
                         minLeft = Math.min(minLeft, c.x - c.r);

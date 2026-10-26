@@ -1,3 +1,4 @@
+import { S, BOSS } from './scene-layout.mjs';
 // Boss sound design. Everything is synthesised (no samples), built from a handful
 // of voices so each boss has its own timbre:
 //   Sentinel / Picket     servo saws and square zaps (a machine)
@@ -868,8 +869,8 @@ export class BossSound {
     // Compare two consecutive scenes and sound whatever just happened.
     observe(old, scene) {
         if (!this.live || !old) return;
-        const was = old[512],
-            is = scene[512],
+        const was = old[S.BOSS_ACTIVE],
+            is = scene[S.BOSS_ACTIVE],
             kind = scene[BOSS_AT] | 0;
         if (!was && is) {
             this.sting(kind);
@@ -880,11 +881,11 @@ export class BossSound {
             return;
         }
         if (!is) return;
-        const stage = scene[517],
-            oldStage = old[517];
+        const stage = scene[S.BOSS_STAGE],
+            oldStage = old[S.BOSS_STAGE];
         // Attack begins: charge for the length of the first telegraph that follows.
-        const attack = scene[BOSS_AT + 5],
-            oldAttack = old[BOSS_AT + 5];
+        const attack = scene[BOSS_AT + BOSS.ATTACK],
+            oldAttack = old[BOSS_AT + BOSS.ATTACK];
         if (attack && attack !== oldAttack)
             this.play(kind, 'charge', attack, { seconds: attackWarn(attack) });
         if (stage > oldStage && oldStage > 0) this.play(kind, 'phase', undefined, { limit: 500 });
@@ -907,28 +908,33 @@ export class BossSound {
         if (lost.length) this.play(kind, 'part', undefined, { limit: 120 });
         if (kind === 2 || kind === 8) {
             for (let i = 0; i < 8; i++)
-                if (scene[BOSS_AT + 32 + i * 8 + 6] === 2 && old[BOSS_AT + 32 + i * 8 + 6] !== 2) {
+                if (
+                    scene[BOSS_AT + BOSS.PARTS.at + i * BOSS.PARTS.stride + 6] === 2 &&
+                    old[BOSS_AT + BOSS.PARTS.at + i * BOSS.PARTS.stride + 6] !== 2
+                ) {
                     this.play(kind, 'part', undefined, { limit: 120 });
                     break;
                 }
         }
         // Windows and gates.
-        const gate = scene[BOSS_AT + 7],
-            oldGate = old[BOSS_AT + 7];
+        const gate = scene[BOSS_AT + BOSS.GATE],
+            oldGate = old[BOSS_AT + BOSS.GATE];
         if ((kind === 0 || kind === 6) && gate > 0.5 && oldGate <= 0.5) this.play(kind, 'open');
         if ((kind === 0 || kind === 6) && gate <= 0.5 && oldGate > 0.5) this.play(kind, 'close');
-        const aux = (i) => scene[BOSS_AT + 16 + i],
-            oldAux = (i) => old[BOSS_AT + 16 + i];
+        const aux = (i) => scene[BOSS_AT + BOSS.AUX + i],
+            oldAux = (i) => old[BOSS_AT + BOSS.AUX + i];
         if (kind === 5 && aux(1) > 0.5 && oldAux(1) <= 0.5) this.play(kind, 'open');
         if (kind === 2 && aux(1) > 0.5 && oldAux(1) <= 0.5) this.play(kind, 'open');
         if (kind === 4 && aux(2) > 0.5 && oldAux(2) <= 0.5) this.play(kind, 'open');
         if (kind === 3 && aux(1) > 0.5 && oldAux(1) <= 0.5) this.play(kind, 'gate');
         // A hit on the boss.
-        if (scene[BOSS_AT + 4] > 0 && old[BOSS_AT + 4] === 0)
+        if (scene[BOSS_AT + BOSS.FLASH_MS] > 0 && old[BOSS_AT + BOSS.FLASH_MS] === 0)
             this.play(kind, 'hit', undefined, { limit: 70 });
     }
 }
-const bossPartNow = (scene, index) => ({ exists: !!scene[BOSS_AT + 32 + index * 8] });
+const bossPartNow = (scene, index) => ({
+    exists: !!scene[BOSS_AT + BOSS.PARTS.at + index * BOSS.PARTS.stride],
+});
 // Telegraph lengths (seconds) the charge sounds are shaped for.
 const WARN = {
     [ATTACK.lance]: 0.9,

@@ -1,7 +1,15 @@
 import { spawnSync } from 'node:child_process';
 import { fileURLToPath } from 'node:url';
 import { dirname, resolve } from 'node:path';
-import { existsSync, mkdirSync, copyFileSync, readFileSync, cpSync, rmSync } from 'node:fs';
+import {
+    existsSync,
+    mkdirSync,
+    copyFileSync,
+    readFileSync,
+    writeFileSync,
+    cpSync,
+    rmSync,
+} from 'node:fs';
 const root = dirname(fileURLToPath(import.meta.url));
 const test = process.argv.includes('--test');
 const oled = process.argv.includes('--oled');
@@ -20,7 +28,10 @@ const linker =
 if ((clang.includes('/') && !existsSync(clang)) || (linker.includes('/') && !existsSync(linker))) {
     throw new Error('Set CLANGXX and WASM_LD, or install LLVM and lld (brew install llvm lld).');
 }
-mkdirSync(resolve(root, 'dist'), { recursive: true });
+mkdirSync(resolve(root, 'dist/gen'), { recursive: true });
+// The scene ABI lives in scene-layout.mjs; the engine gets the same offsets as a header.
+const { sceneHeader } = await import('./scene-layout.mjs');
+writeFileSync(resolve(root, 'dist/gen/scene_layout.h'), sceneHeader());
 const exports = [
     '__wasm_call_ctors',
     'web_init',
@@ -99,6 +110,7 @@ const args = [
     '-fno-threadsafe-statics',
     '-fno-builtin',
     `-I${root}/native`,
+    `-I${root}/dist/gen`,
     `-I${root}/../include`,
     '-Wl,--no-entry',
     '-Wl,--export-memory',
@@ -164,6 +176,7 @@ if (!test && !oled) {
         'art-grade.mjs',
         'fx.mjs',
         'boss-scene.mjs',
+        'scene-layout.mjs',
         'boss-art.mjs',
         'boss-render.mjs',
         'bossui.mjs',

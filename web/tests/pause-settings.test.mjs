@@ -1,3 +1,4 @@
+import { S } from '../scene-layout.mjs';
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { readFile } from 'node:fs/promises';
@@ -21,16 +22,20 @@ test('rapid R2 presses fire on consecutive press/release ticks without a debounc
     for (let i = 0; i < 100; i++) {
         p.buttons[7].value = 0.2; // A light pull, below browser .pressed thresholds.
         g.step(c.sample(p));
-        assert.equal(g.scene()[11], g.scene()[2], `press ${i + 1} must fire immediately`);
+        assert.equal(
+            g.scene()[S.LAST_SHOT_MS],
+            g.scene()[S.GAME_MS],
+            `press ${i + 1} must fire immediately`,
+        );
         p.buttons[7].value = 0.02;
         g.step(c.sample(p));
-        assert(g.scene()[11] < g.scene()[2]);
+        assert(g.scene()[S.LAST_SHOT_MS] < g.scene()[S.GAME_MS]);
     }
     p.buttons[7].value = 1;
     g.step(c.sample(p));
-    const last = g.scene()[11];
+    const last = g.scene()[S.LAST_SHOT_MS];
     for (let i = 0; i < 50; i++) g.step(c.sample(p));
-    assert.equal(g.scene()[11], last, 'holding must never repeat');
+    assert.equal(g.scene()[S.LAST_SHOT_MS], last, 'holding must never repeat');
 });
 
 test('R2 hysteresis rejects small analog jitter but rearms after a light release', () => {
@@ -138,13 +143,13 @@ test('fire pressed during pause does not queue a shot on resume', async () => {
     g.api.web_scenario(9);
     g.step({ pause: true });
     g.step({ fire: true });
-    const last = g.scene()[11];
+    const last = g.scene()[S.LAST_SHOT_MS];
     g.step({ fire: true, pause: true });
     g.step({ fire: true });
-    assert.equal(g.scene()[11], last);
+    assert.equal(g.scene()[S.LAST_SHOT_MS], last);
     g.step();
     g.step({ fire: true });
-    assert.equal(g.scene()[11], g.scene()[2]);
+    assert.equal(g.scene()[S.LAST_SHOT_MS], g.scene()[S.GAME_MS]);
 });
 
 test('full R2 release between physics ticks rearms the next shot even if both ticks see held', async () => {
@@ -161,14 +166,18 @@ test('full R2 release between physics ticks rearms the next shot even if both ti
         const input = c.sample(p);
         assert(input.fire && input.firePressed);
         g.step(input);
-        assert.equal(g.scene()[11], g.scene()[2], `off-tick press ${i + 1} lost`);
+        assert.equal(
+            g.scene()[S.LAST_SHOT_MS],
+            g.scene()[S.GAME_MS],
+            `off-tick press ${i + 1} lost`,
+        );
     }
-    const last = g.scene()[11];
+    const last = g.scene()[S.LAST_SHOT_MS];
     for (let i = 0; i < 20; i++) {
         c.observeController(p);
         g.step(c.sample(p));
     }
-    assert.equal(g.scene()[11], last);
+    assert.equal(g.scene()[S.LAST_SHOT_MS], last);
 });
 
 test('several trigger events between ticks survive as distinct presses, clear removes pending events', () => {
@@ -205,7 +214,7 @@ test('Cross presses fire independently while R2 stays held', async () => {
         p.buttons[0].pressed = true;
         c.observeController(p);
         g.step(c.sample(p));
-        assert.equal(g.scene()[11], g.scene()[2]);
+        assert.equal(g.scene()[S.LAST_SHOT_MS], g.scene()[S.GAME_MS]);
     }
     assert.deepEqual(g.fireDiagnostics(), [51, 51, 0, 0]);
 });

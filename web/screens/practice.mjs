@@ -1,6 +1,7 @@
+import { S } from '../scene-layout.mjs';
 import { element } from '../dom.mjs';
 export function renderPractice({ scene, navigation, runtime, update, practiceButton, fitCanvas }) {
-    const practice = !!scene[60];
+    const practice = !!scene[S.PRACTICE];
     const title =
         navigation.screen === 'pause'
             ? 'Paused'

@@ -1,3 +1,4 @@
+import { S } from '../scene-layout.mjs';
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { readFile } from 'node:fs/promises';
@@ -23,7 +24,7 @@ async function savedGame(storage) {
     game.step();
     game.step({ firePressed: true });
     assert.equal(game.state, 'game-over');
-    assert.equal(game.scene()[31], 1);
+    assert.equal(game.scene()[S.SCORE_COUNT], 1);
     game.records.record(
         1,
         { practice: true },
@@ -46,11 +47,11 @@ test('browser reset clears live WASM and both profiles after reload, preserving 
     storage.setItem('asteroids.web.scores-v3', 'legacy scores');
     const game = await savedGame(storage);
     assert(game.clearRecords());
-    assert.equal(game.scene()[31], 0);
+    assert.equal(game.scene()[S.SCORE_COUNT], 0);
     assert.equal(game.records.get(0, {}), null);
     assert.equal(game.records.get(1, { practice: true }), null);
     const reload = await createRuntime(bytes, { storage, scoreKey });
-    assert.equal(reload.scene()[31], 0);
+    assert.equal(reload.scene()[S.SCORE_COUNT], 0);
     assert.deepEqual(reload.records.profiles, [{}, {}]);
     assert.equal(storage.getItem('asteroids.web.settings-v1'), 'my controls');
     assert.equal(storage.getItem('unrelated'), 'keep');
@@ -74,11 +75,11 @@ test('partial reset failure restores stored leaderboard and leaves live records 
     assert.equal(game.clearRecords(), false);
     assert.equal(storage.getItem(scoreKey), scores);
     assert.equal(storage.getItem(RECORDS_KEY), bests);
-    assert.equal(game.scene()[31], 1);
+    assert.equal(game.scene()[S.SCORE_COUNT], 1);
     assert(game.records.get(0, {}));
     assert.match(game.scoreStatus, /Could not clear/);
     assert(game.clearRecords());
-    assert.equal(game.scene()[31], 0);
+    assert.equal(game.scene()[S.SCORE_COUNT], 0);
 });
 
 test('denied storage fails visibly without pretending records were cleared', () => {
