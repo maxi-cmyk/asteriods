@@ -229,6 +229,8 @@ static bool combat_update_laser(bool pressed) {
     return false;
 }
 
+#include "boss.h"
+
 static void combat_ship_hit() {
     if (ship.invincible_left) {
         return;
@@ -242,6 +244,8 @@ static void combat_ship_hit() {
         return;
     }
     ship_die(ship);
+    // Dying never resets a boss, but its attacks are cleared so the return is fair.
+    if (boss.active) bs_clear_threats();
     memset(combat.pending_shots, 0, sizeof(combat.pending_shots));
     combat.chain = 0;
     combat.charging = false;
@@ -258,8 +262,6 @@ static void combat_ship_hit() {
 static void combat_collisions() {
     if (asteroid_hits_ship(ship.position_x, ship.position_y)) combat_ship_hit();
 }
-#include "boss.h"
-
 static void combat_update_playing(bool laser_pressed) {
     const InputState& input = input_get();
     if (input.pause_triggered) {
@@ -272,7 +274,9 @@ static void combat_update_playing(bool laser_pressed) {
     combat_update_aim();
     combat_move_ship(input);
     combat_collect_and_arm_shield();
-    if (practice_mode) {
+    if (boss.practice) {
+        // Boss practice: no rocks, no lost lives; the fight is the whole room.
+    } else if (practice_mode) {
         if (fabsf(input.joystick_x) + fabsf(input.joystick_y) > 0.1f) {
             practice_goals |= 1;
         }
@@ -292,7 +296,6 @@ static void combat_update_playing(bool laser_pressed) {
         }
     } else {
         if (!boss_controls_wave()) asteroids_update(game_ms);
-        boss_controls_wave();
     }
     bool laser_fired = combat_update_laser(laser_pressed);
     combat_update_cps(input.fire_pressed);
@@ -326,7 +329,7 @@ static void combat_update_playing(bool laser_pressed) {
     }
     particles_update();
     combat_collisions();
-    if (state == STATE_PLAYING && !practice_mode) boss_update(laser_fired);
+    if (state == STATE_PLAYING && (!practice_mode || boss.practice)) boss_update(laser_fired);
 }
 
 static void combat_game_update() {

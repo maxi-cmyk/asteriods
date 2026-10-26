@@ -22,7 +22,6 @@ static bool coop_friendly = false;
 static CoopPlayer coop_players[2] = {};
 static unsigned coop_tick = 0;
 static unsigned coop_owner = 0;
-static unsigned coop_boss_target = 1;
 static GameState coop_pause_state = STATE_PLAYING;
 static unsigned long coop_paused_at = 0;
 
@@ -70,13 +69,14 @@ static void coop_hit(unsigned owner) {
     particles_spawn(player.hull.position_x, player.hull.position_y);
     sound_play(SFX_DEATH);
 }
+static void coop_bind_boss();
 static void coop_begin(bool friendly) {
     begin_game();
     coop_active = true;
     coop_friendly = friendly;
     coop_tick = 0;
-    coop_boss_target = 1;
     boss = {};
+    coop_bind_boss();
     practice_mode = false;
     for (unsigned i = 0; i < 2; i++) {
         coop_players[i] = {};
@@ -108,22 +108,22 @@ static void coop_award(unsigned owner, uint32_t points, bool sentinel = false) {
     if (sentinel) run_destroyed--;
     coop_save();
 }
-static void coop_boss_damage(unsigned owner, unsigned damage) {
-    if (!boss.active || boss.phase == 0) return;
-    coop_players[owner].boss_touched = true;
-    boss.health = damage >= boss.health ? 0 : boss.health - damage;
-    if (boss.health) return;
-    boss.active = false;
-    boss.defeated = game_ms;
-    boss.kills++;
-    for (BossShot& shot : boss.shots) shot.active = false;
-    for (CoopPlayer& player : coop_players) {
-        player.boss_participation += player.boss_touched;
-        player.boss_touched = false;
+static void coop_boss_hit(unsigned owner) { coop_hit(owner); }
+static void coop_boss_stat(unsigned owner) { coop_players[owner].weapons.hits++; }
+static void coop_boss_award(unsigned owner, uint32_t points) {
+    for (unsigned i = 0; i < 2; i++) {
+        coop_players[i].boss_participation += boss.touched[i];
+        coop_players[i].boss_touched = false;
     }
-    coop_award(owner, 1500 + min(10u, boss.wave / 5) * 250, true);
-    particles_spawn(BOSS_X, BOSS_Y);
-    sound_play(SFX_ASTEROID_LARGE);
+    coop_award(owner, points, true);
+}
+static void coop_bind_boss() {
+    boss_hulls[0] = &coop_players[0].hull;
+    boss_hulls[1] = &coop_players[1].hull;
+    boss_hull_n = 2;
+    boss_hit_hook = coop_boss_hit;
+    boss_award_hook = coop_boss_award;
+    boss_stat_hook = coop_boss_stat;
 }
 static void coop_rock(unsigned owner, int index, bool laser) {
     if (!rocks[index].active) return;
@@ -152,6 +152,7 @@ static void coop_projectiles() {
         parents[r] = rocks[r];
     }
     unsigned pending_fragments = 0;
+    bs_build_circles();
     // Resolve globally earliest eligible impacts. Recompute after destruction
     // so a second shot may continue to its next target, but never a new fragment.
     for (unsigned event = 0; event < 2 * BULLET_MAX; event++) {
@@ -161,12 +162,15 @@ static void coop_projectiles() {
             for (unsigned b = 0; b < BULLET_MAX; b++) {
                 const Bullet& bullet = coop_players[p].shots[b];
                 if (!bullet.active) continue;
-                for (int r = -2; r < ASTEROID_MAX; r++) {
+                for (unsigned c = 0; c < boss_circle_count; c++) {
+                    if (!(boss_circles[c].flags & 1)) continue;
+                    float entry = bs_entry(c, bullet.previous_x, bullet.previous_y,
+                                           bullet.position_x, bullet.position_y);
+                    if (entry < best.time) best = {entry, p, b, int(1000 + c)};
+                }
+                for (int r = -1; r < ASTEROID_MAX; r++) {
                     float entry = 2;
-                    if (r == -2 && boss.active && boss.phase != 0) {
-                        entry = coop_entry(bullet, BOSS_X, BOSS_Y,
-                                           BOSS_CORE_RADIUS);
-                    } else if (r == -1 && coop_friendly &&
+                    if (r == -1 && coop_friendly &&
                                coop_players[1-p].hull.alive) {
                         const Ship& other = coop_players[1-p].hull;
                         entry = coop_entry(bullet, other.position_x,
@@ -182,16 +186,16 @@ static void coop_projectiles() {
         if (best.time > 1) break;
         coop_players[best.owner].shots[best.shot].active = false;
         if (best.target == -1) coop_hit(1-best.owner);
-        else {
+        else if (best.target >= 1000) {
+            bs_circle_hit(best.target - 1000, best.owner, 1, false);
+            bs_build_circles();
+        } else {
             if (best.target >= 0 && rocks[best.target].size != AST_SMALL &&
                 free_slots() < 1 + int(pending_fragments)) continue;
             coop_players[best.owner].weapons.hits++;
-            if (best.target == -2) coop_boss_damage(best.owner, 1);
-            else {
-                split[best.target] = parents[best.target].size != AST_SMALL;
-                coop_rock(best.owner, best.target, false);
-                if (split[best.target]) pending_fragments += 2;
-            }
+            split[best.target] = parents[best.target].size != AST_SMALL;
+            coop_rock(best.owner, best.target, false);
+            if (split[best.target]) pending_fragments += 2;
         }
     }
     for (int r = 0; r < ASTEROID_MAX; r++) {
@@ -215,11 +219,6 @@ static void coop_lasers() {
         for (int r = 0; r < ASTEROID_MAX; r++) {
             targets[r] = rocks[r].active && combat_beam_hits(rocks[r]);
         }
-        Asteroid core = {};
-        core.position_x = BOSS_X;
-        core.position_y = BOSS_Y;
-        core.radius = BOSS_CORE_RADIUS;
-        bool sentinel = boss.active && combat_beam_hits(core);
         Asteroid friend_target = {};
         friend_target.position_x = coop_players[1-owner].hull.position_x;
         friend_target.position_y = coop_players[1-owner].hull.position_y;
@@ -228,7 +227,7 @@ static void coop_lasers() {
         for (int r = 0; r < ASTEROID_MAX; r++) {
             if (targets[r]) coop_rock(owner, r, true);
         }
-        if (sentinel) coop_boss_damage(owner, 8);
+        if (boss.active) bs_laser(owner);
         if (friendly) coop_hit(1-owner);
     }
 }
@@ -327,54 +326,7 @@ static void coop_weapons(unsigned owner) {
     coop_save();
 }
 static void coop_boss_update() {
-    if (!boss.active) return;
-    unsigned old_phase = boss.phase;
-    // Existing phase helper only reads the selected scratch ship for targeting.
-    unsigned duration = boss.phase == 0 ? BOSS_ENTRANCE_MS
-                        : boss.phase == 3 ? BOSS_REST_MS : 0;
-    if (duration && game_ms - boss.phase_started >= duration) {
-        unsigned target = 1 - coop_boss_target;
-        if (!coop_players[target].hull.alive) target = 1-target;
-        if (coop_players[target].hull.alive) {
-            coop_boss_target = target;
-        }
-    }
-    coop_load(coop_boss_target);
-    float old_x = boss.target_x;
-    float old_y = boss.target_y;
-    boss_update_phase();
-    if (old_phase != boss.phase && boss.phase == 1 && !ship.alive) {
-        boss.target_x = old_x;
-        boss.target_y = old_y;
-    }
-    if (boss.phase == 0) return;
-    for (BossShot& shot : boss.shots) {
-        if (!shot.active) continue;
-        shot.x += shot.dx;
-        shot.y += shot.dy;
-        if (shot.x < -8 || shot.x > SCREEN_W+8 || shot.y < -8 ||
-            shot.y > SCREEN_H+8) shot.active = false;
-        for (unsigned order = 0; order < 2 && shot.active; order++) {
-            unsigned p = (order + coop_tick) % 2;
-            const Ship& hull = coop_players[p].hull;
-            float dx = shot.x - hull.position_x;
-            float dy = shot.y - hull.position_y;
-            if (hull.alive && dx*dx + dy*dy < 121) {
-                shot.active = false;
-                coop_hit(p);
-            }
-        }
-    }
-    for (unsigned p = 0; p < 2; p++) {
-        const Ship& hull = coop_players[p].hull;
-        float dx = hull.position_x - BOSS_X;
-        float dy = hull.position_y - BOSS_Y;
-        bool lane = boss.phase == 2 && !(boss.cycle % 2) &&
-                    hull.position_x < BOSS_X &&
-                    fabsf(hull.position_y - boss.target_y) < 9 + SHIP_RADIUS;
-        if (lane || dx*dx + dy*dy < (BOSS_CORE_RADIUS+SHIP_RADIUS)*
-                                    (BOSS_CORE_RADIUS+SHIP_RADIUS)) coop_hit(p);
-    }
+    if (boss.active) boss_tick();
 }
 static void coop_respawn(unsigned p) {
     CoopPlayer& player = coop_players[p];
@@ -384,20 +336,21 @@ static void coop_respawn(unsigned p) {
     asteroid_safe_respawn(x, y);
     if (boss.active) {
         float best_clearance = -10000;
+        float body[96];
+        unsigned bodies = bs_kind_body(body);
         for (int candidate_x = SHIP_MIN_X; candidate_x <= 160; candidate_x += 24) {
             for (int candidate_y = SHIP_MIN_Y; candidate_y <= SHIP_MAX_Y; candidate_y += 16) {
                 float clearance = respawn_clearance(candidate_x, candidate_y);
-                float dx = candidate_x - BOSS_X;
-                float dy = candidate_y - BOSS_Y;
-                clearance = min(clearance, sqrtf(dx*dx+dy*dy) -
-                                           BOSS_CORE_RADIUS - SHIP_RADIUS);
-                if ((boss.phase == 1 || boss.phase == 2) && !(boss.cycle % 2))
-                    clearance = min(clearance, fabsf(candidate_y-boss.target_y)-9-SHIP_RADIUS);
+                for (unsigned i = 0; i < bodies; i++)
+                    clearance = min(clearance, bs_dist(candidate_x, candidate_y, body[i*3], body[i*3+1])
+                                               - body[i*3+2] - SHIP_RADIUS);
+                for (const BossHazard& h : boss.hz)
+                    if (h.active && bs_lethal_kind(h.kind) && h.warn_left <= 1500 &&
+                        bs_hazard_hits(h, candidate_x, candidate_y, SHIP_RADIUS + 6))
+                        clearance = min(clearance, -1.0f);
                 for (const BossShot& shot : boss.shots) {
                     if (!shot.active) continue;
-                    dx = candidate_x-shot.x;
-                    dy = candidate_y-shot.y;
-                    clearance = min(clearance, sqrtf(dx*dx+dy*dy)-11);
+                    clearance = min(clearance, bs_dist(candidate_x, candidate_y, shot.x, shot.y) - 11);
                 }
                 if (clearance > best_clearance) {
                     best_clearance = clearance;
@@ -420,14 +373,9 @@ static void coop_update() {
     if (state != STATE_PLAYING) return;
     game_ms += FRAME_TIME_MS;
     coop_tick++;
-    if (wave_number % 5 == 0) {
-        if (boss.wave != wave_number) {
-            boss_begin(2);
-            for (CoopPlayer& player : coop_players) player.boss_touched = false;
-        }
-        if (!boss.active && game_ms - boss.defeated >= BOSS_RECOVERY_MS)
-            asteroids_update(game_ms);
-    } else asteroids_update(game_ms);
+    if (boss.wave != wave_number && boss_wave_is_boss(wave_number))
+        for (CoopPlayer& player : coop_players) player.boss_touched = false;
+    if (!boss_controls_wave(2)) asteroids_update(game_ms);
     for (unsigned p = 0; p < 2; p++) {
         coop_respawn(p);
         coop_weapons(p);

@@ -96,10 +96,6 @@ def to_image(rgb, alpha=None, levels=14, dither=True, hard_alpha=True):
     return Image.fromarray(np.dstack([out.astype(np.uint8), a]), 'RGBA')
 
 
-def scale_up(im, k):
-    return im.resize((im.width * k, im.height * k), Image.NEAREST)
-
-
 # ------------------------------------------------------------------- spheres
 def _unit(v): return v / np.linalg.norm(v)
 
@@ -212,24 +208,6 @@ def ring_colour(stops, r0, r1):
     return fn
 
 
-def contact_sheet(items, cols=5, cell=(150, 150), k=2, bg=(14, 8, 32), title=None):
-    """items: [(label, PIL RGBA image)] drawn nearest-scaled by k on a dark grid."""
-    from PIL import ImageDraw
-    cw, ch = cell
-    rows = (len(items) + cols - 1) // cols
-    top = 18 if title else 0
-    sheet = Image.new('RGBA', (cols * cw * 1, rows * (ch + 12) + top), bg + (255,))
-    d = ImageDraw.Draw(sheet)
-    if title: d.text((6, 3), title, fill=(255, 220, 160, 255))
-    for i, (label, im) in enumerate(items):
-        x, y = (i % cols) * cw, (i // cols) * (ch + 12) + top
-        s = scale_up(im, k) if k > 1 else im
-        s.thumbnail((cw - 6, ch - 4), Image.NEAREST)
-        sheet.alpha_composite(s, (x + (cw - s.width) // 2, y + (ch - s.height) // 2))
-        d.text((x + 4, y + ch - 2), label, fill=(190, 160, 230, 255))
-    return sheet
-
-
 # ======================================================================= textures
 def tex_bands(stops, k=9, turb=.4, seed=3, spot=None, tint=None):
     def fn(c):
@@ -300,18 +278,6 @@ def tex_ice(seed=9):
     return fn
 
 
-def tex_desert(seed=11):
-    def fn(c):
-        px, py, pz = c.P[..., 0], c.P[..., 1], c.P[..., 2]
-        h = fbm3(px * 2.4, py * 2.4, pz * 2.4, seed, 5)
-        col = ramp(h, [(0, '#5a2a1c'), (.4, '#a85a30'), (.75, '#d88a52'), (1, '#f0c088')])
-        dark = smoothstep(.62, .45, fbm3(px * 5 + 8, py * 5, pz * 5, seed + 2, 3))[..., None]
-        col = col * (1 - .35 * dark)
-        cap = smoothstep(1.05, 1.2, np.abs(c.lat))[..., None]
-        return col * (1 - cap) + np.array([240, 240, 244]) * cap
-    return fn
-
-
 def tex_craters(base_stops, count=30, seed=13, mare=None):
     rng = np.random.default_rng(seed)
     cs = rng.normal(size=(count, 3)); cs /= np.linalg.norm(cs, axis=1, keepdims=True)
@@ -329,15 +295,6 @@ def tex_craters(base_stops, count=30, seed=13, mare=None):
             m = smoothstep(.48, .56, fbm3(px * 1.2 + 3, py * 1.2, pz * 1.2, seed + 7, 3))[..., None]
             col = col * (1 - m * .4) + np.array(mare) * m * .4
         return col
-    return fn
-
-
-def tex_uranus(seed=15):
-    def fn(c):
-        px, py, pz = c.P[..., 0], c.P[..., 1], c.P[..., 2]
-        v = np.sin(c.lat * 7 + fbm3(px * 2, py * 2, pz * 2, seed, 3) * .6) * .5 + .5
-        pole = smoothstep(.45, 1.3, np.abs(c.lat))
-        return ramp(.3 + .35 * v + .3 * pole, [(0, '#5aa8b0'), (.5, '#8ad4d8'), (1, '#d8f6f4')])
     return fn
 
 

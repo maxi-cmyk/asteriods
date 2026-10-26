@@ -2,6 +2,10 @@ import { Backgrounds } from './backgrounds.mjs';
 import { gradeAtlas } from './art-grade.mjs';
 import { DEFAULT_HULL, hullSprite } from './hangar.mjs';
 import { glow, smallBlast, bossBlast, bossShake, SMALL_BLAST_MS, BOSS_BLAST_MS } from './fx.mjs';
+import { BossArt } from './boss-art.mjs';
+import { BossLayer } from './boss-render.mjs';
+import { deathMs, drawDeath } from './boss-death.mjs';
+import { BOSS_AT, KINDS } from './boss-scene.mjs';
 export const WIDTH = 480;
 export const HEIGHT = 270;
 const COLOUR = { background:'#080f19', ink:'#f2f1df', muted:'#91a4b3', dim:'#273849', cyan:'#70d9ed', amber:'#efb963', hot:'#ed7659' };
@@ -46,8 +50,10 @@ export class PixelRenderer {
     this.reduced = !!query?.matches;
     this.backgrounds = new Backgrounds({ reduced:this.reduced });
     this.backgrounds.setWorlds(art.worlds);
-    query?.addEventListener?.('change', event => { this.reduced = event.matches; this.backgrounds.setReduced(event.matches); });
+    query?.addEventListener?.('change', event => { this.reduced = event.matches; this.backgrounds.setReduced(event.matches); if (this.bosses) this.bosses.reduced = event.matches; });
     this.finale = null;
+    this.bossArt = art.bossArt || new BossArt();
+    this.bosses = new BossLayer(this.bossArt, { reduced:this.reduced });
     this.hulls = [DEFAULT_HULL, DEFAULT_HULL];
     this.context = canvas.getContext('2d', { alpha:false });
     this.context.imageSmoothingEnabled = false;
@@ -107,6 +113,7 @@ export class PixelRenderer {
     this.cue = this.backgrounds.draw(this.context, {
       time:scene[37], wave:scene[19], hold, dim,
       run:state >= 1 && state !== 0, practice:this.calm || !!scene[60] || state === 7,
+      fight:scene[512] && scene[BOSS_AT+2]>=3 ? {kind:scene[BOSS_AT],tier:scene[BOSS_AT+2]} : null,
     });
   }
   observe(scene) {
@@ -121,17 +128,20 @@ export class PixelRenderer {
         }
       }
       if (old[6] && !scene[6]) this.effects.push({x:scene[4],y:scene[5],time:scene[37],size:3});
-      if (old[512] && !scene[512]) this.finale={x:old[513],y:old[514],time:scene[37]};
+      if (old[512] && !scene[512]) {
+        const kind=old[BOSS_AT];
+        this.finale={x:old[513],y:old[514],time:scene[37],kind,mini:!!old[BOSS_AT+1],snap:new Float32Array(old)};
+      }
     }
     if (old && scene[2]<old[2]) { this.effects=[]; this.finale=null; }
     this.effects=this.effects.filter(effect=>scene[37]-effect.time<SMALL_BLAST_MS).slice(-20);
-    if (this.finale && scene[37]-this.finale.time>=BOSS_BLAST_MS) this.finale=null;
+    if (this.finale && scene[37]-this.finale.time>=deathMs(this.finale.kind)) this.finale=null;
     this.previous=new Float32Array(scene);
   }
   world(scene) {
     const ctx=this.context;
     const time=scene[37];
-    this.boss(scene);
+    this.bosses.draw(ctx,scene,time);
     for (const [i,rock] of record(scene,64,8,24).entries()) {
       if (!rock[0]) continue;
       const size=rock[5], diameter=[32,20,12][size];
@@ -190,8 +200,14 @@ export class PixelRenderer {
     }
     for (const effect of this.effects) smallBlast(ctx,effect,time);
     if (this.finale) {
-      bossBlast(ctx,this.finale,time,{width:WIDTH,height:HEIGHT,reduced:this.reduced,
-        sprite:(name,x,y,scale)=>this.sprite(name,x,y,scale)});
+      // Each boss has its own death (boss-death.mjs); the plain blast is the fallback
+      // while its art is still loading.
+      if (!drawDeath(ctx,this.bossArt,this.finale,time,{reduced:this.reduced})) {
+        const info=KINDS[this.finale.kind];
+        bossBlast(ctx,this.finale,time,{width:WIDTH,height:HEIGHT,reduced:this.reduced,
+          sprite:(name,x,y,scale)=>this.sprite(name,x,y,scale),
+          chunks:this.bossArt.rubble(this.finale.kind),scale:this.finale.mini?.6:Math.max(1,Math.max(...(info?.size||[220]))/200)});
+      }
       this.finaleBanner(time);
     }
     if (!scene[60] && scene[23] && scene[0]===2) this.text(`WAVE ${scene[19]}`,WIDTH/2,14,COLOUR.muted,1,'center');
@@ -203,11 +219,13 @@ export class PixelRenderer {
   }
   finaleBanner(time) {
     const age=time-this.finale.time;
-    if (age<350 || age>1750) return;
-    const alpha=Math.min(1,(age-350)/250,(1750-age)/250);
+    const end=deathMs(this.finale.kind)-200;
+    if (age<350 || age>end) return;
+    const alpha=Math.min(1,(age-350)/250,(end-age)/250);
     this.context.globalAlpha=alpha;
-    this.text('SENTINEL DESTROYED',WIDTH/2+1,191,'#1a0c2c',2,'center');
-    this.text('SENTINEL DESTROYED',WIDTH/2,190,'#ffe2aa',2,'center');
+    const line=`${(KINDS[this.finale.kind]?.name||'BOSS').toUpperCase()} DESTROYED`;
+    this.text(line,WIDTH/2+1,191,'#1a0c2c',2,'center');
+    this.text(line,WIDTH/2,190,'#ffe2aa',2,'center');
     this.context.globalAlpha=1;
   }
   ray(x,y,dx,dy,length,colour,width=1,step=1) {
@@ -300,35 +318,6 @@ export class PixelRenderer {
     this.text(`BEST  ${leader}`,WIDTH/2,169,COLOUR.muted,1,'center');
     this.text('MOVE  /  SHOOT  /  SURVIVE',WIDTH/2,223,COLOUR.muted,1,'center');
   }
-  boss(scene) {
-    if(!scene[512])return;
-    const ctx=this.context,x=scene[513],y=scene[514],phase=scene[517];
-    const fan=!!scene[520],warning=phase===1,attack=phase===2;
-    if(warning || attack){
-      ctx.strokeStyle=warning?'#aa6a45':'#ff9370';
-      ctx.lineWidth=warning?1:18;
-      if(!fan){
-        ctx.beginPath();ctx.setLineDash(warning?[5,5]:[]);
-        ctx.moveTo(0,scene[519]+.5);ctx.lineTo(x,scene[519]+.5);ctx.stroke();ctx.setLineDash([]);
-        if(attack){ctx.strokeStyle='#fff0c8';ctx.lineWidth=2;ctx.beginPath();ctx.moveTo(0,scene[519]);ctx.lineTo(x,scene[519]);ctx.stroke();}
-      } else if(warning){
-        const angle=Math.atan2(scene[519]-y,scene[524]-x);
-        ctx.setLineDash([3,7]);ctx.lineWidth=1;
-        for(let offset=-1;offset<=1;offset++){ctx.beginPath();ctx.moveTo(x,y);ctx.lineTo(x+Math.cos(angle+offset*.28)*160,y+Math.sin(angle+offset*.28)*160);ctx.stroke();}
-        ctx.setLineDash([]);
-      }
-    }
-    ctx.fillStyle='#273c58';ctx.fillRect(x-24,y-23,48,46);
-    ctx.fillStyle='#142337';ctx.fillRect(x-29,y-14,58,28);
-    ctx.fillStyle=phase===0?'#55647a':'#f2a45d';ctx.fillRect(x-16,y-16,32,32);
-    ctx.fillStyle=phase===0?'#283b58':'#ffdf9b';ctx.fillRect(x-10,y-10,20,20);
-    ctx.fillStyle='#172a42';ctx.fillRect(x-3,y-24,6,12);ctx.fillRect(x-3,y+12,6,12);
-    const health=Math.max(0,scene[515]/scene[516]);
-    ctx.fillStyle='#080f19e8';ctx.fillRect(158,62,164,37);
-    this.text(phase===0?'SENTINEL INBOUND':warning?(fan?'FAN LOCK - DODGE':'LANCE LOCK - DODGE'):'SENTINEL / CORE',WIDTH/2,66,COLOUR.amber,1,'center');
-    this.box(180,80,120,6,COLOUR.muted);ctx.fillStyle=COLOUR.amber;ctx.fillRect(181,81,Math.round(118*health),4);
-    for(let i=0;i<6;i++){const at=528+i*4;if(!scene[at])continue;ctx.fillStyle='#ff9c6b';ctx.fillRect(Math.round(scene[at+1])-3,Math.round(scene[at+2])-3,6,6);ctx.fillStyle='#ffe3ac';ctx.fillRect(Math.round(scene[at+1])-1,Math.round(scene[at+2])-1,2,2);}
-  }
   summary(scene) {
     this.text(scene[0]===5?'TOP FIVE!':'GAME OVER',WIDTH/2,29,COLOUR.ink,2,'center');
     this.text(`SCORE ${scene[27]}${scene[27]>scene[59]?' / NEW BEST':''}`,WIDTH/2,54,COLOUR.amber,1,'center');
@@ -353,6 +342,7 @@ export class PixelRenderer {
   render(scene, players = null) {
     this.coopPlayers=players;
     this.observe(scene);
+    this.bossArt.prepare(scene[19]);
     this.scenery(scene);
     if (scene[0]===0) this.menu(scene);
     else if (scene[0]===5 || scene[0]===6) this.summary(scene);

@@ -1,15 +1,17 @@
 import { element } from '../dom.mjs';
 import { HULLS, hullById, hullIcon, saveHangar } from '../hangar.mjs';
 import { drawShowcase } from '../showcase.mjs';
+import { requirementText } from '../unlocks.mjs';
 
 // The Hangar equips a cosmetic hull per local profile. Focus (or hover) previews
 // a hull on the stage; activating it equips it immediately and saves.
-export function createHangarScreen({ getArt, store, storage, activeProfile, reduced }) {
+export function createHangarScreen({ getArt, store, storage, activeProfile, reduced, unlocks }) {
   let pilot = 0, preview = null, status = '';
   const stage = element('hangarStage').getContext('2d');
   const bay = element('hangarBay');
   const pilotButtons = [...document.querySelectorAll('[data-pilot]')];
   const equipped = () => store.profiles[pilot];
+  const locked = id => unlocks ? !unlocks.isUnlocked(pilot, id) : false;
 
   function icon(canvas, hull) {
     const art = getArt(), cell = art?.sprites[hullIcon(hull)];
@@ -35,6 +37,7 @@ export function createHangarScreen({ getArt, store, storage, activeProfile, redu
     }));
   }
   function equip(id) {
+    if (locked(id)) { status = requirementText(id); preview = id; render(); return; }
     store.profiles[pilot] = id;
     const saved = saveHangar(storage, store);
     const name = hullById(id).name;
@@ -47,14 +50,19 @@ export function createHangarScreen({ getArt, store, storage, activeProfile, redu
     const shown = hullById(preview || equipped());
     for (const button of bay.children) {
       button.setAttribute('aria-checked', String(button.dataset.hull === equipped()));
+      const isLocked = locked(button.dataset.hull);
+      button.dataset.locked = String(isLocked);
+      button.setAttribute('aria-disabled', String(isLocked));
+      button.querySelector('span').textContent = isLocked ? `${hullById(button.dataset.hull).name} · locked` : hullById(button.dataset.hull).name;
       button.dataset.preview = String(button.dataset.hull === shown.id);
       icon(button.querySelector('canvas'), button.dataset.hull);
     }
     for (const button of pilotButtons) button.setAttribute('aria-pressed', String(Number(button.dataset.pilot) === pilot));
     element('hangarName').textContent = shown.name;
     element('hangarName').style.setProperty('--accent', shown.accent);
-    element('hangarBlurb').textContent = shown.blurb;
-    element('hangarTag').textContent = shown.id === equipped() ? 'EQUIPPED' : 'PREVIEW';
+    const shownLocked = locked(shown.id);
+    element('hangarBlurb').textContent = shownLocked ? requirementText(shown.id) : shown.blurb;
+    element('hangarTag').textContent = shownLocked ? 'LOCKED' : shown.id === equipped() ? 'EQUIPPED' : 'PREVIEW';
     element('hangarStatus').textContent = status;
   }
   for (const button of pilotButtons) button.addEventListener('click', () => {

@@ -186,14 +186,16 @@ const tile = (ctx, layer, offset, alpha = 1) => {
 // `period` ms (minutes, not seconds) and neighbouring frames crossfade, so the
 // spin is felt only as slow drift. `motion` 0 (reduced motion) holds frame 0.
 const S_ORBITS = [[38, 20, .5, '#9ad0ff'], [56, 30, 2.2, '#ffe9a0'], [74, 24, 4.1, '#ffb070'], [30, 16, 3.2, '#ffffff']];
-function drawWorld(ctx, worlds, name, cx, cy, time, motion, { period = 180000, phase = 0 } = {}) {
+function drawWorld(ctx, worlds, name, cx, cy, time, motion, { period = 180000, phase = 0, alpha = 1 } = {}) {
   const w = worlds?.frames[name];
   if (!w) return;
   const turn = motion ? ((time / period + phase) % 1 + 1) % 1 : 0, at = turn * w.frames, i = Math.floor(at) % w.frames, mix = at - Math.floor(at);
   const x = Math.round(cx - w.w / 2), y = Math.round(cy - w.h / 2);
+  ctx.globalAlpha = alpha;
   ctx.drawImage(worlds.image, w.x + i * w.w, w.y, w.w, w.h, x, y, w.w, w.h);
+  ctx.globalAlpha = 1;
   if (motion && mix > .02) {
-    ctx.globalAlpha = mix;
+    ctx.globalAlpha = mix * alpha;
     ctx.drawImage(worlds.image, w.x + (i + 1) % w.frames * w.w, w.y, w.w, w.h, x, y, w.w, w.h);
     ctx.globalAlpha = 1;
   }
@@ -309,6 +311,16 @@ const BUILDERS = {
   },
 };
 
+// Tier 3+ boss fights (waves 93 and up) play in front of something that should
+// not exist: a quasi-star, a pulsar or a magnetar, picked by boss and tier. It
+// replaces nothing; the region's own scenery dims behind a veil. Background only.
+export const FIGHT_SCENERY = Object.freeze([
+  { name:'quasi-star', x:138, y:98, period:0 },
+  { name:'pulsar', x:150, y:102, period:9000 },
+  { name:'magnetar', x:150, y:102, period:9000 },
+]);
+export const fightSceneryFor = ({ kind, tier }) => FIGHT_SCENERY[(((kind % 6) + tier - 3) % 3 + 3) % 3];
+
 // Dims decoration so bullets, rocks, pickups, and warnings stay on top.
 const PLAY_DIM = 'rgba(8, 4, 22, .2)';
 
@@ -322,6 +334,9 @@ export class Backgrounds {
     this.failed = new Set();
     this.queued = new Set();
     this.worlds = null;
+    this.fightMix = 0;
+    this.fightPick = null;
+    this.fightTime = null;
   }
   // Sprites arrive after the game art loads; regions built earlier are rebuilt.
   setWorlds(worlds) { this.worlds = worlds; this.built.clear(); this.failed.clear(); }
@@ -356,7 +371,7 @@ export class Backgrounds {
     ctx.restore();
   }
   // Draws the scene for the current region and any transition in progress.
-  draw(ctx, { time, wave, run, practice, dim, hold = false }) {
+  draw(ctx, { time, wave, run, practice, dim, hold = false, fight = null }) {
     const lines = this.timeline;
     if (!hold) lines.observe({ wave, time, run, practice });
     const index = lines.index;
@@ -392,9 +407,23 @@ export class Backgrounds {
         ctx.globalAlpha = e; this.paintRegion(ctx, to, time); ctx.globalAlpha = 1;
       }
     }
+    this.paintFight(ctx, time, fight);
     if (dim) { ctx.fillStyle = PLAY_DIM; ctx.fillRect(0, 0, WIDTH, HEIGHT); }
     if(this.brightness<1){ctx.fillStyle=`rgba(0,0,0,${1-this.brightness})`;ctx.fillRect(0,0,WIDTH,HEIGHT);}
     return lines.cue(time);
+  }
+  // Fades the tier 3+ backdrop in and out over about 0.7 s of visual time.
+  paintFight(ctx, time, fight) {
+    const active = !!fight && fight.tier >= 3;
+    if (active) this.fightPick = fightSceneryFor(fight);
+    const dt = this.fightTime === null ? 0 : Math.max(0, Math.min(100, time - this.fightTime));
+    this.fightTime = time;
+    this.fightMix = Math.max(0, Math.min(1, this.fightMix + (active ? dt : -dt) / (this.reduced ? 120 : 700)));
+    if (!this.fightMix || !this.fightPick || !this.worlds) return;
+    ctx.fillStyle = `rgba(6, 3, 16, ${(.55 * this.fightMix).toFixed(3)})`;
+    ctx.fillRect(0, 0, WIDTH, HEIGHT);
+    const { name, x, y, period } = this.fightPick;
+    drawWorld(ctx, this.worlds, name, x, y, time, this.reduced ? 0 : this.motion, { period:period || 1, alpha:this.fightMix });
   }
   // A few distant star traces bend toward the emerging ring. Background only.
   convergence(ctx, t) {

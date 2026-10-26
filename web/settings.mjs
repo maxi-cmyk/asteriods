@@ -7,7 +7,7 @@ export const KEY_ACTIONS = {
 export const PAD_ACTIONS = { fire:['Primary fire',7], laser:['Charge laser',6], shield:['Shield',4], precision:['Precision',5], pause:['Pause',9] };
 export const PAD_BUTTONS = ['Cross / A','Circle / B','Square / X','Triangle / Y','L1 / LB','R1 / RB','L2 / LT','R2 / RT','Share / Back','Options / Start','L3','R3'];
 export function defaults() {
-  return { volume:.5, deadzone:.25, aimDeadzone:.35, aimSensitivity:1, mouseAimSensitivity:1, movementSensitivity:1, shake:.5, soundEnabled:false, musicEnabled:false, backgroundMotion:1, backgroundBrightness:1,
+  return { volume:.5, deadzone:.25, aimDeadzone:.35, aimSensitivity:1, mouseAimSensitivity:1, movementSensitivity:1, shake:.5, soundEnabled:false, musicEnabled:false, backgroundMotion:1, backgroundBrightness:1, bossLongWarnings:false, bossCalm:false,
     keys:Object.fromEntries(Object.entries(KEY_ACTIONS).map(([key,[,code]])=>[key,code])),
     buttons:Object.fromEntries(Object.entries(PAD_ACTIONS).map(([key,[,index]])=>[key,index])) };
 }
@@ -22,6 +22,8 @@ export function sanitizeSettings(raw = {}) {
   if (!Number.isFinite(raw.mouseAimSensitivity)) settings.mouseAimSensitivity=settings.aimSensitivity;
   settings.soundEnabled=raw.soundEnabled===true;
   settings.musicEnabled=raw.musicEnabled===true;
+  settings.bossLongWarnings=raw.bossLongWarnings===true;
+  settings.bossCalm=raw.bossCalm===true;
   const used=new Set();
   for (const key of Object.keys(KEY_ACTIONS)) {
     const code=raw.keys?.[key];

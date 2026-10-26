@@ -4,8 +4,8 @@
 // unaffected. Colours stay dusty and low-saturation except the boss finale,
 // which is the one place the screen is allowed to go loud.
 const TAU = Math.PI * 2;
-const hash = n => { const x = Math.sin(n * 127.1 + 311.7) * 43758.5453; return x - Math.floor(x); };
-const ease = t => 1 - (1 - t) ** 2;
+export const hash = n => { const x = Math.sin(n * 127.1 + 311.7) * 43758.5453; return x - Math.floor(x); };
+export const ease = t => 1 - (1 - t) ** 2;
 
 export const SMALL_BLAST_MS = 380;
 export const BOSS_BLAST_MS = 2000;
@@ -36,6 +36,50 @@ export function glow(ctx, x, y, radius, rgb, alpha = 1) {
   ctx.globalAlpha = Math.min(1, alpha);
   ctx.drawImage(canvas, Math.round(x) - radius - 1, Math.round(y) - radius - 1);
   ctx.restore();
+}
+
+// Blocky glow for bosses: concentric 4 px steps in flat colour, never a gradient,
+// to match the chunky boss art. Pre-rendered once per colour and radius.
+export const BLOCK = 4;
+const pixelBlobs = new Map();
+function pixelBlob(rgb, radius) {
+  const key = `${rgb}|${radius}`;
+  let canvas = pixelBlobs.get(key);
+  if (!canvas) {
+    const size = Math.ceil(radius * 2 / BLOCK) * BLOCK + BLOCK;
+    canvas = document.createElement('canvas');
+    canvas.width = canvas.height = size;
+    const ctx = canvas.getContext('2d'), c = size / 2;
+    for (let y = 0; y < size; y += BLOCK) for (let x = 0; x < size; x += BLOCK) {
+      const d = Math.hypot(x + BLOCK / 2 - c, y + BLOCK / 2 - c) / radius;
+      if (d >= 1) continue;
+      const level = Math.floor((1 - d) * 4) / 4;           // four flat steps
+      if (level <= 0) continue;
+      ctx.fillStyle = `rgba(${rgb},${(level * .55).toFixed(2)})`;
+      ctx.fillRect(x, y, BLOCK, BLOCK);
+    }
+    pixelBlobs.set(key, canvas);
+  }
+  return canvas;
+}
+export function pixelGlow(ctx, x, y, radius, rgb, alpha = 1) {
+  if (alpha <= 0) return;
+  const canvas = pixelBlob(rgb, radius);
+  ctx.save();
+  ctx.globalCompositeOperation = 'lighter';
+  ctx.globalAlpha = Math.min(1, alpha * 1.4);
+  ctx.drawImage(canvas, Math.round((x - canvas.width / 2) / BLOCK) * BLOCK, Math.round((y - canvas.height / 2) / BLOCK) * BLOCK);
+  ctx.restore();
+}
+// A ragged blocky disc: the cog-edged fireball core of the boss-destroyed draft.
+export function blockDisc(ctx, cx, cy, r, colour, seed) {
+  if (r < BLOCK) return;
+  ctx.fillStyle = colour;
+  const x0 = Math.round(cx / BLOCK) * BLOCK, y0 = Math.round(cy / BLOCK) * BLOCK;
+  for (let gy = -r; gy <= r; gy += BLOCK) for (let gx = -r; gx <= r; gx += BLOCK) {
+    const d = Math.hypot(gx, gy), jag = (hash(Math.round(gx / BLOCK) * 7 + Math.round(gy / BLOCK) * 13 + seed) - .5) * BLOCK * 2.6;
+    if (d < r + jag) ctx.fillRect(x0 + gx, y0 + gy, BLOCK, BLOCK);
+  }
 }
 
 // A pixel-art filled disc, one fillRect per row.
@@ -87,30 +131,42 @@ export function smallBlast(ctx, effect, time) {
 // radial rays, flying hull plates and a spray of sparks. `reduced` skips the
 // full-screen flash.
 const HULL = ['#273c58', '#142337', '#f2a45d', '#55647a'];
-export function bossBlast(ctx, effect, time, { width, height, reduced = false, sprite = () => {} } = {}) {
+export function bossBlast(ctx, effect, time, { width, height, reduced = false, sprite = () => {}, chunks = [], scale = 1 } = {}) {
   const age = time - effect.time, t = age / BOSS_BLAST_MS;
   if (t < 0 || t >= 1) return;
   const { x, y } = effect;
-  // Plates fly under the fireball so the hot centre overlaps them.
+  // Fireball: stepped, ragged discs in flat colour (draft: amber rim, cream, white-hot core).
+  const fade = Math.max(0, 1 - Math.max(0, t - .35) / .5);
+  const swell = ease(Math.min(1, age / 300)) * Math.max(0, 1 - Math.max(0, t - .2) * 1.25), big = Math.min(scale, 1.25);
+  pixelGlow(ctx, x, y, Math.round(84 * big), '255,140,60', .6 * fade);
+  blockDisc(ctx, x, y, 50 * big * swell, '#e8944a', 1);
+  blockDisc(ctx, x, y, 38 * big * swell, '#ffd9a0', 2);
+  blockDisc(ctx, x, y, 26 * big * swell, '#fff4dc', 3);
+  blockDisc(ctx, x, y, 15 * big * swell, '#ffffff', 4);
+  ctx.globalAlpha = 1;
+  // Hull pieces: angular shards cut from the boss's own sprite, drawn over the
+  // fireball like the boss-destroyed draft.
   for (let i = 0; i < 10; i++) {
-    const angle = hash(i * 3.1) * TAU, speed = 60 + hash(i + 5) * 120;
+    const angle = hash(i * 3.1) * TAU, speed = (60 + hash(i + 5) * 120) * scale;
     const run = ease(Math.min(1, t * 1.4)) * speed * 1.3;
-    const px = x + Math.cos(angle) * run, py = y + Math.sin(angle) * run * .85 + t * t * 22;
-    const side = 4 + Math.floor(hash(i + 8) * 7);
+    const fall = t * t * 22;
     ctx.globalAlpha = Math.max(0, 1 - Math.max(0, t - .55) / .45);
-    ctx.fillStyle = HULL[i % 3]; ctx.fillRect(Math.round(px - side / 2), Math.round(py - side / 2), side, side);
-    ctx.fillStyle = t < .5 ? '#ffb86e' : '#7a4a3a'; ctx.fillRect(Math.round(px - side / 2), Math.round(py - side / 2), side, 1);
+    const chunk = chunks[i % Math.max(1, chunks.length)];
+    if (chunk) {
+      const lean = Math.hypot(chunk.dx, chunk.dy) || 1;
+      const px = x + chunk.dx + (chunk.dx / lean * .7 + Math.cos(angle) * .5) * run;
+      const py = y + chunk.dy + (chunk.dy / lean * .7 + Math.sin(angle) * .5) * run * .85 + fall;
+      ctx.drawImage(chunk.canvas, Math.round((px - chunk.canvas.width / 2) / BLOCK) * BLOCK, Math.round((py - chunk.canvas.height / 2) / BLOCK) * BLOCK);
+    } else {
+      const px = x + Math.cos(angle) * run, py = y + Math.sin(angle) * run * .85 + fall;
+      const side = 4 + Math.floor(hash(i + 8) * 7);
+      ctx.fillStyle = HULL[i % 3]; ctx.fillRect(Math.round(px - side / 2), Math.round(py - side / 2), side, side);
+      ctx.fillStyle = t < .5 ? '#ffb86e' : '#7a4a3a'; ctx.fillRect(Math.round(px - side / 2), Math.round(py - side / 2), side, 1);
+    }
   }
   ctx.globalAlpha = 1;
-  // Fireball.
-  const frame = Math.min(7, Math.floor(age / 85));
-  const fade = Math.max(0, 1 - Math.max(0, t - .35) / .5);
-  glow(ctx, x, y, 90, '255,140,60', .85 * fade);
-  glow(ctx, x, y, 46, '255,232,176', fade);
-  if (frame <= 6) sprite(`explosion-${frame}`, x - 48, y - 48, 3);
-  if (age < 360) glow(ctx, x, y, 30, '255,252,236', 1 - age / 360);
   // Shockwave.
-  const ring = ease(Math.min(1, age / 900)) * Math.hypot(width, height) * .32;
+  const ring = ease(Math.min(1, age / 900)) * Math.hypot(width, height) * .32 * Math.max(.7, scale * .8);
   if (age < 900) {
     ctx.fillStyle = `rgba(255,232,190,${(1 - age / 900).toFixed(2)})`;
     for (let a = 0; a < 220; a++) {

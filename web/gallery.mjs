@@ -12,7 +12,7 @@ import {REGIONS} from './regions.mjs';
 const review=document.querySelector('#presentationReview');
 const reviewArt=await loadArt();
 function reviewScene(wave,time){
-    const scene=new Float32Array(576);
+    const scene=new Float32Array(1408);
     scene[0]=2;scene[2]=time;scene[37]=time;scene[19]=wave;
     scene[4]=110;scene[5]=150;scene[6]=1;scene[7]=3;scene[45]=1;
     scene[22]=1;scene[21]=110;scene[20]=4;scene[63]=1;
@@ -40,9 +40,10 @@ for(let i=1;i<REGIONS.length;i++){
         scene[37]=1000+region.enter.ms*.5;
     });
 }
-for(const [phase,fan,label] of [[1,0,'Lance warning: 900 ms'],[2,0,'Lance discharge: clear upper/lower escape routes'],[1,1,'Fan warning: locked aim, narrow spread']]){
-    fixture(`Sentinel · ${label}`,5,(renderer,scene)=>{
-        scene.fill(0,64,256);scene[22]=0;
-        scene.set([1,414,135,12,18,phase,300,150,fan,1,5,0,110],512);
-    });
+
+// Boss sheets, one image per region plus the projectile sheet.
+for(const name of ['frontier','violet','ember','ruins','lunar','rift','shots']){
+    const image=document.createElement('img');
+    image.className='sprite-sheet';image.src=`./assets/bosses/${name}.png`;image.alt=`${name} boss sheet`;
+    document.querySelector('#bossSheets')?.append(image);
 }

@@ -1,6 +1,7 @@
 import { CoopLeaderboard } from './coop-records.mjs';
 import { decodeCoopPlayer } from './coop-scene.mjs';
 import { PersonalBests, clearBrowserRecords } from './records.mjs';
+import { BossRecords } from './boss-records.mjs';
 export const STATES = ['menu', 'countdown', 'playing', 'paused', 'death', 'initials', 'game-over', 'demo'];
 export const SCORE_KEY = 'asteroids.web.scores-v3';
 
@@ -41,13 +42,14 @@ export async function createRuntime(bytes, { storage, random, tone = () => {}, s
   const { instance } = await WebAssembly.instantiate(bytes, imports);
   api = instance.exports;
   const records = new PersonalBests(storage);
+  const bossRecords = new BossRecords(storage);
   let run = null, result = null;
   let coop = null, coopPhase = null, teamBoard = null;
   let initials = ['A','A','A'], initialSlot = 0, initialReady = false, initialRepeat = 0;
   let teamSaveFailed = false;
   let initialHorizontal = 0, initialHorizontalRepeat = 0;
   function coopPlayers() {
-    return [0,1].map(owner => decodeCoopPlayer(new Float32Array(new Float32Array(api.memory.buffer, api.web_coop_player(owner), 576))));
+    return [0,1].map(owner => decodeCoopPlayer(new Float32Array(new Float32Array(api.memory.buffer, api.web_coop_player(owner), 1408))));
   }
   function finishCoop() {
     if (!run) return;
@@ -59,8 +61,9 @@ export async function createRuntime(bytes, { storage, random, tone = () => {}, s
       bossParticipation:p.participation}));
     result = {rules:run.rules, profile:coop.profiles[0], players:summaries,
       score:players[0].teamScore, wave:players[0].scene[19], elapsedMs:players[0].scene[2],
-      bossKills:players[0].scene[523]};
+      bossKills:players[0].scene[523], bossMask:players[0].scene[610]};
     summaries.forEach(p => records.record(p.profile, run.rules, p));
+    summaries.forEach(p => bossRecords.record(p.profile, players[0].scene[610]));
     run = null; coopPhase = 'results'; initialReady = false;
   }
   function stepCoop(inputs) {
@@ -110,12 +113,15 @@ export async function createRuntime(bytes, { storage, random, tone = () => {}, s
     result = {...run, score: scene[16], wave: stats.highestWave, peakCps: stats.peakCps,
       longestChain: stats.longestChain, shots: stats.spawned, hits: stats.hits,
       laserShots: stats.laserShots, laserKills: stats.laserKills,
-      bossKills: scene[523], elapsedMs: scene[2], destroyed: scene[57], bestMultiplier: scene[58]};
+      bossKills: scene[523], bossMask: scene[610], bossHits: scene[611], elapsedMs: scene[2],
+      destroyed: scene[57], bestMultiplier: scene[58]};
     records.record(run.profile, run.rules, result);
+    if (!run.rules.practice) bossRecords.record(run.profile, result.bossMask || 0);
     run = null;
   }
   const runtime = {
     records,
+    bossRecords,
     get scoreStatus() { return coop ? teamBoard.status : scoreStatus; },
     get coop() { return coop; },
     teamLeaderboard(friendlyFire) { return new CoopLeaderboard(storage, friendlyFire); },
@@ -142,6 +148,7 @@ export async function createRuntime(bytes, { storage, random, tone = () => {}, s
       if (reset.ok) {
         if (coop) teamBoard = new CoopLeaderboard(storage, coop.friendlyFire);
         records.profiles = [{}, {}];
+        bossRecords.reset();
         api.web_reload_scores();
       }
       return reset.ok;
@@ -200,6 +207,10 @@ export async function createRuntime(bytes, { storage, random, tone = () => {}, s
       resultsVisible = false;awaitResultsRelease = true;
     },
     resetTargets() { api.web_practice_targets(); },
+    // Boss practice: a practice run whose room holds one chosen fight (0-5 bosses, 6-11 minis).
+    bossPractice(kind, tier = 0, phase = 1) { api.web_boss_practice(kind, tier, phase); },
+    // Assists change telegraph length and forces only; scoring is unaffected.
+    bossAssist({ longWarnings = false, calm = false } = {}) { api.web_boss_assist(+longWarnings, +calm); },
     doubleFire() { api.web_practice_double_fire(); },
     stats() {
       if (coop) return coopPlayers()[0].stats;
@@ -212,7 +223,7 @@ export async function createRuntime(bytes, { storage, random, tone = () => {}, s
     get height() { return api.web_height(); },
     fireDiagnostics() { return [...new Uint32Array(api.memory.buffer,api.web_fire_diagnostics(),4)]; },
     scene() {
-      if (!coop) return new Float32Array(api.memory.buffer, api.web_scene(), 576);
+      if (!coop) return new Float32Array(api.memory.buffer, api.web_scene(), 1408);
       const scene = coopPlayers()[0].scene;
       scene[16] = scene[556]; scene[27] = scene[556];
       if (coopPhase) {

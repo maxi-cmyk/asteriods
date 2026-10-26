@@ -20,3 +20,15 @@ test('every sprite a region background draws exists in the sheet', () => {
   assert.ok(used.length >= REGIONS.length);
   for (const name of new Set(used)) assert.ok(meta[name], `missing world ${name}`);
 });
+
+test('tier 3+ fight scenery exists in the sheet, covers every boss and cycles through all three objects', async () => {
+  const { FIGHT_SCENERY, fightSceneryFor } = await import('../backgrounds.mjs');
+  for (const entry of FIGHT_SCENERY) assert.ok(meta[entry.name], entry.name);
+  assert.equal(meta['pulsar'].frames, 16);assert.equal(meta['quasi-star'].frames, 1);
+  for (const tier of [3, 4, 5, 6]) {
+    const seen = new Set();
+    for (let kind = 0; kind < 6; kind++) seen.add(fightSceneryFor({ kind, tier }).name);
+    assert.equal(seen.size, 3, `tier ${tier} shows all three`);
+  }
+  assert.notEqual(fightSceneryFor({ kind:0, tier:3 }).name, fightSceneryFor({ kind:0, tier:4 }).name);
+});

@@ -10,7 +10,8 @@ Every shipped asset is original, and every image is regenerable from a script in
 | `sprites.png` / `sprites.json` | Stock atlas: Vanguard ship (24×16 and 16 aiming cells), 72 rock cells, two pickups, 8 explosion frames (99 cells) | `tools/make-assets.py` (no dependencies) |
 | `font.png` | Adafruit 5×8 bitmap font used by canvas text | `tools/make-assets.py` |
 | `ships.png` / `ships.json` | Six Hangar hulls: 16 aiming cells and a 24×16 icon each | `tools/make-ships.py` (Pillow, NumPy) |
-| `worlds.png` / `worlds.json` | Region scenery: 16 rotation frames per world plus a static Sagittarius A* | `tools/make-worlds.py` (Pillow, NumPy) |
+| `worlds.png` / `worlds.json` | Region scenery: 16 rotation frames per world plus a static Sagittarius A*; also the tier 3+ boss backdrops (static quasi-star, 16-frame pulsar and magnetar) | `tools/make-worlds.py` (Pillow, NumPy) |
+| `bosses/*.png` / `*.json` | One sheet per region (`frontier`, `violet`, `ember`, `ruins`, `lunar`, `rift`) holding its boss, mini-boss, layers and two damage overlays; `shots` holds hostile projectiles | `tools/make-bosses.py` (Pillow, NumPy; toolkit in `tools/boss_art.py`, `tools/boss_sprites.py`) |
 | `home-scene.png` | Home backdrop (nebula, gas giant, lit rocks) | `tools/make-home-scene.py` (Pillow, NumPy) |
 | `ui/` | HUD glyphs (bolt, shield, 2×), selection chevron, ship-life icon | hand-authored 7×7 pixel grids |
 | `fonts/` | Jersey 10 (display) and Pixelify Sans (body), SIL OFL, with licence texts | Google Fonts |
@@ -48,5 +49,11 @@ frame 0. Region ids, wave ranges, transitions and fallback colours are in
 - The five region transitions (orbital pass, atmospheric sweep, skyline emergence,
   cloud clearance, ring convergence) run below the sprites with static fallbacks;
   `../assets.html` has synthetic midpoint fixtures.
-- The Sentinel boss is code-native geometry; it does not replace any sprite or
-  collision shape.
+- Bosses follow the boss-destroyed draft (`assets/screenshots/design-draft-boss.png`):
+  chunky 4 px blocks, flat low-poly facets in five flat shades with no gradients or fine
+  dither, a dark silhouette with an amber rim on the lit upper-left edge, a few dark
+  speckle blocks, angular shard-shaped rubble for the defeat. Glows are four flat
+  4 px steps (`pixelGlow` in `fx.mjs`) and the fireball is stepped ragged discs.
+  Painter: `tools/boss_facets.py`; sprites: `tools/boss_sprites.py`. Sprites load per
+  region on demand; collision shapes are circles defined in `native/boss_fights.h`,
+  independent of the art.

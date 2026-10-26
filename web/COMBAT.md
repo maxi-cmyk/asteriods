@@ -126,36 +126,67 @@ Friendly hits do not count as enemy accuracy or scoring progress. See the
 local co-op rules below.
 
 
-## Region-closing sentinel (browser solo)
+## Bosses and mini-bosses (browser solo and co-op)
 
-Every fifth wave (5, 10, 15, ...) replaces ordinary asteroid pressure with one
-sentinel. Its 1.2-second entrance is harmless. The orange core becomes vulnerable
-when the entrance finishes. A locked lane/fan warns for 900 ms, attacks for
-320 ms, then rests for 950 ms; the two patterns alternate. The lance has a
-9-pixel half-width matching its rendered 18-pixel beam. Three fan projectiles
-travel at 2.2 pixels/tick with ±0.28-radian spread. Movement bounds are unchanged.
-Boss phase clocks freeze with gameplay, including Pause and utility visits.
+Design: `nextSteps.md` Part A. Engine: `native/boss.h` (shared framework) and
+`native/boss_fights.h` (the twelve fights). Waves 5, 10, 15, 20, 25 and 30 close
+their region with a boss (Sentinel, Ringwarden, Cinderforge, Bastion,
+Tidecaller, Horizon Warden); the cycle then repeats as tiers (wave 35 is the
+Sentinel again, tier II). Waves 3, 8, 13, 18, 23 and 28 carry a mini-boss
+(Picket, Shardling, Cinderling, Gunnery, Moonjelly, Lens Imp) that shares the
+wave with half the usual rocks and keeps the wave open until it is down.
 
-Health is `(18 + 6 * (min(10, wave / 5) - 1)) * latched_players`; solo
-runs supply one player and local co-op supplies its two-player starting roster. Tests exercise the two-player scaling input, but
-there is no co-op implementation or network authority yet. A future co-op run
-will latch its roster at entry; a disconnect must not resize the boss mid-fight.
+Rules every fight obeys, measured by the test build (`web_test_boss_stats`):
 
-A primary projectile deals one damage and counts once toward primary accuracy;
-laser discharge deals eight damage once, without inflating primary statistics.
-Shield protection and invulnerability use the existing collision path. Multishot
-and 2× fire retain their projectile pools and 80 ms echo accounting.
+- the 1.4 s entrance is harmless and cannot be shot;
+- a lethal hazard never goes live without its warning (900 ms for lanes, beams,
+  tendrils and pools; 700 ms for ring waves); telegraphs show a dashed amber line
+  (lane or beam), a pulsing pink ring (landing area), a dotted arc (spread) or a
+  thin red line (aimed shot);
+- at most 48 hostile shots and 6 lethal hazards live at once, and a safe channel
+  42 px wide always exists;
+- the body stays in the right 55% of the field and touching it counts as a hit;
+- dying never resets a boss: its attacks are cleared and you return protected;
+- boss practice (Pause, practice only) loses no lives and reports hits taken.
 
-Defeat awards `1500 + 250 * min(10, wave / 5)` base points as one scoring event
-through the existing multiplier, capped at ×5. No per-hit farming. Boss defeats
-are separate from asteroid kills and appear in Results. The defeat recovery is
-at least 1.2 seconds, followed by the ordinary wave recovery. Since bosses close
-regions, their entrance never overlaps the following region reveal.
+Health is stated in design hits, `(18 + 6 * (min(10, wave / 5) - 1)) * players`
+(minis `6 + 2 * region`), times 1.2 from tier II. The engine splits each design
+hit into 3 to 8 sub-hits per fight (`BOSS_K`) so open windows, not raw fire rate,
+set the fight length. A primary shot is one sub-hit and counts once toward
+primary accuracy; the laser stays worth eight design hits and pierces. Shields,
+multishot and 2× fire use the ordinary paths.
 
-Local co-op awards the destroying player once and includes the points once in
-the team total. Other participants receive a non-scoring participation count.
-Network authority remains task 8 work. Existing browser record keys are preserved;
-old records are retained, with the new boss balance documented here.
+Each fight has a signature rule: Sentinel plates open only between attacks;
+Ringwarden blades absorb shots and break (the laser pierces both rings);
+Cinderforge's shell opens at vents or at panels broken with three hits; Bastion's
+bridge takes half damage while a hardpoint lives; Tidecaller's bell is shielded
+by bubbles (the laser pops all three); the Warden's core opens in a two-second
+window every eight seconds or when all four S-stars are down.
+
+Defeat awards `1500 + 250 * min(10, wave / 5)` (minis `400 + 100 * region`) as one
+scoring event through the multiplier, +50% when no life was lost during the
+fight. Boss kills are separate from asteroid kills and appear in Results and
+Records by name. Defeating a mini-boss in a real run for the first time unlocks
+its Hangar hull (`unlocks.mjs`); practice never unlocks. Co-op awards the killing
+pilot, counts participation for every pilot who touched the boss, scales health by
+two, and alternates its aim between the nearer and the farther pilot.
+
+Every boss and mini-boss has its own defeat sequence (`boss-death.mjs`), played from a
+frozen copy of its last frame: the Sentinel's plates blast off, the Ringwarden shears and
+implodes, the Cinderforge splits on a column of fire, the Bastion breaks in two along a
+chain of explosions, the Tidecaller dissolves into bubbles, the Warden collapses to a point
+and rings out. Each has a matching defeat sound. Replay them on `/boss-attacks.html`.
+
+Tier 3+ fights (wave 93 and later, or tier IV in boss practice) play in front of a
+quasi-star, pulsar or magnetar; it is scenery only and never hurts the player.
+
+Sound: each boss has its own timbre, a charge-up for every attack, a release sound
+at the lethal moment and a distinct defeat sound (`boss-sound.mjs`). The
+attack gallery (`boss-attacks.html`, linked from Pixel assets) lists every attack
+with its warning and answer and plays its sounds.
+
+Assists (Settings → Display): longer warnings add 30% to every telegraph; calm
+forces remove the Warden's pull and straighten the lens shots.
 
 ## Local co-op
 

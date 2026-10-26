@@ -71,15 +71,31 @@ test('boss roster, alternating target locks, attribution and piercing laser appl
     const g=await game();
     set(g,0,1,100);set(g,0,2,135);set(g,1,1,170);set(g,1,2,210);
     for(let p=0;p<2;p++)set(g,p,3,100000);
-    g.api.web_test_boss(5,2,36);ticks(g,60);
+    g.api.web_test_boss(5,2,0);
     let scene=players(g)[0].scene;
-    assert.equal(scene[516],36);assert.equal(scene[521],2);assert.equal(scene[524],100);
-    ticks(g,76,{players:[{laser:true,aimX:1},{}]});
-    assert.equal(players(g)[0].scene[515],28);assert.equal(players(g)[0].stats.laserShots,1);
-    ticks(g,20,{players:[{laser:true,aimX:1},{}]});assert.equal(players(g)[0].scene[515],28);
-    ticks(g,20);scene=players(g)[0].scene;
-    assert.equal(scene[524],170);assert.equal(scene[519],210);
-    set(g,1,3,0);set(g,1,7,0);assert.equal(players(g)[0].scene[516],36);
+    assert.equal(scene[516],18*3*2);assert.equal(scene[521],2);
+    ticks(g,76,{players:[{laser:true,aimX:1},{}]});               // the 1.5 s windup lands as the boss opens
+    assert.equal(players(g)[0].scene[515],18*3*2-8*3);assert.equal(players(g)[0].stats.laserShots,1);
+    ticks(g,20,{players:[{laser:true,aimX:1},{}]});assert.equal(players(g)[0].scene[515],18*3*2-8*3);
+    // The first lock goes to the nearer pilot, the next to the farther one.
+    const lock=()=>[players(g)[0].scene[524],players(g)[0].scene[519]];
+    let guard=0;while(players(g)[0].scene[605]===0&&guard++<400)g.step();
+    assert.deepEqual(lock(),[170,210]);
+    while(players(g)[0].scene[605]!==0&&guard++<900)g.step();
+    while(players(g)[0].scene[605]===0&&guard++<1500)g.step();
+    assert.deepEqual(lock(),[100,135]);
+    assert.equal(players(g)[0].scene[516],18*3*2);
+});
+test('boss defeat credits the killing pilot and counts participation for every pilot who touched it',async()=>{
+    const g=await game();
+    set(g,0,1,100);set(g,0,2,135);set(g,1,1,100);set(g,1,2,200);
+    for(let p=0;p<2;p++)set(g,p,3,100000);
+    g.api.web_test_boss(5,2,1);ticks(g,75);
+    let guard=0;
+    while(players(g)[0].scene[512]&&guard++<900)g.step({players:[{firePressed:guard%3===0,aimX:1},{}]});
+    assert.equal(players(g)[0].scene[512],0);
+    assert.equal(players(g)[0].participation,1);assert.equal(players(g)[1].participation,0);
+    assert.equal(players(g)[0].score,2625);assert.equal(players(g)[1].score,0);
 });
 test('same-target simultaneous shots pay once and the loser continues without duplicate credit',async()=>{
     const g=await game();set(g,1,2,95);set(g,0,10,110);

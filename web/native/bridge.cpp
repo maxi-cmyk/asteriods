@@ -166,6 +166,7 @@ void web_audio_step() {
 void web_start(int practice) {
 #ifdef WEB_HD
     coop_active = false;
+    boss_bind_solo();
     practice_mode = practice != 0;
     practice_goals = 0;
     begin_game();
@@ -202,9 +203,46 @@ void web_menu() {
     ship.effects.double_fire_left_ms = 0;
     combat_reset();
     boss = {};
+    boss_bind_solo();
 #endif
     sound_stop();
     set_state(STATE_MENU);
+}
+// Boss practice: pick a boss (0-5) or mini-boss (6-11) and a tier. Lives are
+// never lost; the fight is the whole room.
+void web_boss_practice(int kind, int tier, int phase) {
+#ifdef WEB_HD
+    coop_active = false;
+    boss_bind_solo();
+    practice_mode = true;
+    practice_goals = 0;
+    begin_game();
+    combat_reset();
+    boss = {};
+    boss_begin_practice(constrain(kind, 0, int(BK_COUNT) - 1), constrain(tier, 0, 3));
+    if (phase > 1) {
+        unsigned top = bs_phases() + (boss.tier >= 2 && !boss.mini ? 1 : 0);
+        boss.start_phase = constrain(unsigned(phase), 1u, top);
+        boss.health = bs_phase_health(boss.start_phase);
+    }
+    pending_asteroids = 0;
+    ship.invincible_left = 0;
+    ship.effects.double_fire_left_ms = 0;
+    set_state(STATE_PLAYING);
+#else
+    (void)kind;
+    (void)tier;
+    (void)phase;
+#endif
+}
+void web_boss_assist(int longer_warnings, int calm) {
+#ifdef WEB_HD
+    boss_assist_long = longer_warnings != 0;
+    boss_assist_calm = calm != 0;
+#else
+    (void)longer_warnings;
+    (void)calm;
+#endif
 }
 void web_practice_targets() {
 #ifdef WEB_HD
@@ -304,8 +342,10 @@ int web_height() {
     return SCREEN_H;
 }
 const float *web_scene() {
-    // First 512 floats retain the original layout; 64 tail floats expose bosses.
-    static float scene[576];
+    // First 512 floats retain the original layout; 512..575 keep the boss header
+    // and the co-op ABI slots; the boss detail block starts at 600 (see
+    // boss-scene.mjs, which owns the offsets).
+    static float scene[1408];
     memset(scene, 0, sizeof(scene));
     scene[0] = state;
     scene[1] = browser_ms;
@@ -408,22 +448,79 @@ const float *web_scene() {
     scene[481] = pickup.kind;
 #ifdef WEB_HD
     scene[512] = boss.active;
-    scene[513] = BOSS_X;
-    scene[514] = BOSS_Y;
+    scene[513] = boss.x;
+    scene[514] = boss.y;
     scene[515] = boss.health;
     scene[516] = boss.maximum;
     scene[517] = boss.phase;
-    scene[518] = game_ms - boss.phase_started;
+    scene[518] = bs_since(boss.phase_started);
     scene[519] = boss.target_y;
     scene[520] = boss.cycle % 2;
     scene[521] = boss.players;
     scene[522] = boss.wave;
     scene[523] = boss.kills;
     scene[524] = boss.target_x;
-    for (int i = 0; i < 6; i++) {
-        scene[528 + i * 4] = boss.shots[i].active;
-        scene[529 + i * 4] = boss.shots[i].x;
-        scene[530 + i * 4] = boss.shots[i].y;
+    {
+        const int B = 600;
+        scene[B] = boss.kind;
+        scene[B + 1] = boss.mini;
+        scene[B + 2] = boss.tier;
+        scene[B + 3] = boss.maximum == 0 ? 0 : boss.health * 3 > boss.maximum * 2 ? 0
+                       : boss.health * 3 > boss.maximum ? 1 : 2;
+        scene[B + 4] = game_ms < boss.flash_until ? boss.flash_until - game_ms : 0;
+        scene[B + 5] = boss.atk;
+        scene[B + 6] = boss.atk ? game_ms - boss.atk_t0 : 0;
+        scene[B + 7] = boss.aux[0];
+        scene[B + 8] = bs_since(boss.born) >= BOSS_ENTRANCE_MS ? 1
+                       : bs_since(boss.born) / float(BOSS_ENTRANCE_MS);
+        scene[B + 9] = boss.practice;
+        scene[B + 10] = boss.defeated_mask;
+        scene[B + 11] = boss.hits_taken;
+        scene[B + 12] = boss.violations;
+        scene[B + 13] = boss.max_shots;
+        scene[B + 14] = boss.max_hazards;
+        scene[B + 15] = boss.min_corridor;
+        for (int i = 0; i < 16; i++) scene[B + 16 + i] = boss.aux[i];
+        for (unsigned i = 0; i < BOSS_PARTS; i++) {
+            const BossPart& p = boss.parts[i];
+            int at = B + 32 + i * 8;
+            scene[at] = p.exists;
+            scene[at + 1] = p.kind;
+            scene[at + 2] = p.x;
+            scene[at + 3] = p.y;
+            scene[at + 4] = p.r;
+            scene[at + 5] = p.hp;
+            scene[at + 6] = p.state;
+            scene[at + 7] = p.slot;
+        }
+        for (unsigned i = 0; i < BOSS_SHOTS; i++) {
+            const BossShot& sh = boss.shots[i];
+            int at = B + 288 + i * 8;
+            scene[at] = sh.active;
+            scene[at + 1] = sh.family;
+            scene[at + 2] = sh.x;
+            scene[at + 3] = sh.y;
+            scene[at + 4] = bs_atan2(sh.dy, sh.dx);
+            scene[at + 5] = sh.hp;
+            scene[at + 6] = game_ms - sh.born;
+            scene[at + 7] = sh.family == SF_LOB ? sh.life : sh.amp;
+        }
+        for (unsigned i = 0; i < BOSS_HAZARDS; i++) {
+            const BossHazard& h = boss.hz[i];
+            int at = B + 672 + i * 12;
+            scene[at] = h.active;
+            scene[at + 1] = h.kind;
+            scene[at + 2] = h.x;
+            scene[at + 3] = h.y;
+            scene[at + 4] = h.a;
+            scene[at + 5] = h.b;
+            scene[at + 6] = h.c;
+            scene[at + 7] = h.d;
+            scene[at + 8] = h.e;
+            scene[at + 9] = h.warn_left;
+            scene[at + 10] = h.warn_total;
+            scene[at + 11] = h.live_left;
+        }
     }
 #endif
     for (int i = 0; i < HIGHSCORE_CAPACITY; i++) {
@@ -473,7 +570,7 @@ void web_coop_input(int owner, float x, float y, int fire, float aim_x,
 #endif
 }
 const float *web_coop_player(int owner) {
-    static float snapshot[576];
+    static float snapshot[1408];
 #ifdef WEB_HD
     if (coop_active && owner >= 0 && owner < 2) {
         coop_load(owner);
@@ -517,6 +614,50 @@ void web_test_boss(int wave, int players, int health) {
     wave_number = wave;
     boss_begin(players);
     if (health > 0) boss.health = health;
+#endif
+}
+// Fairness telemetry gathered by the test build: warnings, caps, corridor.
+const float *web_test_boss_stats() {
+    static float values[16];
+#ifdef WEB_HD
+    values[0] = boss.violations;
+    values[1] = boss.max_shots;
+    values[2] = boss.max_hazards;
+    values[3] = boss.entrance_hits;
+    values[4] = boss.min_corridor;
+    values[5] = boss.hits_taken;
+    values[6] = boss.health;
+    values[7] = boss.phase;
+    values[8] = boss.defeated_mask;
+    values[9] = boss.kind;
+    values[10] = boss.life_lost;
+    values[11] = boss.maximum;
+#endif
+    return values;
+}
+// Contact circles (count, then x, y, r triples) for fairness and bot tests.
+const float *web_test_boss_body() {
+    static float values[1 + 3 * 32];
+    memset(values, 0, sizeof(values));
+#ifdef WEB_HD
+    float body[96];
+    unsigned n = boss.active ? bs_kind_body(body) : 0;
+    values[0] = n;
+    for (unsigned i = 0; i < n * 3; i++) values[1 + i] = body[i];
+#endif
+    return values;
+}
+void web_test_boss_set(int field, float value) {
+#ifdef WEB_HD
+    if (field == 0) bs_damage(0, boss.health > unsigned(value) ? boss.health - unsigned(value) : 0);
+    if (field == 1) { boss.health = unsigned(value); }
+    if (field == 2) boss.rest_until = 0;
+    if (field == 3) { ship.position_x = value; }
+    if (field == 4) { ship.position_y = value; }
+    if (field == 5) { ship.invincible_left = unsigned(value); }
+    if (field == 6) { boss.stamp[0] = 0; for (BossPart& p : boss.parts) if (p.exists) { p.hp = 1; } }
+    if (field == 7) { boss_assist_long = value != 0; }
+    if (field == 8) { for (BossPart& p : boss.parts) p.exists = false; }
 #endif
 }
 void web_test_pickup(int kind) {

@@ -1,7 +1,7 @@
-// Co-op scene ABI v1 wraps legacy 576-float read-only scenes. Keep decoding
+// Co-op scene ABI v1 wraps legacy read-only scenes (1408 floats). Keep decoding
 // here so UI controllers do not acquire another set of magic offsets.
 export function decodeCoopPlayer(scene) {
-    if (scene.length !== 576 || scene[552] !== 1) throw Error('Unsupported co-op scene');
+    if (scene.length !== 1408 || scene[552] !== 1) throw Error('Unsupported co-op scene');
     return {
         scene, id:scene[553], x:scene[4], y:scene[5], alive:!!scene[6], lives:scene[7],
         score:scene[16], multiplier:scene[17], chainMs:scene[18],

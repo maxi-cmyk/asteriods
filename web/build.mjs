@@ -60,6 +60,8 @@ const exports = [
     'web_reload_scores',
     'web_menu',
     'web_practice_targets',
+    'web_boss_practice',
+    'web_boss_assist',
     'web_practice_multishot',
     'web_practice_double_fire',
     'web_stats',
@@ -75,6 +77,9 @@ if (test)
         'web_test_overlap',
         'web_test_pickup',
         'web_test_boss',
+        'web_test_boss_stats',
+        'web_test_boss_body',
+        'web_test_boss_set',
     );
 // Compile portable modules as C17, never through the C++ frontend.
 const coreObjects = ['scoring', 'difficulty', 'score_table'].map((name) => {
@@ -179,12 +184,23 @@ if (!test && !oled) {
         'backgrounds.mjs',
         'art-grade.mjs',
         'fx.mjs',
+        'boss-scene.mjs',
+        'boss-art.mjs',
+        'boss-render.mjs',
+        'bossui.mjs',
+        'boss-sound.mjs',
+        'boss-death.mjs',
+        'boss-records.mjs',
+        'unlocks.mjs',
         'hangar.mjs',
         'showcase.mjs',
         'presentation.mjs',
         'settings.mjs',
         'audio.mjs',
         'assets.html',
+        'boss-attacks.html',
+        'boss-attacks.mjs',
+        'boss-guide.mjs',
         'gallery.mjs',
     ]) {
         if (existsSync(resolve(root, file)))

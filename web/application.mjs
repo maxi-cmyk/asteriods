@@ -2,13 +2,15 @@ import {CoopInput, supportedPad} from './coop-input.mjs';
 import {createCoopScreen} from './screens/coop.mjs';
 import { renderDiagnostics } from './screens/diagnostics.mjs';
 import { renderPractice } from './screens/practice.mjs';
+import { createBossUi } from './bossui.mjs';
 import { renderPlayChrome } from './screens/play-chrome.mjs';
 import { element } from './dom.mjs';
 import { createSettingsScreen } from './screens/settings.mjs';
 import { createHelpScreen } from './screens/help.mjs';
 import { createHangarScreen } from './screens/hangar.mjs';
 import { createModeScreen } from './screens/mode.mjs';
-import { loadHangar } from './hangar.mjs';
+import { loadHangar, hullById } from './hangar.mjs';
+import { createUnlocks } from './unlocks.mjs';
 import { createRecordsActions } from './screens/records-actions.mjs';
 import { renderPlayHud } from './screens/play.mjs';
 import { renderResultsScreen } from './screens/results.mjs';
@@ -39,6 +41,7 @@ import { PixelRenderer, loadArt, WIDTH, HEIGHT } from './renderer.mjs';
 
 const canvas = element('game');
 let renderer;
+const bossUi = createBossUi();
 const controllerLabel = element('controller');
 const stateLabel = element('state');
 const hint = element('hint');
@@ -55,6 +58,8 @@ try {
     storage = localStorage;
 } catch {}
 const profileStore = loadProfiles(storage);
+const unlocks = createUnlocks(storage);
+let lastBossMask = 0, toastTimer = 0;
 const hangarStore = loadHangar(storage);
 let gameArt = null;
 const settings = sanitizeSettings(
@@ -137,6 +142,7 @@ function syncSettingsEffects() {
         renderer.backgrounds.motion = settings.backgroundMotion;
         renderer.backgrounds.brightness = settings.backgroundBrightness;
     }
+    runtime?.bossAssist({ longWarnings: settings.bossLongWarnings, calm: settings.bossCalm });
     soundButton.textContent = settings.soundEnabled ? 'Sound on' : 'Sound off';
     soundButton.setAttribute('aria-pressed', String(settings.soundEnabled));
     element('music').textContent = settings.musicEnabled
@@ -170,6 +176,7 @@ const hangarScreen = createHangarScreen({
     getArt: () => gameArt,
     store: hangarStore,
     storage,
+    unlocks,
     activeProfile: () => profileStore.activeProfile,
     reduced: () => matchMedia('(prefers-reduced-motion: reduce)').matches,
 });
@@ -229,6 +236,11 @@ for (const [id, action] of [
         navigation.resume();
     });
 }
+element('bossPracticeStart').addEventListener('click', () => {
+    controls.clear();
+    runtime.bossPractice(Number(element('bossPick').value), Number(element('bossTier').value), Number(element('bossPhase').value));
+    navigation.resume();
+});
 element('endPractice').addEventListener('click', () => {
     controls.clear();
     pointerPosition = null;
@@ -284,6 +296,23 @@ function findController() {
         helpScreen.render(!!pad && menuDevice === 'controller');
     return pad;
 }
+// A first defeat of a mini-boss in a real run earns its Hangar hull.
+function trackBossUnlocks(scene) {
+    const mask = scene[610] | 0;
+    if (!mask) { lastBossMask = 0; return; }
+    const fresh = mask & ~lastBossMask;
+    lastBossMask = mask;
+    if (!fresh || scene[609]) return;
+    const profiles = runtime.coop ? (coopInput.profileIds ?? [0, 1]) : [profileStore.activeProfile];
+    for (const hull of unlocks.hullsFor(fresh))
+        if (profiles.map((profile) => unlocks.grant(profile, hull)).some(Boolean)) {
+            const toast = element('unlockToast');
+            toast.textContent = `${hullById(hull).name} hull unlocked · see Hangar`;
+            toast.hidden = false;
+            clearTimeout(toastTimer);
+            toastTimer = setTimeout(() => (toast.hidden = true), 4200);
+        }
+}
 function draw() {
     const update = (element, text) => {
         if (element.textContent !== text) element.textContent = text;
@@ -299,6 +328,12 @@ function draw() {
             : [hangarStore.profiles[profileStore.activeProfile]];
         renderer.render(scene, runtime.coop ? runtime.coopPlayers() : null);
     }
+    trackBossUnlocks(scene);
+    bossUi.render(
+        scene,
+        navigation.screen === 'play' &&
+            ['playing', 'countdown', 'death'].includes(runtime.state),
+    );
     renderHomeScreen({
         demoEngine,
         navigation,
@@ -351,6 +386,7 @@ function draw() {
         resetRecordsArmed: recordsActions.armed,
         resetProfile: recordsActions.profile,
         disarmRecordsReset: recordsActions.disarmRecordsReset,
+        bossArt: renderer?.bossArt,
         update,
     });
     renderResultsScreen({
@@ -1303,6 +1339,7 @@ try {
         scoreKey: 'asteroids.web.hd.scores-v3',
         profile: () => profileStore.activeProfile,
     });
+    syncSettingsEffects();
     navigation = new Navigation({
         runtime,
         dirty: () => settingsDraft.changed(),

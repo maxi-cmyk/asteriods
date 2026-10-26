@@ -93,11 +93,21 @@ def main():
     arr[..., 3] = ((edge > bayer(n, n) * .8 + .1) * 255).astype(np.uint8)   # dithered fade into the sky
     bh = Image.fromarray(arr, 'RGBA')
     rows.append(('sgr-a', bh, bh.width, bh.height))
+    # Tier 3+ boss backdrops: a quasi-star, and a pulsar and magnetar whose beams
+    # turn through half a revolution (the second beam makes the loop close).
+    qs = so.quasi_star()
+    rows.append(('quasi-star', qs, qs.width, qs.height))
+    for name, mag in (('pulsar', False), ('magnetar', True)):
+        frames = [so.pulsar(i * math.pi / FRAMES, S=176, magnetar=mag) for i in range(FRAMES)]
+        w, h = frames[0].size
+        strip = Image.new('RGBA', (w * FRAMES, h), (0, 0, 0, 0))
+        for i, f in enumerate(frames): strip.paste(f, (i * w, 0))
+        rows.append((name, strip, w, h))
     sheet_w = max(r[1].width for r in rows); y = 0
     sheet = Image.new('RGBA', (sheet_w, sum(r[1].height for r in rows)), (0, 0, 0, 0))
     for name, strip, w, h in rows:
         sheet.paste(strip, (0, y))
-        meta[name] = dict(x=0, y=y, w=w, h=h, frames=FRAMES if name != 'sgr-a' else 1)
+        meta[name] = dict(x=0, y=y, w=w, h=h, frames=1 if name in ('sgr-a', 'quasi-star') else FRAMES)
         y += h
     sheet.save(OUT / 'worlds.png', optimize=True)
     (OUT / 'worlds.json').write_text(json.dumps(meta, indent=1) + '\n')

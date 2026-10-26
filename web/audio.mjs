@@ -1,10 +1,13 @@
 import { ThemeMusic } from './music.mjs';
+import { BOSS_AT, bossHazards } from './boss-scene.mjs';
+import { BossSound } from './boss-sound.mjs';
 export class GameAudio {
     constructor(settings) {
         this.settings = settings;
         this.frequency = 0;
         this.previous = null;
         this.suspended = false;
+        this.bossSound = new BossSound(this);
     }
     unlock() {
         const Audio = window.AudioContext || window.webkitAudioContext;
@@ -74,6 +77,21 @@ export class GameAudio {
             gain.disconnect();
         };
     }
+    // A short tell tick, 200 ms before a lethal hazard goes live. The rest of the
+    // boss sound design lives in boss-sound.mjs.
+    bossCue() {
+        if (!this.context || !this.settings.soundEnabled || this.suspended) return;
+        const now = this.context.currentTime, osc = this.context.createOscillator(), env = this.context.createGain();
+        osc.type = 'square';
+        osc.frequency.setValueAtTime(1500, now);
+        env.gain.setValueAtTime(0.0001, now);
+        env.gain.linearRampToValueAtTime(.04, now + .005);
+        env.gain.exponentialRampToValueAtTime(.001, now + .05);
+        osc.connect(env).connect(this.master);
+        osc.start(now);
+        osc.stop(now + .08);
+        osc.onended = () => { osc.disconnect(); env.disconnect(); };
+    }
     setMode(mode, suspended = false) {
         this.mode = mode;
         this.musicSuspended = suspended;
@@ -136,6 +154,14 @@ export class GameAudio {
         if (old && scene[2] >= old[2] && scene[0] === 2) {
             if (scene[50] > old[50]) this.cue('discharge');
             if (old[49] > 0 && scene[49] === 0) this.cue('ready');
+            this.bossSound.observe(old, scene);
+            if (scene[512] && old[512]) {
+                const before = new Map(bossHazards(old).map(h => [h.index, h]));
+                for (const h of bossHazards(scene)) {
+                    const prev = before.get(h.index);
+                    if (h.kind <= 4 && h.warn > 0 && h.warn <= 200 && prev && prev.warn > 200 && prev.kind === h.kind) { this.bossCue(); break; }
+                }
+            }
         }
         this.previous = new Float32Array(scene);
     }

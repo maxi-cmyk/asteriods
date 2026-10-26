@@ -162,34 +162,7 @@ body {
 .settings-footer button {
     font-size: 12px;
 }
-.records-layout {
-    display: grid;
-    grid-template-columns: minmax(200px, 0.65fr) minmax(0, 1fr);
-    gap: 48px;
-}
-.records-panel {
-    margin: 0;
-    padding: 0;
-    border: 0;
-    font-size: 13px;
-}
-.records-panel h2 {
-    margin-bottom: 16px;
-}
-.record-filters {
-    margin: 0 0 22px;
-}
-#recordsValues {
-    line-height: 2;
-    font-variant-numeric: tabular-nums;
-}
-#leaderboard {
-    margin: 0;
-    padding-left: 24px;
-    line-height: 2.6;
-    font-variant-numeric: tabular-nums;
-    color: var(--ink);
-}
+
 .utility-view .controls {
     padding: 0 0 24px;
 }
@@ -295,10 +268,7 @@ body[data-screen='pause'] .app-shell {
         padding: 12px 16px;
         gap: 8px;
     }
-    .records-layout {
-        grid-template-columns: 1fr;
-        gap: 28px;
-    }
+    
     .utility-view .controls {
         grid-template-columns: 1fr 1fr;
         gap: 24px;
@@ -506,22 +476,7 @@ body[data-screen='pause'] .app-shell {
     gap: 12px;
     margin-bottom: 24px;
 }
-.metric-grid {
-    display: grid;
-    grid-template-columns: repeat(2, minmax(0, 1fr));
-    gap: 22px;
-    margin: 24px 0;
-    line-height: 1.4 !important;
-}
-.metric-grid dt {
-    font-size: 13px;
-    color: var(--muted);
-}
-.metric-grid dd {
-    font-size: 26px;
-    margin: 8px 0 0;
-    color: var(--ink);
-}
+
 .help-layout {
     display: grid;
     grid-template-columns: minmax(240px, 0.9fr) minmax(0, 1.2fr);
@@ -619,12 +574,6 @@ body[data-screen='pause'] .app-shell {
     .settings-footer {
         padding-top: 8px;
     }
-}
-
-.metric-grid > .empty-record {
-    font-size: 14px;
-    margin: 0;
-    line-height: 1.7;
 }
 
 @media (max-width: 600px) {

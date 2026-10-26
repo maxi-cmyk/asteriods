@@ -30,6 +30,8 @@ export function createSettingsScreen({
         element('inputProfile').value = profileStore.activeProfile;
         element('audioEnabled').checked = settings.soundEnabled;
         element('musicEnabled').checked = settings.musicEnabled;
+        element('bossLongWarnings').checked = settings.bossLongWarnings;
+        element('bossCalm').checked = settings.bossCalm;
         if (!storage)
             settingsStatus.textContent =
                 'Storage unavailable; settings apply for this visit';
@@ -132,6 +134,11 @@ export function createSettingsScreen({
         settings.musicEnabled = event.target.checked;
         changed();
     });
+    for (const name of ['bossLongWarnings', 'bossCalm'])
+        element(name).addEventListener('change', (event) => {
+            settings[name] = event.target.checked;
+            changed();
+        });
     element('audioEnabled').addEventListener('change', (event) => {
         settings.soundEnabled = event.target.checked;
         changed();

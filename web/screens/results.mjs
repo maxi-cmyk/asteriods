@@ -1,6 +1,7 @@
 import { element } from '../dom.mjs';
 import { accuracyText } from '../records.mjs';
 import { regionForWave } from '../regions.mjs';
+import { bossNames } from '../boss-scene.mjs';
 
 export function renderResultsScreen({
     results,
@@ -25,13 +26,17 @@ export function renderResultsScreen({
         element('resultLaser').hidden = coop || !result.laserShots;
         const seconds = Math.floor(result.elapsedMs / 1000);
         const clock = `${Math.floor(seconds / 60)}:${String(seconds % 60).padStart(2, '0')}`;
-        const sentinels = result.bossKills
-            ? ` · ${result.bossKills} sentinel${result.bossKills === 1 ? '' : 's'}`
+        const defeated = bossNames(result.bossMask || 0);
+        const bosses = element('resultBosses');
+        const line = defeated.length
+            ? `Defeated · ${defeated.join(', ')}${result.rules?.practice ? ` · hit ${result.bossHits || 0}×` : ''}`
             : '';
+        update(bosses, line);
+        bosses.hidden = !line;
         update(element('resultScore'), String(result.score));
         update(
             element('resultRegion'),
-            `Wave ${result.wave} · ${regionForWave(result.wave).name}${coop ? ` · ${clock}` : ''}${sentinels}`,
+            `Wave ${result.wave} · ${regionForWave(result.wave).name}${coop ? ` · ${clock}` : ''}`,
         );
         if (coop) {
             update(element('continueResults'), 'Continue');

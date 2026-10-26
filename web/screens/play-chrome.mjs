@@ -1,4 +1,5 @@
 import { element } from '../dom.mjs';
+import { renderLeaderboard } from './leaderboard.mjs';
 export function renderPlayChrome({
     runtime,
     navigation,
@@ -35,20 +36,12 @@ export function renderPlayChrome({
         !['playing', 'countdown', 'death', 'paused'].includes(state) ||
         navigation.screen === 'pause';
     const leaderboard = element('leaderboard');
-    const rows = Array.from({ length: Math.min(5, scene[31]) }, (_, i) => {
-        const at = 486 + i * 5;
-        return `${String.fromCharCode(...scene.subarray(at + 1, at + 4))}    ${scene[at]}`;
-    });
-    const text = rows.join('|');
-    if (!(navigation.screen==='records' && element('recordsMode').value!=='solo') && leaderboard.dataset.rows !== text) {
-        leaderboard.dataset.rows = text;
-        leaderboard.replaceChildren(
-            ...(rows.length ? rows : ['No scores saved yet.']).map((value) => {
-                const li = document.createElement('li');
-                li.textContent = value;
-                return li;
-            }),
-        );
+    if (!(navigation.screen === 'records' && element('recordsMode').value !== 'solo')) {
+        const entries = Array.from({ length: Math.min(5, scene[31]) }, (_, i) => {
+            const at = 486 + i * 5;
+            return { initials: String.fromCharCode(...scene.subarray(at + 1, at + 4)), score: scene[at] };
+        });
+        renderLeaderboard(leaderboard, entries, { highlight: scene[29] });
     }
     if (state === 'initials')
         hint.textContent = scene[30]

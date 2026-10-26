@@ -90,7 +90,6 @@ h2,
 .settings-heading h2,
 [data-settings-panel] > h2,
 .help-layout h2,
-.records-panel h2,
 .pause-menu h2,
 #navigationDecision h2,
 dialog h2 {
@@ -135,7 +134,6 @@ h3,
 .settings-intro,
 #settingsProfileNote,
 .binding-note,
-.records-panel p,
 .utility-view .controls p,
 dialog p {
     font-size: var(--size-body);
@@ -178,22 +176,11 @@ dialog p {
     font-family: var(--font-display);
     font-size: var(--size-label);
 }
-.metric-grid dt,
 .binding-list dt {
     font-size: var(--size-small);
     color: var(--muted);
 }
-.metric-grid dd {
-    font-family: var(--font-display);
-    font-size: var(--size-menu);
-    font-weight: 400;
-    line-height: 1.5;
-}
-.metric-grid > .empty-record {
-    font-family: var(--font-body);
-    font-size: var(--size-body);
-    color: var(--muted);
-}
+
 .binding-list {
     font-size: var(--size-body);
 }
@@ -208,12 +195,7 @@ dialog p {
 .run-summary h2 {
     font-size: clamp(16px, 2.4cqw, 28px);
 }
-#leaderboard {
-    font-size: 24px;
-    line-height: 2.2;
-    color: var(--ink);
-}
-.record-filters label,
+
 .profile-picker,
 .settings-sliders label,
 #keyBindings label,
@@ -333,16 +315,12 @@ button[aria-pressed='true'] {
     font-size: var(--size-small);
 }
 .destructive,
-#resetRecords,
-#clearBrowserRecords,
 #quitRun,
 #resetSettings {
     color: var(--danger);
     border-color: #7a3550;
 }
 .destructive:hover:not(:disabled),
-#resetRecords:hover:not(:disabled),
-#clearBrowserRecords:hover:not(:disabled),
 #quitRun:hover:not(:disabled),
 #resetSettings:hover:not(:disabled) {
     background: var(--danger-fill);
@@ -353,7 +331,6 @@ input[type='range'] {
 }
 select,
 .profile-picker select,
-.record-filters select,
 .settings-bindings select {
     font-family: var(--font-body);
     font-size: var(--size-body);
@@ -386,7 +363,6 @@ dialog {
     box-shadow: 6px 6px 0 #040716;
     padding: var(--space-4);
 }
-.records-layout > div,
 .help-layout > section,
 [data-settings-panel] {
     background: var(--background);
@@ -396,8 +372,7 @@ dialog {
 [data-settings-panel] {
     padding-right: var(--space-4);
 }
-.help-layout > section > h2:first-child,
-.records-layout > div > h2:first-child {
+.help-layout > section > h2:first-child {
     margin-top: 0;
 }
 .help-layout h2 {
@@ -409,19 +384,7 @@ dialog {
     border-top: 0;
     padding-top: 0;
 }
-.records-panel {
-    background: var(--background);
-}
-.records-panel .record-filters {
-    margin-bottom: var(--space-3);
-}
-#resetRecords,
-#clearBrowserRecords,
-#retryRecords,
-#cancelResetRecords,
-#cancelBrowserReset {
-    margin: var(--space-1) var(--space-2) var(--space-1) 0;
-}
+
 .settings-tabs {
     gap: var(--space-2);
 }
@@ -462,9 +425,8 @@ dialog {
         font-size: var(--size-label);
         min-height: 40px;
     }
-    .records-layout > div,
     .help-layout > section,
-    [data-settings-panel] {
+[data-settings-panel] {
         padding: var(--space-3);
     }
     #screenTitle {
@@ -1035,7 +997,8 @@ body[data-screen='home'] .shell-header button {
 /* ---- Mode select and Hangar ------------------------------------------------
    Same violet backdrop as Home; art-led cards instead of plain buttons. */
 .flight-mode,
-.hangar {
+.hangar,
+.records {
     display: flex;
     flex-direction: column;
     gap: clamp(12px, 2.4vh, 24px);
@@ -1048,7 +1011,8 @@ body[data-screen='home'] .shell-header button {
     image-rendering: pixelated;
 }
 .flight-mode > h1,
-.hangar > h1 {
+.hangar > h1,
+.records > h1 {
     margin: 0;
     font-size: clamp(28px, 3.6vw, 46px);
     color: transparent;
@@ -2221,4 +2185,387 @@ body[data-results='true'] .console .combat-hud {
 @container (max-width: 560px) {
     .screen .run-summary dl { grid-template-columns: repeat(2, minmax(0, 1fr)); }
     #resultScore { font-size: clamp(44px, 14cqw, 80px); }
+}
+
+/* ---- Boss HUD: entrance card and health bar ------------------------------------ */
+.boss-intro {
+    position: absolute;
+    inset: 17% 0 auto;
+    z-index: 4;
+    display: grid;
+    justify-items: center;
+    gap: clamp(2px, .6cqw, 8px);
+    pointer-events: none;
+    text-align: center;
+    transition: opacity 0.22s ease-out, transform 0.22s ease-out;
+}
+.boss-intro[data-beat='in'],
+.boss-intro[data-beat='out'] {
+    opacity: 0;
+    transform: translateY(-6px);
+}
+.boss-intro b {
+    font-family: var(--font-display);
+    font-weight: 400;
+    font-size: clamp(34px, 8.6cqw, 96px);
+    line-height: 1;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    color: #ffd9a0;
+    background: linear-gradient(#fff6d8 0%, #ffc070 52%, #ff6f7e 100%);
+    -webkit-background-clip: text;
+    background-clip: text;
+    -webkit-text-fill-color: transparent;
+    filter: drop-shadow(0 .06em 0 #34104a) drop-shadow(0 0 .35em #ff7a5a66);
+}
+.boss-intro .boss-region,
+.boss-intro .boss-tier {
+    font-family: var(--font-display);
+    font-size: clamp(16px, 2.3cqw, 26px);
+    letter-spacing: 0.3em;
+    text-transform: uppercase;
+    color: #be96e6;
+    text-shadow: 0 1px 0 #080416;
+}
+.boss-intro .boss-tier:empty { display: none; }
+.boss-intro .boss-tier { color: #ffb868; }
+.boss-bar {
+    position: absolute;
+    top: 11.5%;
+    left: 50%;
+    z-index: 3;
+    width: min(46%, 430px);
+    transform: translateX(-50%);
+    display: grid;
+    gap: 3px;
+    pointer-events: none;
+    text-align: center;
+}
+.boss-bar .boss-name {
+    font-family: var(--font-display);
+    font-size: clamp(15px, 2cqw, 22px);
+    letter-spacing: 0.22em;
+    text-transform: uppercase;
+    color: #ffe9c4;
+    text-shadow: 0 1px 0 #34104a, 0 0 6px #080416;
+}
+.boss-track {
+    position: relative;
+    height: clamp(7px, 1.1cqw, 12px);
+    background: #140a2cd8;
+    border: 2px solid #5a3c98;
+    box-sizing: border-box;
+}
+.boss-track i {
+    display: block;
+    height: 100%;
+    background: repeating-linear-gradient(90deg, #ffbe6e 0 6px, #ff9a58 6px 8px);
+    transition: width 0.12s linear;
+}
+.boss-bar[data-mini='true'] .boss-track i {
+    background: repeating-linear-gradient(90deg, #d8a0ff 0 6px, #b074f0 6px 8px);
+}
+.boss-track u {
+    position: absolute;
+    top: -3px;
+    bottom: -3px;
+    width: 2px;
+    margin-left: -1px;
+    background: #fff4d6;
+    text-decoration: none;
+}
+.boss-bar.crossed .boss-track {
+    animation: boss-notch 0.42s steps(4, end);
+}
+@keyframes boss-notch {
+    0%, 50% { border-color: #fff4d6; box-shadow: 0 0 0 2px #fff4d655; }
+    100% { border-color: #5a3c98; box-shadow: none; }
+}
+@media (prefers-reduced-motion: reduce) {
+    .boss-intro { transition: none; }
+    .boss-bar.crossed .boss-track { animation: none; }
+}
+
+/* ---- Boss practice picker (Pause, practice only) ------------------------------ */
+.practice-tools .boss-picker {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 6px 8px;
+    margin: 8px 0 2px;
+    align-items: end;
+}
+.practice-tools .boss-picker label {
+    display: grid;
+    gap: 2px;
+    font-family: var(--font-display);
+    font-size: 15px;
+    letter-spacing: 0.16em;
+    text-transform: uppercase;
+    color: #be96e6;
+    text-align: left;
+}
+.practice-tools .boss-picker select {
+    width: 100%;
+    min-width: 0;
+    font-size: 17px;
+    text-transform: none;
+    letter-spacing: 0;
+}
+.practice-tools .boss-picker button,
+.practice-tools .boss-picker label:first-child {
+    grid-column: 1 / -1;
+}
+#resultBosses {
+    margin: 4px 0 0;
+    font-family: var(--font-display);
+    font-size: clamp(15px, 1.9cqw, 22px);
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+    color: #ffc88a;
+}
+#resultBosses[hidden] { display: none; }
+
+/* ---- Unlock toast and locked hulls ------------------------------------------- */
+.unlock-toast {
+    position: absolute;
+    left: 50%;
+    bottom: 14%;
+    z-index: 5;
+    transform: translateX(-50%);
+    padding: 6px 16px;
+    font-family: var(--font-display);
+    font-size: clamp(16px, 2.2cqw, 26px);
+    letter-spacing: 0.16em;
+    text-transform: uppercase;
+    color: #ffe9c4;
+    background: #1a0c3ae6;
+    border: 2px solid #be96e6;
+    pointer-events: none;
+    animation: result-rise 0.3s ease-out both;
+}
+.unlock-toast[hidden] { display: none; }
+.hangar-bay button[data-locked='true'] {
+    opacity: 0.45;
+    filter: grayscale(0.7);
+}
+.hangar-bay button[data-locked='true'] canvas { filter: brightness(0.5); }
+
+/* ---- Records ------------------------------------------------------------------
+   The Hangar's voice: sunset title, chip filters, no boxes. Big Jersey numbers for
+   the board and the bests, silhouettes for bosses not yet beaten. */
+.chips {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+}
+.chips button {
+    background: transparent;
+    border: 1px solid #3a2a64;
+    color: #aa8cd2;
+    font-family: var(--font-display);
+    font-size: var(--size-label);
+    min-height: 32px;
+    padding: 6px 12px;
+}
+.chips button[aria-pressed='true'] {
+    border-color: #ffbe6e;
+    color: #ffe9c4;
+    box-shadow: inset 0 -3px 0 #ffbe6e;
+}
+.chips button:disabled {
+    opacity: 0.35;
+}
+.records-filters {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 10px clamp(14px, 3vw, 36px);
+}
+.records-grid {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1.25fr);
+    gap: clamp(18px, 4vw, 56px);
+}
+.records h2 {
+    margin: 0 0 4px;
+    font-size: clamp(24px, 2.6vw, 32px);
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    color: #ffe9c4;
+    text-shadow: 2px 2px 0 #340e4a;
+}
+.records-note {
+    margin: 0;
+    color: #8a76b0;
+    font-size: var(--size-small);
+}
+.records-note:empty {
+    display: none;
+}
+#leaderboard {
+    list-style: none;
+    margin: 10px 0 8px;
+    padding: 0;
+    display: grid;
+    gap: 6px;
+}
+#leaderboard li {
+    display: grid;
+    grid-template-columns: 2ch 1fr auto;
+    align-items: baseline;
+    gap: 14px;
+    padding: 6px 12px;
+    border-left: 3px solid #3a2a64;
+    background: linear-gradient(90deg, #1c0e3a99, transparent);
+    font-family: var(--font-display);
+    font-size: clamp(24px, 3vw, 34px);
+    letter-spacing: 0.08em;
+    color: #e6d4ff;
+}
+#leaderboard li:first-child {
+    border-left-color: #ffbe6e;
+    color: #ffe9c4;
+    background: linear-gradient(90deg, #4a2a3a99, transparent);
+}
+#leaderboard .rank {
+    color: #8a76b0;
+    font-size: 0.65em;
+}
+#leaderboard .score {
+    text-align: right;
+    color: #ffc88a;
+    font-variant-numeric: tabular-nums;
+}
+#leaderboard li[data-empty='true'] {
+    opacity: 0.35;
+}
+#leaderboard li[data-latest='true'] {
+    border-left-color: #6ef0ff;
+    box-shadow: inset 0 0 0 1px #6ef0ff55;
+}
+.metric-grid {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 12px 18px;
+    margin: 10px 0;
+}
+.metric-grid > div {
+    padding: 4px 12px;
+    border-left: 3px solid #3a2a64;
+}
+.metric-grid dt {
+    margin: 0;
+    font-family: var(--font-display);
+    font-size: var(--size-label);
+    letter-spacing: 0.18em;
+    text-transform: uppercase;
+    color: #be96e6;
+}
+.metric-grid dd {
+    margin: 0;
+    font-family: var(--font-display);
+    font-size: clamp(32px, 4vw, 50px);
+    line-height: 1.1;
+    color: #ffe9c4;
+    text-shadow: 3px 3px 0 #340e4a;
+    font-variant-numeric: tabular-nums;
+}
+.metric-grid > .empty-record {
+    grid-column: 1 / -1;
+}
+.metric-grid > .empty-record dd {
+    font-family: var(--font-body);
+    font-size: var(--size-body);
+    text-shadow: none;
+    color: #8a76b0;
+}
+.records-log {
+    display: grid;
+    gap: 4px;
+}
+.boss-log {
+    display: grid;
+    grid-template-columns: repeat(6, minmax(0, 1fr));
+    gap: 10px;
+    margin: 8px 0 4px;
+}
+.boss-log figure {
+    margin: 0;
+    display: grid;
+    justify-items: center;
+    align-content: start;
+    gap: 4px;
+    padding: 8px 4px;
+    border: 1px solid #3a2a64;
+    background: #160a3490;
+}
+.boss-log figure[data-state='beaten'] {
+    border-color: #ffbe6e;
+    box-shadow: inset 0 -3px 0 #ffbe6e;
+}
+.boss-log canvas {
+    background: transparent;
+    width: 100%;
+    max-width: 96px;
+    aspect-ratio: 1;
+    image-rendering: pixelated;
+}
+.boss-log figure[data-state='unseen'] canvas {
+    filter: brightness(0.22) saturate(0.3);
+}
+.boss-log figcaption {
+    display: grid;
+    justify-items: center;
+    font-family: var(--font-display);
+    font-size: 16px;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    color: #ffe9c4;
+    text-align: center;
+}
+.boss-log figcaption span {
+    color: #ffbe6e;
+    font-size: 14px;
+}
+.boss-log figure[data-state='unseen'] figcaption {
+    color: #6c5a92;
+}
+.boss-log figure[data-state='unseen'] figcaption span {
+    color: #54447a;
+}
+.records-data {
+    margin-top: auto;
+    padding-top: 12px;
+    border-top: 1px solid #3a2a64;
+    display: grid;
+    gap: 6px;
+}
+.records-actions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+}
+.records-actions button {
+    background: transparent;
+    border: 1px solid #3a2a64;
+    color: #aa8cd2;
+    font-family: var(--font-display);
+    font-size: var(--size-label);
+    min-height: 34px;
+    padding: 4px 12px;
+}
+.records-actions button[hidden] {
+    display: none;
+}
+.records-actions #clearBrowserRecords:hover,
+.records-actions #clearBrowserRecords:focus-visible {
+    color: var(--danger);
+    border-color: var(--danger);
+}
+@media (max-width: 760px) {
+    .records-grid {
+        grid-template-columns: 1fr;
+    }
+    .boss-log {
+        grid-template-columns: repeat(4, minmax(0, 1fr));
+    }
 }
