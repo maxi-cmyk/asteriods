@@ -44,7 +44,7 @@ body {
     overflow: hidden;
     display: flex;
     align-items: center;
-    background: #03071a url('./assets/home-scene.png') center/cover no-repeat;
+    background: #03071a url('../assets/home-scene.png') center/cover no-repeat;
 }
 .home-menu {
     position: relative;

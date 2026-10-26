@@ -1,0 +1,207 @@
+/* ---- Results ----------------------------------------------------------------
+   A big glowing score, one line of context, then six quiet stats on thin rules.
+   Sized in container units so it scales with the playfield. The HUD steps aside. */
+body[data-results='true'] .console .hud,
+body[data-results='true'] .console .combat-hud {
+    visibility: hidden;
+}
+.screen .run-summary {
+    align-items: center;
+    padding: clamp(14px, 3.4cqw, 40px);
+    background: radial-gradient(ellipse at 50% 38%, #1c0c40e6 0%, #0a0518f0 62%, #070312f5 100%);
+    text-align: center;
+}
+.screen .run-summary .run-summary-content {
+    width: min(100%, 860px);
+    margin: auto;
+    animation: result-rise 0.45s ease-out both;
+}
+@keyframes result-rise {
+    from {
+        opacity: 0;
+        transform: translateY(14px);
+    }
+    to {
+        opacity: 1;
+        transform: none;
+    }
+}
+.screen .run-summary #personalBest {
+    margin: 0 0 clamp(2px, 1cqw, 10px);
+    font-family: var(--font-display);
+    font-size: clamp(18px, 2.6cqw, 28px);
+    font-weight: 400;
+    letter-spacing: 0.22em;
+    text-transform: uppercase;
+    color: #be96e6;
+}
+.result-hero {
+    margin: 0 0 clamp(14px, 3cqw, 30px);
+}
+.result-label {
+    display: block;
+    color: #8a76b0;
+    font-family: var(--font-display);
+    font-size: clamp(16px, 2cqw, 22px);
+    letter-spacing: 0.3em;
+    text-transform: uppercase;
+}
+#resultScore {
+    display: block;
+    font-family: var(--font-display);
+    font-weight: 400;
+    font-size: clamp(64px, 14cqw, 160px);
+    line-height: 0.95;
+    color: #fff4d6;
+    font-variant-numeric: tabular-nums;
+    text-shadow:
+        0 0 26px #ffa05a99,
+        4px 4px 0 #3a1646;
+}
+.screen .run-summary #resultRegion {
+    margin: clamp(4px, 1cqw, 10px) 0 0;
+    max-width: none;
+    color: #cdb6f0;
+    font-size: clamp(15px, 2.1cqw, 22px);
+}
+.screen .run-summary dl {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 0 clamp(8px, 2cqw, 28px);
+    margin: 0 0 clamp(10px, 2cqw, 20px);
+    border-top: 1px solid #3a2a64;
+}
+.screen .run-summary dl > div {
+    display: flex;
+    flex-direction: column-reverse;
+    gap: 2px;
+    padding: clamp(8px, 1.6cqw, 16px) 4px;
+    border-bottom: 1px solid #2a1c4c;
+}
+.screen .run-summary dd {
+    margin: 0;
+    font-family: var(--font-display);
+    font-size: clamp(28px, 4.6cqw, 52px);
+    line-height: 1;
+    color: #ffe9c4;
+    font-variant-numeric: tabular-nums;
+}
+.screen .run-summary dt {
+    color: #8a76b0;
+    font-size: clamp(13px, 1.7cqw, 17px);
+    letter-spacing: 0.04em;
+}
+.screen .run-summary #resultLaser {
+    margin: 0 0 clamp(10px, 2cqw, 20px);
+    max-width: none;
+    color: #9a86c0;
+    font-size: clamp(14px, 1.8cqw, 18px);
+}
+.screen .run-summary #continueResults {
+    min-height: 0;
+    padding: 6px clamp(26px, 4cqw, 48px) 4px;
+    background: #ffbe6e;
+    border: 1px solid #ffbe6e;
+    color: #2a0e3a;
+    font-family: var(--font-display);
+    font-size: clamp(26px, 3.4cqw, 38px);
+    letter-spacing: 0.04em;
+}
+.screen .run-summary #continueResults:hover,
+.screen .run-summary #continueResults:focus {
+    background: #ffd68c;
+    border-color: #fff4d6;
+    box-shadow:
+        0 0 0 1px #ffbe6e,
+        0 0 24px #ff785a88;
+    outline: none;
+}
+/* Co-op: two pilot cards under the team score. */
+#coopResults {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: clamp(8px, 2cqw, 24px);
+    margin: 0 0 clamp(12px, 2.4cqw, 24px);
+    text-align: left;
+}
+#coopResults section {
+    padding: clamp(8px, 1.6cqw, 16px) clamp(10px, 2cqw, 20px);
+    border-left: 3px solid var(--pilot, #ffbe6e);
+    background: #12082ccc;
+}
+#coopResults h3 {
+    margin: 0;
+    color: var(--pilot, #ffbe6e);
+    font-size: clamp(16px, 2cqw, 22px);
+    letter-spacing: 0.1em;
+}
+#coopResults b {
+    display: block;
+    font-family: var(--font-display);
+    font-weight: 400;
+    font-size: clamp(30px, 5cqw, 56px);
+    line-height: 1;
+    color: #ffe9c4;
+}
+#coopResults p {
+    margin: 4px 0 0;
+    max-width: none;
+    color: #9a86c0;
+    font-size: clamp(13px, 1.6cqw, 16px);
+    line-height: 1.35;
+}
+@container (max-width: 560px) {
+    .screen .run-summary dl {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+    #coopResults {
+        grid-template-columns: 1fr;
+    }
+}
+
+/* Results fit the playfield without scrolling: stats run in one row on wide
+   fields and fold into rows only when the field gets narrow. */
+.screen .run-summary {
+    scrollbar-width: none;
+}
+.screen .run-summary::-webkit-scrollbar {
+    display: none;
+}
+.screen .run-summary #personalBest {
+    font-size: clamp(16px, 2.2cqw, 24px);
+}
+.result-hero {
+    margin-bottom: clamp(8px, 1.8cqw, 20px);
+}
+.result-label {
+    font-size: clamp(14px, 1.7cqw, 20px);
+}
+#resultScore {
+    font-size: clamp(48px, 10.5cqw, 130px);
+}
+.screen .run-summary dl {
+    grid-template-columns: 1.7fr repeat(5, minmax(0, 1fr));
+    gap: 0 clamp(6px, 1.4cqw, 18px);
+    margin-bottom: clamp(8px, 1.4cqw, 14px);
+}
+.screen .run-summary dl > div {
+    padding: clamp(6px, 1.1cqw, 12px) 2px;
+    border-bottom: 0;
+}
+.screen .run-summary dd {
+    font-size: clamp(22px, 3.5cqw, 44px);
+}
+.screen .run-summary dt {
+    font-size: clamp(12px, 1.4cqw, 15px);
+}
+.screen .run-summary #continueResults {
+    font-size: clamp(24px, 3cqw, 34px);
+}
+@container (max-width: 560px) {
+    .screen .run-summary dl {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+    #resultScore {
+        font-size: clamp(44px, 14cqw, 80px);
+    }
+}

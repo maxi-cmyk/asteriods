@@ -1,0 +1,187 @@
+/* ---- Boss HUD: entrance card and health bar ------------------------------------ */
+.boss-intro {
+    position: absolute;
+    inset: 17% 0 auto;
+    z-index: 4;
+    display: grid;
+    justify-items: center;
+    gap: clamp(2px, 0.6cqw, 8px);
+    pointer-events: none;
+    text-align: center;
+    transition:
+        opacity 0.22s ease-out,
+        transform 0.22s ease-out;
+}
+.boss-intro[data-beat='in'],
+.boss-intro[data-beat='out'] {
+    opacity: 0;
+    transform: translateY(-6px);
+}
+.boss-intro b {
+    font-family: var(--font-display);
+    font-weight: 400;
+    font-size: clamp(34px, 8.6cqw, 96px);
+    line-height: 1;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    color: #ffd9a0;
+    background: linear-gradient(#fff6d8 0%, #ffc070 52%, #ff6f7e 100%);
+    -webkit-background-clip: text;
+    background-clip: text;
+    -webkit-text-fill-color: transparent;
+    filter: drop-shadow(0 0.06em 0 #34104a) drop-shadow(0 0 0.35em #ff7a5a66);
+}
+.boss-intro .boss-region,
+.boss-intro .boss-tier {
+    font-family: var(--font-display);
+    font-size: clamp(16px, 2.3cqw, 26px);
+    letter-spacing: 0.3em;
+    text-transform: uppercase;
+    color: #be96e6;
+    text-shadow: 0 1px 0 #080416;
+}
+.boss-intro .boss-tier:empty {
+    display: none;
+}
+.boss-intro .boss-tier {
+    color: #ffb868;
+}
+.boss-bar {
+    position: absolute;
+    top: 11.5%;
+    left: 50%;
+    z-index: 3;
+    width: min(46%, 430px);
+    transform: translateX(-50%);
+    display: grid;
+    gap: 3px;
+    pointer-events: none;
+    text-align: center;
+}
+.boss-bar .boss-name {
+    font-family: var(--font-display);
+    font-size: clamp(15px, 2cqw, 22px);
+    letter-spacing: 0.22em;
+    text-transform: uppercase;
+    color: #ffe9c4;
+    text-shadow:
+        0 1px 0 #34104a,
+        0 0 6px #080416;
+}
+.boss-track {
+    position: relative;
+    height: clamp(7px, 1.1cqw, 12px);
+    background: #140a2cd8;
+    border: 2px solid #5a3c98;
+    box-sizing: border-box;
+}
+.boss-track i {
+    display: block;
+    height: 100%;
+    background: repeating-linear-gradient(90deg, #ffbe6e 0 6px, #ff9a58 6px 8px);
+    transition: width 0.12s linear;
+}
+.boss-bar[data-mini='true'] .boss-track i {
+    background: repeating-linear-gradient(90deg, #d8a0ff 0 6px, #b074f0 6px 8px);
+}
+.boss-track u {
+    position: absolute;
+    top: -3px;
+    bottom: -3px;
+    width: 2px;
+    margin-left: -1px;
+    background: #fff4d6;
+    text-decoration: none;
+}
+.boss-bar.crossed .boss-track {
+    animation: boss-notch 0.42s steps(4, end);
+}
+@keyframes boss-notch {
+    0%,
+    50% {
+        border-color: #fff4d6;
+        box-shadow: 0 0 0 2px #fff4d655;
+    }
+    100% {
+        border-color: #5a3c98;
+        box-shadow: none;
+    }
+}
+@media (prefers-reduced-motion: reduce) {
+    .boss-intro {
+        transition: none;
+    }
+    .boss-bar.crossed .boss-track {
+        animation: none;
+    }
+}
+
+/* ---- Boss practice picker (Pause, practice only) ------------------------------ */
+.practice-tools .boss-picker {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 6px 8px;
+    margin: 8px 0 2px;
+    align-items: end;
+}
+.practice-tools .boss-picker label {
+    display: grid;
+    gap: 2px;
+    font-family: var(--font-display);
+    font-size: 15px;
+    letter-spacing: 0.16em;
+    text-transform: uppercase;
+    color: #be96e6;
+    text-align: left;
+}
+.practice-tools .boss-picker select {
+    width: 100%;
+    min-width: 0;
+    font-size: 17px;
+    text-transform: none;
+    letter-spacing: 0;
+}
+.practice-tools .boss-picker button,
+.practice-tools .boss-picker label:first-child {
+    grid-column: 1 / -1;
+}
+#resultBosses {
+    margin: 4px 0 0;
+    font-family: var(--font-display);
+    font-size: clamp(15px, 1.9cqw, 22px);
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+    color: #ffc88a;
+}
+#resultBosses[hidden] {
+    display: none;
+}
+
+/* ---- Unlock toast and locked hulls ------------------------------------------- */
+.unlock-toast {
+    position: absolute;
+    left: 50%;
+    bottom: 14%;
+    z-index: 5;
+    transform: translateX(-50%);
+    padding: 6px 16px;
+    font-family: var(--font-display);
+    font-size: clamp(16px, 2.2cqw, 26px);
+    letter-spacing: 0.16em;
+    text-transform: uppercase;
+    color: #ffe9c4;
+    background: #1a0c3ae6;
+    border: 2px solid #be96e6;
+    pointer-events: none;
+    animation: result-rise 0.3s ease-out both;
+}
+.unlock-toast[hidden] {
+    display: none;
+}
+.hangar-bay button[data-locked='true'] {
+    opacity: 0.45;
+    filter: grayscale(0.7);
+}
+.hangar-bay button[data-locked='true'] canvas {
+    filter: brightness(0.5);
+}

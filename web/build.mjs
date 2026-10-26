@@ -154,7 +154,7 @@ if (!test && !oled) {
     rmSync(resolve(root, 'dist/coop-browser.html'), { force: true });
     // Every module under src/ ships as-is (a new file can never be forgotten); the dev
     // pages keep their old URLs at the site root, their scripts live under dist/dev.
-    for (const file of ['index.html', 'style.css', 'shell.css', 'theme.css'])
+    for (const file of ['index.html', 'style.css', 'theme.css'])
         copyFileSync(resolve(root, file), resolve(root, 'dist', file));
     for (const folder of ['src', 'styles', 'dev']) {
         rmSync(resolve(root, 'dist', folder), { recursive: true, force: true });

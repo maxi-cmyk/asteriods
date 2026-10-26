@@ -1,0 +1,146 @@
+/* ---- Pause menu and confirmation dialog -------------------------------------
+   No boxes: a violet scrim over the field and a bare column in the same voice
+   as Home. The dialog is the one panel, because it must interrupt. */
+.pause-menu {
+    background: #0a0518c4;
+    border: 0;
+    box-shadow: 0 0 0 100vmax #0a0518c4;
+    width: min(380px, 92%);
+    padding: 8px 0;
+    text-align: center;
+}
+.pause-menu h2 {
+    margin: 0 0 18px;
+    font-family: var(--font-display);
+    font-size: clamp(40px, 5vw, 64px);
+    line-height: 1.05;
+    color: transparent;
+    background: linear-gradient(#fff4d6 0 40%, #ffbe6e 40% 72%, #e8608c 72%);
+    -webkit-background-clip: text;
+    background-clip: text;
+    -webkit-text-fill-color: transparent;
+    filter: drop-shadow(3px 3px 0 #340e4a) drop-shadow(0 0 14px #ff785a40);
+}
+.pause-menu button {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 10px;
+    width: 100%;
+    min-height: 46px;
+    margin: 2px 0 0;
+    padding: 6px 4px;
+    background: transparent;
+    border: 0;
+    box-shadow: none;
+    color: #aa8cd2;
+    font-family: var(--font-display);
+    font-size: clamp(26px, 2.4vw, 34px);
+    letter-spacing: 0.02em;
+}
+.pause-menu button.primary {
+    color: #ffd68c;
+}
+.pause-menu button::before {
+    content: '';
+    flex: none;
+    width: 18px;
+    height: 18px;
+    background: url('../../assets/ui/chevron.png') center / 18px 18px no-repeat;
+    image-rendering: pixelated;
+    opacity: 0;
+}
+.pause-menu button:hover:not(:disabled),
+.pause-menu button:focus {
+    color: #fff4d6;
+    text-shadow: 0 0 10px #ffa05acc;
+    background: transparent;
+    outline: 1px solid transparent;
+    text-decoration: underline;
+    text-decoration-color: #ffbe6e;
+    text-decoration-thickness: 2px;
+    text-underline-offset: 6px;
+}
+.pause-menu button:hover:not(:disabled)::before,
+.pause-menu button:focus::before {
+    opacity: 1;
+}
+.pause-menu #quitRun {
+    color: #ff9aae;
+}
+.pause-menu #quitRun:hover,
+.pause-menu #quitRun:focus {
+    color: #ffd0d8;
+    text-decoration-color: #ff6a8a;
+}
+.pause-menu p {
+    color: #8a76b0;
+    font-size: var(--size-small);
+}
+
+dialog {
+    max-width: min(480px, 92vw);
+    padding: clamp(22px, 3vw, 36px);
+    background: #0e0624;
+    color: #cdb6f0;
+    border: 1px solid #5a3c98;
+    border-radius: 0;
+    box-shadow:
+        0 0 0 1px #05020f,
+        0 0 60px #6a2a8a55,
+        0 24px 80px #000c;
+}
+dialog::backdrop {
+    background: #0a0518d1;
+}
+dialog#navigationDecision h2,
+dialog h2 {
+    margin: 0 0 10px;
+    font-family: var(--font-display);
+    font-size: clamp(34px, 3.6vw, 48px);
+    line-height: 1.1;
+    color: transparent;
+    background: linear-gradient(#fff4d6 0 40%, #ffbe6e 40% 72%, #e8608c 72%);
+    -webkit-background-clip: text;
+    background-clip: text;
+    -webkit-text-fill-color: transparent;
+    filter: drop-shadow(2px 2px 0 #340e4a);
+}
+dialog p {
+    margin: 0 0 22px;
+    color: #aa8cd2;
+    font-size: var(--size-body);
+    line-height: 1.4;
+}
+dialog .actions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 10px;
+}
+dialog .actions button {
+    min-height: 44px;
+    padding: 6px 20px;
+    background: transparent;
+    border: 1px solid #5a3c98;
+    color: #cdb6f0;
+    font-family: var(--font-display);
+    font-size: 24px;
+}
+dialog .actions button[data-decision='stay'] {
+    background: #ffbe6e;
+    border-color: #ffbe6e;
+    color: #2a0e3a;
+}
+dialog .actions button[data-decision='quit'],
+dialog .actions button[data-decision='discard'] {
+    color: #ff9aae;
+    border-color: #6a2a50;
+}
+dialog .actions button:hover:not(:disabled),
+dialog .actions button:focus {
+    border-color: #fff4d6;
+    box-shadow:
+        0 0 0 1px #ffbe6e,
+        0 0 18px #ff785a66;
+    outline: none;
+}

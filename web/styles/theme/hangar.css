@@ -1,0 +1,288 @@
+/* ---- Mode select and Hangar ------------------------------------------------
+   Same violet backdrop as Home; art-led cards instead of plain buttons. */
+.flight-mode,
+.hangar,
+.records {
+    display: flex;
+    flex-direction: column;
+    gap: clamp(12px, 2.4vh, 24px);
+    padding: clamp(16px, 3.4vh, 36px) clamp(18px, 5vw, 64px);
+    overflow: auto;
+    border: 0;
+    background:
+        linear-gradient(#0a0518d9, #0a0518f0),
+        url('../../assets/home-scene.png') center / cover;
+    image-rendering: pixelated;
+}
+.flight-mode > h1,
+.hangar > h1,
+.records > h1 {
+    margin: 0;
+    font-size: clamp(28px, 3.6vw, 46px);
+    color: transparent;
+    background: linear-gradient(#fff4d6 0 40%, #ffbe6e 40% 72%, #e8608c 72%);
+    -webkit-background-clip: text;
+    background-clip: text;
+    -webkit-text-fill-color: transparent;
+    filter: drop-shadow(2px 2px 0 #340e4a);
+    width: max-content;
+    max-width: 100%;
+}
+.mode-options {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: clamp(14px, 2.6vw, 36px);
+    margin: 0;
+    flex: 1;
+    min-height: 0;
+    align-content: center;
+}
+.mode-options .mode-card {
+    display: flex;
+    flex-direction: column;
+    align-items: stretch;
+    gap: 6px;
+    min-height: 0;
+    padding: 0 0 18px;
+    text-align: left;
+    background: #0e0624d9;
+    border: 1px solid #3a2a64;
+    box-shadow: none;
+    overflow: hidden;
+    color: #aa8cd2;
+    font-family: var(--font-body);
+    font-size: var(--size-body);
+    transition:
+        border-color 0.12s,
+        box-shadow 0.12s;
+}
+.mode-card canvas {
+    display: block;
+    width: 100%;
+    height: auto;
+    aspect-ratio: 16 / 9;
+    margin-bottom: 8px;
+    image-rendering: pixelated;
+    border-bottom: 1px solid #3a2a64;
+    filter: saturate(0.85) brightness(0.82);
+    transition: filter 0.12s;
+}
+.mode-card em {
+    padding: 0 18px;
+    font-style: normal;
+    font-family: var(--font-display);
+    font-size: var(--size-label);
+    letter-spacing: 0.12em;
+    color: #be96e6;
+}
+.mode-card strong {
+    padding: 0 18px;
+    font-family: var(--font-display);
+    font-weight: 400;
+    font-size: clamp(24px, 2.6vw, 34px);
+    line-height: 1.4;
+    color: #ffe9c4;
+}
+.mode-options .mode-card span {
+    display: block;
+    margin: 0;
+    padding: 0 18px;
+    color: #aa8cd2;
+    font-size: var(--size-body);
+}
+.mode-card:hover:not(:disabled),
+.mode-card:focus {
+    background: #160a34e6;
+    border-color: #ffbe6e;
+    box-shadow:
+        0 0 0 1px #ffbe6e,
+        0 0 30px #ff785a40;
+    outline: 1px solid transparent;
+}
+.mode-card:hover canvas,
+.mode-card:focus canvas {
+    filter: none;
+}
+.mode-card:hover strong,
+.mode-card:focus strong {
+    color: #fff;
+    text-shadow: 0 0 10px #ffa05acc;
+}
+.mode-foot {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 16px;
+    flex-wrap: wrap;
+}
+.mode-foot p {
+    margin: 0;
+    color: #8a76b0;
+    font-size: var(--size-small);
+}
+#modeHangar {
+    display: inline-flex;
+    align-items: center;
+    gap: 12px;
+    background: transparent;
+    border: 1px solid #3a2a64;
+    color: #cdb6f0;
+    font-family: var(--font-body);
+    font-size: var(--size-body);
+    padding: 6px 12px;
+}
+#modeHangar canvas {
+    width: 48px;
+    height: 32px;
+    image-rendering: pixelated;
+}
+#modeHangar b {
+    font-family: var(--font-display);
+    font-weight: 400;
+    font-size: var(--size-label);
+    color: #ffe9c4;
+    margin-left: 6px;
+}
+#modeHangar u {
+    color: #ffbe6e;
+    text-underline-offset: 4px;
+}
+#modeHangar:hover,
+#modeHangar:focus {
+    border-color: #ffbe6e;
+    color: #fff;
+    background: #160a34e6;
+}
+
+.hangar-pilots {
+    display: flex;
+    gap: 8px;
+}
+.hangar-pilots button {
+    background: transparent;
+    border: 1px solid #3a2a64;
+    color: #aa8cd2;
+    font-family: var(--font-display);
+    font-size: var(--size-label);
+    min-height: 32px;
+    padding: 6px 12px;
+}
+.hangar-pilots button[aria-pressed='true'] {
+    border-color: #ffbe6e;
+    color: #ffe9c4;
+    box-shadow: inset 0 -3px 0 #ffbe6e;
+}
+.hangar-stage {
+    display: grid;
+    grid-template-columns: minmax(0, 1.4fr) minmax(0, 1fr);
+    gap: clamp(14px, 3vw, 40px);
+    align-items: center;
+    flex: 1 0 auto;
+}
+.hangar-stage canvas {
+    width: 100%;
+    aspect-ratio: 16 / 9;
+    image-rendering: pixelated;
+    border: 1px solid #3a2a64;
+    box-shadow: 0 0 40px #ff785a26;
+}
+.hangar-info {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    min-width: 0;
+}
+.hangar-info em {
+    font-style: normal;
+    font-family: var(--font-display);
+    font-size: var(--size-label);
+    letter-spacing: 0.12em;
+    color: #be96e6;
+}
+.hangar-info h2 {
+    --accent: #ffbe6e;
+    margin: 0;
+    font-size: clamp(30px, 4vw, 50px);
+    color: var(--accent);
+    text-shadow:
+        3px 3px 0 #340e4a,
+        0 0 18px color-mix(in srgb, var(--accent) 45%, transparent);
+}
+.hangar-info p {
+    margin: 0;
+    color: #cdb6f0;
+    font-size: var(--size-body);
+}
+.hangar-info .hangar-note,
+.hangar-info #hangarStatus {
+    color: #8a76b0;
+    font-size: var(--size-small);
+}
+.hangar-bay {
+    display: grid;
+    grid-template-columns: repeat(7, minmax(0, 1fr));
+    gap: clamp(6px, 1vw, 12px);
+}
+.hangar-bay button {
+    --accent: #ffbe6e;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 6px;
+    padding: 10px 4px 8px;
+    background: #0e0624d9;
+    border: 1px solid #3a2a64;
+    color: #aa8cd2;
+    font-family: var(--font-display);
+    font-size: var(--size-label);
+    border-radius: 0;
+    min-height: 0;
+    position: relative;
+}
+.hangar-bay button canvas {
+    width: 72px;
+    max-width: 100%;
+    aspect-ratio: 3 / 2;
+    image-rendering: pixelated;
+}
+.hangar-bay button[aria-checked='true'] {
+    color: #ffe9c4;
+    border-color: var(--accent);
+}
+.hangar-bay button[aria-checked='true']::after {
+    content: '';
+    position: absolute;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    height: 3px;
+    background: var(--accent);
+}
+.hangar-bay button[data-preview='true'],
+.hangar-bay button:hover,
+.hangar-bay button:focus {
+    background: #160a34e6;
+    border-color: var(--accent);
+    box-shadow:
+        0 0 0 1px var(--accent),
+        0 0 22px color-mix(in srgb, var(--accent) 30%, transparent);
+    color: #fff;
+    outline: 1px solid transparent;
+}
+@media (max-width: 800px) {
+    .mode-options {
+        grid-template-columns: 1fr;
+    }
+    .hangar-stage {
+        grid-template-columns: 1fr;
+    }
+    .hangar-bay {
+        grid-template-columns: repeat(4, minmax(0, 1fr));
+    }
+}
+@media (max-height: 650px) {
+    .mode-card canvas {
+        aspect-ratio: 21 / 9;
+        object-fit: cover;
+    }
+}
