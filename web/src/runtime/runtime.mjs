@@ -1,8 +1,12 @@
-import { S, BOSS, BOSS_AT, BLOCKS, SCENE_FLOATS, recordAt } from './scene-layout.mjs';
+import { S, BLOCKS, SCENE_FLOATS, recordAt } from './scene-layout.mjs';
 import { CoopLeaderboard } from '../state/coop-records.mjs';
 import { decodeCoopPlayer } from './coop-scene.mjs';
 import { PersonalBests, clearBrowserRecords } from '../state/records.mjs';
 import { BossRecords } from '../boss/records.mjs';
+import { CoopRun } from './coop-run.mjs';
+import { RunRecorder } from './run-recorder.mjs';
+import { WasmHost } from './wasm-host.mjs';
+
 export const STATES = [
     'menu',
     'countdown',
@@ -14,163 +18,98 @@ export const STATES = [
     'demo',
 ];
 export const SCORE_KEY = 'asteroids.web.scores-v3';
+const STAT_KEYS = [
+    'cps',
+    'peakCps',
+    'spawned',
+    'hits',
+    'longestChain',
+    'highestWave',
+    'doubleFireMs',
+    'laserShots',
+    'laserKills',
+    'presses',
+    'pending',
+];
 
-export async function createRuntime(
-    bytes,
-    { storage, random, tone = () => {}, scoreKey = SCORE_KEY, profile = () => 0 } = {},
-) {
-    let api;
-    let scoreStatus = storage
-        ? 'Top-five scores saved in this browser.'
-        : 'Storage unavailable; initials cannot be saved.';
-    const words = new Uint32Array(64);
-    let wordIndex = words.length;
-    const nextRandom =
-        random ||
-        (() => {
-            if (wordIndex === words.length) {
-                crypto.getRandomValues(words);
-                wordIndex = 0;
-            }
-            return words[wordIndex++];
+// The engine as the UI sees it: one object that steps the game, exposes the scene and
+// remembers how runs ended. Solo and co-op share it; a CoopRun exists only during co-op.
+class Runtime {
+    constructor(host, { storage, scoreKey, profile }) {
+        this.host = host;
+        this.api = host.api;
+        this.storage = storage;
+        this.scoreKey = scoreKey;
+        this.records = new PersonalBests(storage);
+        this.bossRecords = new BossRecords(storage);
+        this.recorder = new RunRecorder({
+            records: this.records,
+            bossRecords: this.bossRecords,
+            profile,
         });
-    const imports = {
-        env: {
-            sinf: Math.sin,
-            cosf: Math.cos,
-            browser_random: nextRandom,
-            browser_tone: tone,
-            browser_storage_read(pointer, capacity) {
-                try {
-                    const raw = storage?.getItem(scoreKey);
-                    if (!raw) return 0;
-                    const record = JSON.parse(raw);
-                    if (
-                        !Array.isArray(record) ||
-                        record.length !== 42 ||
-                        record.some((value) => !Number.isInteger(value) || value < 0 || value > 255)
-                    ) {
-                        scoreStatus = 'Saved leaderboard could not be read.';
-                        return 0;
-                    }
-                    if (pointer && capacity >= record.length)
-                        new Uint8Array(api.memory.buffer, pointer, record.length).set(record);
-                    return record.length;
-                } catch {
-                    scoreStatus = 'Saved leaderboard could not be read.';
-                    return 0;
-                }
-            },
-            browser_storage_write(pointer, length) {
-                try {
-                    if (!storage) {
-                        scoreStatus = 'Storage unavailable; initials cannot be saved.';
-                        return 0;
-                    }
-                    storage.setItem(
-                        scoreKey,
-                        JSON.stringify([...new Uint8Array(api.memory.buffer, pointer, length)]),
-                    );
-                    scoreStatus = 'Top-five scores saved in this browser.';
-                    return length;
-                } catch {
-                    scoreStatus =
-                        'Could not save initials. Allow browser storage and retry from score entry.';
-                    return 0;
-                }
-            },
-        },
-    };
-    const { instance } = await WebAssembly.instantiate(bytes, imports);
-    api = instance.exports;
-    const records = new PersonalBests(storage);
-    const bossRecords = new BossRecords(storage);
-    let run = null,
-        result = null;
-    let coop = null,
-        coopPhase = null,
-        teamBoard = null;
-    let initials = ['A', 'A', 'A'],
-        initialSlot = 0,
-        initialReady = false,
-        initialRepeat = 0;
-    let teamSaveFailed = false;
-    let initialHorizontal = 0,
-        initialHorizontalRepeat = 0;
-    function coopPlayers() {
+        this.profile = profile;
+        this.coop = null; // CoopRun while a co-op run is current
+        // Solo end-of-run screen: visible, then ready for Continue once fire is released.
+        this.resultsVisible = false;
+        this.resultsReady = false;
+        this.awaitResultsRelease = false;
+    }
+    get scoreStatus() {
+        return this.coop ? this.coop.board.status : this.host.scoreStatus;
+    }
+    get result() {
+        return this.recorder.result;
+    }
+    get runProfile() {
+        return this.recorder.runProfile;
+    }
+    get teamEntries() {
+        return this.coop?.board.entries ?? [];
+    }
+    teamLeaderboard(friendlyFire) {
+        return new CoopLeaderboard(this.storage, friendlyFire);
+    }
+    get state() {
+        return this.coop?.phase || (this.resultsVisible ? 'results' : STATES[this.api.web_state()]);
+    }
+    get width() {
+        return this.api.web_width();
+    }
+    get height() {
+        return this.api.web_height();
+    }
+    // ---------------------------------------------------------------- co-op
+    coopPlayers() {
         return [0, 1].map((owner) =>
             decodeCoopPlayer(
                 new Float32Array(
-                    new Float32Array(api.memory.buffer, api.web_coop_player(owner), SCENE_FLOATS),
+                    new Float32Array(
+                        this.host.memory.buffer,
+                        this.api.web_coop_player(owner),
+                        SCENE_FLOATS,
+                    ),
                 ),
             ),
         );
     }
-    function finishCoop() {
-        if (!run) return;
-        const players = coopPlayers();
-        const summaries = players.map((p, i) => ({
-            profile: coop.profiles[i],
-            score: p.score,
-            wave: p.stats.highestWave,
-            peakCps: p.stats.peakCps,
-            longestChain: p.stats.longestChain,
-            shots: p.stats.spawned,
-            hits: p.stats.hits,
-            laserShots: p.stats.laserShots,
-            laserKills: p.stats.laserKills,
-            destroyed: p.scene[S.RUN_DESTROYED],
-            bestMultiplier: p.scene[S.RUN_BEST_MULTIPLIER],
-            bossParticipation: p.participation,
-        }));
-        result = {
-            rules: run.rules,
-            profile: coop.profiles[0],
-            players: summaries,
-            score: players[0].teamScore,
-            wave: players[0].scene[S.WAVE],
-            elapsedMs: players[0].scene[S.GAME_MS],
-            bossKills: players[0].scene[S.BOSS_KILLS],
-            bossMask: players[0].scene[BOSS_AT + BOSS.DEFEATED_MASK],
-        };
-        summaries.forEach((p) => records.record(p.profile, run.rules, p));
-        summaries.forEach((p) =>
-            bossRecords.record(p.profile, players[0].scene[BOSS_AT + BOSS.DEFEATED_MASK]),
-        );
-        run = null;
-        coopPhase = 'results';
-        initialReady = false;
+    startCoop({ profiles = [0, 1], friendlyFire = false } = {}) {
+        this.coop = new CoopRun({ profiles, friendlyFire, storage: this.storage });
+        this.resultsVisible = false;
+        this.recorder.beginCoop(friendlyFire);
+        this.api.web_coop_start(+!!friendlyFire);
     }
-    function stepCoop(inputs) {
-        if (coopPhase) {
+    releaseCoopLasers(players) {
+        if (!this.coop || this.api.web_state() !== 3) return;
+        players.forEach((p, i) => this.api.web_coop_input(i, 0, 0, 0, 0, 0, +!!p.laser, 0, 0));
+    }
+    #finishCoop() {
+        if (this.recorder.finishCoop(this.coop.profiles, this.coopPlayers())) this.coop.finish();
+    }
+    #stepCoop(inputs) {
+        const { api, coop } = this;
+        if (coop.phase) {
             api.web_audio_step();
-            if (coopPhase === 'results') return;
-            const input = inputs.players?.[inputs.menuOwner ?? 0] ?? inputs;
-            if (!input.fire && !input.firePressed) initialReady = true;
-            if (coopPhase === 'initials') {
-                const horizontal = input.x < 1300 ? -1 : input.x > 2800 ? 1 : 0;
-                if (!horizontal) {
-                    initialHorizontal = 0;
-                    initialHorizontalRepeat = 0;
-                } else if (horizontal !== initialHorizontal || !initialHorizontalRepeat) {
-                    initialSlot = Math.max(0, Math.min(2, initialSlot + horizontal));
-                    initialHorizontalRepeat = 12;
-                    initialHorizontal = horizontal;
-                } else initialHorizontalRepeat--;
-                const direction = input.y < 1300 ? 1 : input.y > 2800 ? -1 : 0;
-                if (!direction) initialRepeat = 0;
-                else if (!initialRepeat) {
-                    initials[initialSlot] = String.fromCharCode(
-                        65 + ((initials[initialSlot].charCodeAt(0) - 65 + direction + 26) % 26),
-                    );
-                    initialRepeat = 12;
-                } else initialRepeat--;
-                if (initialReady && input.firePressed) {
-                    initialReady = false;
-                    teamSaveFailed = !teamBoard.save(coop.runId, initials.join(''), result.score);
-                    if (!teamSaveFailed) coopPhase = 'game-over';
-                }
-            }
+            coop.stepEnd(inputs.players?.[inputs.menuOwner ?? 0] ?? inputs, this.result);
             return;
         }
         const players = inputs.players || [{}, {}];
@@ -190,291 +129,187 @@ export async function createRuntime(
         if (inputs.pause || players.some((p) => p.pause))
             api.web_coop_pause(+(api.web_state() !== 3));
         else api.web_step(2048, 2048, 0, 0, 0);
-        if (api.web_state() === 6) finishCoop();
+        if (api.web_state() === 6) this.#finishCoop();
     }
-    let resultsVisible = false,
-        resultsReady = false,
-        awaitResultsRelease = false;
-    function beginRun(practice = false) {
-        run = {
-            profile: profile() === 1 ? 1 : 0,
-            rules: { mode: 'solo', friendlyFire: false, modifiers: [], practice },
-        };
-        result = null;
-        resultsVisible = false;
-        resultsReady = false;
-        awaitResultsRelease = false;
+
+    // ---------------------------------------------------------------- run flow
+    step(input = {}) {
+        if (this.coop) {
+            this.#stepCoop(input);
+            return;
+        }
+        const { api } = this;
+        let {
+            x = 2048,
+            y = 2048,
+            fire = false,
+            firePressed = false,
+            click = false,
+            pause = false,
+            aimX = 0,
+            aimY = 0,
+            laser = false,
+            precision = false,
+            shield = false,
+        } = input;
+        if (this.resultsVisible) {
+            api.web_audio_step();
+            // Consume the ending press/hold before accepting a separate Continue.
+            if (!fire && !firePressed) this.resultsReady = true;
+            else if (this.resultsReady) this.continueResults();
+            return;
+        }
+        if (this.awaitResultsRelease) {
+            if (fire || firePressed) {
+                fire = false;
+                firePressed = false;
+            } else this.awaitResultsRelease = false;
+        }
+        const previous = this.state;
+        api.web_fire_press(+firePressed);
+        api.web_actions(aimX, aimY, +laser, +precision, +shield);
+        api.web_step(x, y, +fire, +click, +pause);
+        if (this.state === 'countdown' && previous !== 'countdown') this.#beginRun(false);
+        if (
+            this.recorder.run &&
+            (this.state === 'initials' ||
+                this.state === 'game-over' ||
+                (this.state === 'death' && this.snapshot()[3] === 0))
+        )
+            this.#finishRun();
+        if (this.result && previous === 'death' && ['initials', 'game-over'].includes(this.state)) {
+            this.resultsVisible = true;
+            this.resultsReady = false;
+        }
     }
-    function finishRun() {
-        if (!run) return;
-        const stats = runtime.stats(),
-            scene = runtime.scene();
-        result = {
-            ...run,
-            score: scene[S.SCORE],
-            wave: stats.highestWave,
-            peakCps: stats.peakCps,
-            longestChain: stats.longestChain,
-            shots: stats.spawned,
-            hits: stats.hits,
-            laserShots: stats.laserShots,
-            laserKills: stats.laserKills,
-            bossKills: scene[S.BOSS_KILLS],
-            bossMask: scene[BOSS_AT + BOSS.DEFEATED_MASK],
-            bossHits: scene[BOSS_AT + BOSS.HITS_TAKEN],
-            elapsedMs: scene[S.GAME_MS],
-            destroyed: scene[S.RUN_DESTROYED],
-            bestMultiplier: scene[S.RUN_BEST_MULTIPLIER],
-        };
-        records.record(run.profile, run.rules, result);
-        if (!run.rules.practice) bossRecords.record(run.profile, result.bossMask || 0);
-        run = null;
+    #beginRun(practice) {
+        this.recorder.beginSolo(practice);
+        this.resultsVisible = false;
+        this.resultsReady = false;
+        this.awaitResultsRelease = false;
     }
-    const runtime = {
-        records,
-        bossRecords,
-        get scoreStatus() {
-            return coop ? teamBoard.status : scoreStatus;
-        },
-        get coop() {
-            return coop;
-        },
-        teamLeaderboard(friendlyFire) {
-            return new CoopLeaderboard(storage, friendlyFire);
-        },
-        get teamEntries() {
-            return teamBoard?.entries ?? [];
-        },
-        coopPlayers,
-        releaseCoopLasers(players) {
-            if (!coop || api.web_state() !== 3) return;
-            players.forEach((p, i) => api.web_coop_input(i, 0, 0, 0, 0, 0, +!!p.laser, 0, 0));
-        },
-        startCoop({ profiles = [0, 1], friendlyFire = false } = {}) {
-            if (
-                profiles.length !== 2 ||
-                profiles[0] === profiles[1] ||
-                profiles.some((p) => ![0, 1].includes(p))
-            )
-                throw Error('Choose distinct profiles');
-            coop = {
-                profiles: [...profiles],
-                friendlyFire: !!friendlyFire,
-                runId: Symbol('co-op run'),
-            };
-            coopPhase = null;
-            result = null;
-            resultsVisible = false;
-            teamBoard = new CoopLeaderboard(storage, !!friendlyFire);
-            initials = ['A', 'A', 'A'];
-            initialSlot = 0;
-            initialReady = false;
-            initialRepeat = 0;
-            teamSaveFailed = false;
-            initialHorizontal = 0;
-            initialHorizontalRepeat = 0;
-            run = {
-                rules: {
-                    mode: 'co-op',
-                    friendlyFire: !!friendlyFire,
-                    modifiers: [],
-                    practice: false,
-                },
-            };
-            api.web_coop_start(+!!friendlyFire);
-        },
-        clearRecords() {
-            const reset = clearBrowserRecords(storage, scoreKey);
-            scoreStatus = reset.message;
-            records.status = reset.message;
-            if (reset.ok) {
-                if (coop) teamBoard = new CoopLeaderboard(storage, coop.friendlyFire);
-                records.profiles = [{}, {}];
-                bossRecords.reset();
-                api.web_reload_scores();
-            }
-            return reset.ok;
-        },
-        get result() {
-            return result;
-        },
-        get runProfile() {
-            return run?.profile ?? result?.profile ?? (profile() === 1 ? 1 : 0);
-        },
-        api,
-        step(input = {}) {
-            if (coop) {
-                stepCoop(input);
-                return;
-            }
-            let {
-                x = 2048,
-                y = 2048,
-                fire = false,
-                firePressed = false,
-                click = false,
-                pause = false,
-                aimX = 0,
-                aimY = 0,
-                laser = false,
-                precision = false,
-                shield = false,
-            } = input;
-            if (resultsVisible) {
-                api.web_audio_step();
-                // Consume the ending press/hold before accepting a separate Continue.
-                if (!fire && !firePressed) resultsReady = true;
-                else if (resultsReady) runtime.continueResults();
-                return;
-            }
-            if (awaitResultsRelease) {
-                if (fire || firePressed) {
-                    fire = false;
-                    firePressed = false;
-                } else awaitResultsRelease = false;
-            }
-            const previous = runtime.state;
-            api.web_fire_press(+firePressed);
-            api.web_actions(aimX, aimY, +laser, +precision, +shield);
-            api.web_step(x, y, +fire, +click, +pause);
-            if (runtime.state === 'countdown' && previous !== 'countdown') beginRun(false);
-            if (
-                run &&
-                (runtime.state === 'initials' ||
-                    runtime.state === 'game-over' ||
-                    (runtime.state === 'death' && runtime.snapshot()[3] === 0))
-            )
-                finishRun();
-            if (
-                result &&
-                previous === 'death' &&
-                ['initials', 'game-over'].includes(runtime.state)
-            ) {
-                resultsVisible = true;
-                resultsReady = false;
-            }
-        },
-        start(practice = false) {
-            coop = null;
-            coopPhase = null;
-            api.web_start(+practice);
-            beginRun(practice);
-        },
-        menu() {
-            coop = null;
-            coopPhase = null;
-            const practiceEnded = !!run?.rules.practice;
-            if (practiceEnded) finishRun();
-            else run = null;
-            api.web_menu();
-            resultsVisible = practiceEnded;
-            resultsReady = false;
-        },
-        abandon() {
-            coop = null;
-            coopPhase = null;
-            run = null;
-            result = null;
-            resultsVisible = false;
-            resultsReady = false;
-            awaitResultsRelease = true;
-            api.web_menu();
-        },
-        continueResults() {
-            if (coop) {
-                if (coopPhase === 'results') {
-                    coopPhase = teamBoard.qualifies(result.score) ? 'initials' : 'game-over';
-                    initialReady = false;
-                }
-                return;
-            }
-            if (!resultsVisible) return;
-            resultsVisible = false;
-            awaitResultsRelease = true;
-        },
-        resetTargets() {
-            api.web_practice_targets();
-        },
-        // Boss practice: a practice run whose room holds one chosen fight (0-5 bosses, 6-11 minis).
-        bossPractice(kind, tier = 0, phase = 1) {
-            api.web_boss_practice(kind, tier, phase);
-        },
-        // Assists change telegraph length and forces only; scoring is unaffected.
-        bossAssist({ longWarnings = false, calm = false } = {}) {
-            api.web_boss_assist(+longWarnings, +calm);
-        },
-        doubleFire() {
-            api.web_practice_double_fire();
-        },
-        stats() {
-            if (coop) return coopPlayers()[0].stats;
-            const values = new Float32Array(api.memory.buffer, api.web_stats(), 16);
-            return Object.fromEntries(
-                [
-                    'cps',
-                    'peakCps',
-                    'spawned',
-                    'hits',
-                    'longestChain',
-                    'highestWave',
-                    'doubleFireMs',
-                    'laserShots',
-                    'laserKills',
-                    'presses',
-                    'pending',
-                ].map((key, i) => [key, values[i]]),
+    #finishRun() {
+        this.recorder.finishSolo(this.stats(), this.scene());
+    }
+    start(practice = false) {
+        this.coop = null;
+        this.api.web_start(+practice);
+        this.#beginRun(practice);
+    }
+    menu() {
+        this.coop = null;
+        const practiceEnded = !!this.recorder.run?.rules.practice;
+        if (practiceEnded) this.#finishRun();
+        else this.recorder.discardRun();
+        this.api.web_menu();
+        this.resultsVisible = practiceEnded;
+        this.resultsReady = false;
+    }
+    abandon() {
+        this.coop = null;
+        this.recorder.discardRun();
+        this.recorder.discardResult();
+        this.resultsVisible = false;
+        this.resultsReady = false;
+        this.awaitResultsRelease = true;
+        this.api.web_menu();
+    }
+    continueResults() {
+        if (this.coop) {
+            this.coop.advance(this.result.score);
+            return;
+        }
+        if (!this.resultsVisible) return;
+        this.resultsVisible = false;
+        this.awaitResultsRelease = true;
+    }
+    pause() {
+        if (this.coop && ['playing', 'countdown'].includes(this.state)) this.api.web_coop_pause(1);
+        else if (this.state === 'playing') this.step({ pause: true });
+    }
+    clearRecords() {
+        const reset = clearBrowserRecords(this.storage, this.scoreKey);
+        this.host.scoreStatus = reset.message;
+        this.records.status = reset.message;
+        if (reset.ok) {
+            if (this.coop)
+                this.coop.board = new CoopLeaderboard(this.storage, this.coop.friendlyFire);
+            this.records.profiles = [{}, {}];
+            this.bossRecords.reset();
+            this.api.web_reload_scores();
+        }
+        return reset.ok;
+    }
+
+    // ---------------------------------------------------------------- practice tools
+    resetTargets() {
+        this.api.web_practice_targets();
+    }
+    doubleFire() {
+        this.api.web_practice_double_fire();
+    }
+    multishot() {
+        this.api.web_practice_multishot();
+    }
+    // Boss practice: a practice run whose room holds one chosen fight (0-5 bosses, 6-11 minis).
+    bossPractice(kind, tier = 0, phase = 1) {
+        this.api.web_boss_practice(kind, tier, phase);
+    }
+    // Assists change telegraph length and forces only; scoring is unaffected.
+    bossAssist({ longWarnings = false, calm = false } = {}) {
+        this.api.web_boss_assist(+longWarnings, +calm);
+    }
+
+    // ---------------------------------------------------------------- reading the engine
+    stats() {
+        if (this.coop) return this.coopPlayers()[0].stats;
+        const values = new Float32Array(this.host.memory.buffer, this.api.web_stats(), 16);
+        return Object.fromEntries(STAT_KEYS.map((key, i) => [key, values[i]]));
+    }
+    fireDiagnostics() {
+        return [...new Uint32Array(this.host.memory.buffer, this.api.web_fire_diagnostics(), 4)];
+    }
+    // The scene as a float view. In co-op it is player one's scene with the team's totals
+    // and, on the end screens, the co-op results and initials entry written over it.
+    scene() {
+        if (!this.coop)
+            return new Float32Array(this.host.memory.buffer, this.api.web_scene(), SCENE_FLOATS);
+        const scene = this.coopPlayers()[0].scene;
+        scene[S.SCORE] = scene[S.COOP_TEAM_SCORE];
+        scene[S.FINAL_SCORE] = scene[S.COOP_TEAM_SCORE];
+        const { coop, result } = this;
+        if (coop.phase) {
+            scene[S.RUN_DESTROYED] = result.players.reduce((sum, p) => sum + p.destroyed, 0);
+            scene[S.RUN_BEST_MULTIPLIER] = Math.max(...result.players.map((p) => p.bestMultiplier));
+            scene[S.STATE] = coop.phase === 'initials' ? 5 : 6;
+            scene[S.SELECTED_INITIAL] = coop.editor.slot;
+            scene[S.SAVE_FAILED] = +coop.saveFailed;
+            scene[S.SCORE_COUNT] = coop.board.entries.length;
+            coop.editor.letters.forEach(
+                (c, i) => (scene[BLOCKS.INITIALS.at + i] = c.charCodeAt(0)),
             );
-        },
-        multishot() {
-            api.web_practice_multishot();
-        },
-        get state() {
-            return coopPhase || (resultsVisible ? 'results' : STATES[api.web_state()]);
-        },
-        get width() {
-            return api.web_width();
-        },
-        get height() {
-            return api.web_height();
-        },
-        fireDiagnostics() {
-            return [...new Uint32Array(api.memory.buffer, api.web_fire_diagnostics(), 4)];
-        },
-        scene() {
-            if (!coop) return new Float32Array(api.memory.buffer, api.web_scene(), SCENE_FLOATS);
-            const scene = coopPlayers()[0].scene;
-            scene[S.SCORE] = scene[S.COOP_TEAM_SCORE];
-            scene[S.FINAL_SCORE] = scene[S.COOP_TEAM_SCORE];
-            if (coopPhase) {
-                scene[S.RUN_DESTROYED] = result.players.reduce((sum, p) => sum + p.destroyed, 0);
-                scene[S.RUN_BEST_MULTIPLIER] = Math.max(
-                    ...result.players.map((p) => p.bestMultiplier),
-                );
-                scene[S.STATE] = coopPhase === 'initials' ? 5 : 6;
-                scene[S.SELECTED_INITIAL] = initialSlot;
-                scene[S.SAVE_FAILED] = +teamSaveFailed;
-                scene[S.SCORE_COUNT] = teamBoard.entries.length;
-                initials.forEach((c, i) => (scene[BLOCKS.INITIALS.at + i] = c.charCodeAt(0)));
-                teamBoard.entries.forEach((e, i) => {
-                    const at = recordAt(BLOCKS.HIGHSCORES, i);
-                    scene[at] = e.score;
-                    [...e.initials].forEach((c, j) => (scene[at + 1 + j] = c.charCodeAt(0)));
-                });
-            }
-            return scene;
-        },
-        pixels() {
-            return new Uint8Array(api.memory.buffer, api.web_pixels(), 128 * 64);
-        },
-        snapshot() {
-            return [...new Float32Array(api.memory.buffer, api.web_snapshot(), 16)];
-        },
-        pause() {
-            if (coop && ['playing', 'countdown'].includes(runtime.state)) api.web_coop_pause(1);
-            else if (runtime.state === 'playing') runtime.step({ pause: true });
-        },
-    };
-    api.__wasm_call_ctors();
-    api.web_init();
+            coop.board.entries.forEach((e, i) => {
+                const at = recordAt(BLOCKS.HIGHSCORES, i);
+                scene[at] = e.score;
+                [...e.initials].forEach((c, j) => (scene[at + 1 + j] = c.charCodeAt(0)));
+            });
+        }
+        return scene;
+    }
+    pixels() {
+        return new Uint8Array(this.host.memory.buffer, this.api.web_pixels(), 128 * 64);
+    }
+    snapshot() {
+        return [...new Float32Array(this.host.memory.buffer, this.api.web_snapshot(), 16)];
+    }
+}
+
+export async function createRuntime(
+    bytes,
+    { storage, random, tone = () => {}, scoreKey = SCORE_KEY, profile = () => 0 } = {},
+) {
+    const host = await WasmHost.load(bytes, { storage, random, tone, scoreKey });
+    const runtime = new Runtime(host, { storage, scoreKey, profile });
+    host.api.web_init();
     return runtime;
 }
