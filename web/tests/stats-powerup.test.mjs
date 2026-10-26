@@ -1,10 +1,10 @@
-import { S } from '../scene-layout.mjs';
+import { S } from '../src/runtime/scene-layout.mjs';
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { readFile } from 'node:fs/promises';
-import { createRuntime } from '../runtime.mjs';
-import { Controls } from '../controls.mjs';
-import { PersonalBests, RECORDS_KEY, rulesKey, accuracyText } from '../records.mjs';
+import { createRuntime } from '../src/runtime/runtime.mjs';
+import { Controls } from '../src/input/controls.mjs';
+import { PersonalBests, RECORDS_KEY, rulesKey, accuracyText } from '../src/state/records.mjs';
 const bytes = await readFile(new URL('../dist/test.wasm', import.meta.url));
 const ticks = (g, n = 1, input = {}) => {
     for (let i = 0; i < n; i++) g.step(input);

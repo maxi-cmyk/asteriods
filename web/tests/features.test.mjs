@@ -1,17 +1,17 @@
-import { S } from '../scene-layout.mjs';
+import { S } from '../src/runtime/scene-layout.mjs';
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { readFile } from 'node:fs/promises';
-import { createRuntime } from '../runtime.mjs';
-import { GameAudio } from '../audio.mjs';
-import { Controls, radial } from '../controls.mjs';
+import { createRuntime } from '../src/runtime/runtime.mjs';
+import { GameAudio } from '../src/audio/audio.mjs';
+import { Controls, radial } from '../src/input/controls.mjs';
 import {
     defaults,
     loadSettings,
     saveSettings,
     SETTINGS_KEY,
     sanitizeSettings,
-} from '../settings.mjs';
+} from '../src/state/settings.mjs';
 const bytes = await readFile(new URL('../dist/test.wasm', import.meta.url));
 const ticks = (g, n = 1, input = {}) => {
     for (let i = 0; i < n; i++) g.step(input);

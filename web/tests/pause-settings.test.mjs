@@ -1,10 +1,10 @@
-import { S } from '../scene-layout.mjs';
+import { S } from '../src/runtime/scene-layout.mjs';
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { readFile } from 'node:fs/promises';
-import { Controls, PauseSettingsShortcut } from '../controls.mjs';
-import { defaults, loadProfiles, loadSettings, SettingsDraft } from '../settings.mjs';
-import { createRuntime } from '../runtime.mjs';
+import { Controls, PauseSettingsShortcut } from '../src/input/controls.mjs';
+import { defaults, loadProfiles, loadSettings, SettingsDraft } from '../src/state/settings.mjs';
+import { createRuntime } from '../src/runtime/runtime.mjs';
 const bytes = await readFile(new URL('../dist/test.wasm', import.meta.url));
 const pad = () => ({
     index: 0,

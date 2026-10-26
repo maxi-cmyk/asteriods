@@ -1,7 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { readdir, readFile } from 'node:fs/promises';
-import { S, BLOCKS, BOSS, SCENE_FLOATS, sceneHeader } from '../scene-layout.mjs';
+import { S, BLOCKS, BOSS, SCENE_FLOATS, sceneHeader } from '../src/runtime/scene-layout.mjs';
 
 test('layout fields never overlap and stay inside the scene', () => {
     const used = new Map();
@@ -30,12 +30,17 @@ test('the generated engine header carries every field', () => {
 
 test('no module outside the layout reads the scene by a bare number', async () => {
     const files = [];
-    for (const dir of ['.', 'screens', 'demo', 'tests']) {
-        const base = new URL(`../${dir}/`, import.meta.url);
-        for (const name of await readdir(base))
-            if (name.endsWith('.mjs') && name !== 'scene-layout.mjs')
-                files.push([`${dir}/${name}`, new URL(name, base)]);
-    }
+    const walk = async (dir) => {
+        for (const entry of await readdir(new URL(`../${dir}/`, import.meta.url), {
+            withFileTypes: true,
+        })) {
+            const path = `${dir}/${entry.name}`;
+            if (entry.isDirectory()) await walk(path);
+            else if (entry.name.endsWith('.mjs') && entry.name !== 'scene-layout.mjs')
+                files.push([path, new URL(`../${path}`, import.meta.url)]);
+        }
+    };
+    for (const dir of ['src', 'dev', 'tests']) await walk(dir);
     const bare = /\b(?:scene|playerScene|scene\(\))\[\d+\]/;
     for (const [name, url] of files) {
         const text = await readFile(url, 'utf8');

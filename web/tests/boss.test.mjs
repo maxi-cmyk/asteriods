@@ -1,8 +1,8 @@
-import { S } from '../scene-layout.mjs';
+import { S } from '../src/runtime/scene-layout.mjs';
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { readFile } from 'node:fs/promises';
-import { createRuntime } from '../runtime.mjs';
+import { createRuntime } from '../src/runtime/runtime.mjs';
 import { BossBot } from './boss-bot.mjs';
 import {
     ATTACK,
@@ -15,7 +15,7 @@ import {
     bossPart,
     bossShots,
     bossState,
-} from '../boss-scene.mjs';
+} from '../src/boss/scene.mjs';
 const bytes = await readFile(new URL('../dist/test.wasm', import.meta.url));
 const set = (game, field, value) => game.api.web_test_boss_set(field, value);
 const K = [3, 6, 7, 5, 5, 4, 5, 8, 5, 8, 8, 6]; // sub-hits per design hit, mirrors BOSS_K

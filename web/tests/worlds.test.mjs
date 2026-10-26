@@ -1,7 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
-import { REGIONS } from '../regions.mjs';
+import { REGIONS } from '../src/render/regions.mjs';
 
 const meta = JSON.parse(readFileSync(new URL('../assets/worlds.json', import.meta.url)));
 const png = readFileSync(new URL('../assets/worlds.png', import.meta.url));
@@ -19,14 +19,14 @@ test('every world strip fits inside worlds.png and has whole frames', () => {
 });
 
 test('every sprite a region background draws exists in the sheet', () => {
-    const source = readFileSync(new URL('../backgrounds.mjs', import.meta.url), 'utf8');
+    const source = readFileSync(new URL('../src/render/backgrounds.mjs', import.meta.url), 'utf8');
     const used = [...source.matchAll(/drawWorld\(ctx, worlds, '([a-z-]+)'/g)].map((m) => m[1]);
     assert.ok(used.length >= REGIONS.length);
     for (const name of new Set(used)) assert.ok(meta[name], `missing world ${name}`);
 });
 
 test('tier 3+ fight scenery exists in the sheet, covers every boss and cycles through all three objects', async () => {
-    const { FIGHT_SCENERY, fightSceneryFor } = await import('../backgrounds.mjs');
+    const { FIGHT_SCENERY, fightSceneryFor } = await import('../src/render/backgrounds.mjs');
     for (const entry of FIGHT_SCENERY) assert.ok(meta[entry.name], entry.name);
     assert.equal(meta['pulsar'].frames, 16);
     assert.equal(meta['quasi-star'].frames, 1);

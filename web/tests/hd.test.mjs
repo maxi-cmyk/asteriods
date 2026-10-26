@@ -1,8 +1,8 @@
-import { S, BLOCKS } from '../scene-layout.mjs';
+import { S, BLOCKS } from '../src/runtime/scene-layout.mjs';
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { readFile } from 'node:fs/promises';
-import { createRuntime } from '../runtime.mjs';
+import { createRuntime } from '../src/runtime/runtime.mjs';
 const bytes = await readFile(new URL('../dist/test.wasm', import.meta.url));
 const ticks = (g, count = 1, input = {}) => {
     for (let i = 0; i < count; i++) g.step(input);

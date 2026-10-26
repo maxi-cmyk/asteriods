@@ -10,7 +10,7 @@ import {
     sanitizeHangar,
     loadHangar,
     saveHangar,
-} from '../hangar.mjs';
+} from '../src/state/hangar.mjs';
 
 const memory = () => {
     const data = new Map();

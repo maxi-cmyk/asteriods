@@ -1,7 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { CoopInput } from '../coop-input.mjs';
-import { defaults } from '../settings.mjs';
+import { CoopInput } from '../src/input/coop-input.mjs';
+import { defaults } from '../src/state/settings.mjs';
 const pad = (index) => ({
     index,
     id: 'Identical controller',

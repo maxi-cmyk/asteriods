@@ -1,11 +1,17 @@
-import { S } from '../scene-layout.mjs';
+import { S } from '../src/runtime/scene-layout.mjs';
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { readFile } from 'node:fs/promises';
-import { Controls, readController, movementResponse } from '../controls.mjs';
-import { defaults, loadProfiles, saveProfiles, loadSettings, SETTINGS_KEY } from '../settings.mjs';
-import { DriftSample, stickValues } from '../calibration.mjs';
-import { createRuntime } from '../runtime.mjs';
+import { Controls, readController, movementResponse } from '../src/input/controls.mjs';
+import {
+    defaults,
+    loadProfiles,
+    saveProfiles,
+    loadSettings,
+    SETTINGS_KEY,
+} from '../src/state/settings.mjs';
+import { DriftSample, stickValues } from '../src/input/calibration.mjs';
+import { createRuntime } from '../src/runtime/runtime.mjs';
 const bytes = await readFile(new URL('../dist/test.wasm', import.meta.url));
 const pad = () => ({
     index: 0,

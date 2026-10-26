@@ -1,7 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { readFile } from 'node:fs/promises';
-import { createRuntime } from '../runtime.mjs';
+import { createRuntime } from '../src/runtime/runtime.mjs';
 
 test('HD demo launches explicitly and exits on movement without saving', async () => {
     let seed = 7,
@@ -25,7 +25,7 @@ test('HD demo launches explicitly and exits on movement without saving', async (
 });
 
 test('isolated manual demo never advances or writes the player runtime and freezes after Stop', async () => {
-    const { createDemo } = await import('../demo/engine.mjs');
+    const { createDemo } = await import('../src/demo/engine.mjs');
     const bytes = await readFile(new URL('../dist/test.wasm', import.meta.url));
     let writes = 0;
     const player = await createRuntime(bytes, {

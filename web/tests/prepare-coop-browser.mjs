@@ -15,10 +15,10 @@ for(const [name,index,button] of [['P2 move + fire',0,7],['P2 pause',0,9]]) {
 const b=document.createElement('button');b.textContent=name;b.onclick=()=>{pads[index].buttons[button]={pressed:true,value:1};if(button===7)pads[index].axes[0]=1;setTimeout(()=>{pads[index].buttons[button]={pressed:false,value:0};pads[index].axes[0]=0;},300);};qa.append(b);
 }
 document.body.append(qa);
-</script><script type="module" src="./app.mjs"></script>`;
+</script><script type="module" src="./src/main.mjs"></script>`;
 await writeFile(
     new URL('../dist/coop-browser.html', import.meta.url),
-    html.replace('<script type="module" src="./app.mjs"></script>', setup),
+    html.replace('<script type="module" src="./src/main.mjs"></script>', setup),
 );
 console.log(
     'Prepared /coop-browser.html with synthetic controllers; excluded from production build packaging.',

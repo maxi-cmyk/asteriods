@@ -1,8 +1,8 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { readFile } from 'node:fs/promises';
-import { Navigation, MenuInput, routeFromHash, fitPlayfield } from '../navigation.mjs';
-import { createRuntime } from '../runtime.mjs';
+import { Navigation, MenuInput, routeFromHash, fitPlayfield } from '../src/state/navigation.mjs';
+import { createRuntime } from '../src/runtime/runtime.mjs';
 const bytes = await readFile(new URL('../dist/test.wasm', import.meta.url));
 async function setup(options = {}) {
     let seed = 9317;

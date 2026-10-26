@@ -1,9 +1,9 @@
-import { S, BOSS, BOSS_AT, BLOCKS } from '../scene-layout.mjs';
+import { S, BOSS, BOSS_AT, BLOCKS } from '../src/runtime/scene-layout.mjs';
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { readFile } from 'node:fs/promises';
-import { createRuntime } from '../runtime.mjs';
-import { CoopLeaderboard, COOP_SCORE_KEYS } from '../coop-records.mjs';
+import { createRuntime } from '../src/runtime/runtime.mjs';
+import { CoopLeaderboard, COOP_SCORE_KEYS } from '../src/state/coop-records.mjs';
 const bytes = await readFile(new URL('../dist/test.wasm', import.meta.url));
 const ticks = (g, n, input = {}) => {
     for (let i = 0; i < n; i++) g.step(input);

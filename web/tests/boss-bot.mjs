@@ -1,4 +1,4 @@
-import { S } from '../scene-layout.mjs';
+import { S } from '../src/runtime/scene-layout.mjs';
 // A scripted pilot for the boss tests: it reads the same scene the renderer reads,
 // picks the sub-target a person would, keeps clear of every shot, lethal hazard and
 // body, and fires at a human rate. It proves a fight is beatable and measures how
@@ -13,7 +13,7 @@ import {
     bossPart,
     bossShots,
     bossState,
-} from '../boss-scene.mjs';
+} from '../src/boss/scene.mjs';
 
 const SPEED = 3.65625,
     SHIP = 7;

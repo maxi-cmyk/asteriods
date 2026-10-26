@@ -1,7 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { createUnlocks, UNLOCKS_KEY, REQUIREMENTS, requirementText } from '../unlocks.mjs';
-import { HANGAR_KEY, HULLS } from '../hangar.mjs';
+import { createUnlocks, UNLOCKS_KEY, REQUIREMENTS, requirementText } from '../src/boss/unlocks.mjs';
+import { HANGAR_KEY, HULLS } from '../src/state/hangar.mjs';
 
 const memory = (seed = {}) => {
     const data = new Map(Object.entries(seed));
@@ -45,8 +45,8 @@ test('corrupt or unavailable storage degrades to a fresh start without throwing'
     assert.equal(createUnlocks(null).isUnlocked(0, 'wasp'), false);
 });
 
-import { BossRecords, BOSS_RECORDS_KEY } from '../boss-records.mjs';
-import { clearBrowserRecords } from '../records.mjs';
+import { BossRecords, BOSS_RECORDS_KEY } from '../src/boss/records.mjs';
+import { clearBrowserRecords } from '../src/state/records.mjs';
 
 test('boss defeats are counted by name per profile and cleared with the other records', () => {
     const storage = {

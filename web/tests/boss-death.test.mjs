@@ -1,8 +1,8 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { readFile } from 'node:fs/promises';
-import { createRuntime } from '../runtime.mjs';
-import { KINDS } from '../boss-scene.mjs';
+import { createRuntime } from '../src/runtime/runtime.mjs';
+import { KINDS } from '../src/boss/scene.mjs';
 
 // Draw against a recording canvas: no DOM, no images, just what each death asks for.
 const calls = [];
@@ -23,7 +23,7 @@ const ctx = new Proxy(
         },
     },
 );
-const { drawDeath, deathMs, DEATH_MS } = await import('../boss-death.mjs');
+const { drawDeath, deathMs, DEATH_MS } = await import('../src/boss/death.mjs');
 const bytes = await readFile(new URL('../dist/test.wasm', import.meta.url));
 
 async function snapshot(kind) {

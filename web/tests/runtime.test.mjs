@@ -1,9 +1,9 @@
-import { S } from '../scene-layout.mjs';
+import { S } from '../src/runtime/scene-layout.mjs';
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { readFile } from 'node:fs/promises';
-import { createRuntime, SCORE_KEY } from '../runtime.mjs';
-import { axisToRaw, Controls, readController } from '../controls.mjs';
+import { createRuntime, SCORE_KEY } from '../src/runtime/runtime.mjs';
+import { axisToRaw, Controls, readController } from '../src/input/controls.mjs';
 const bytes = await readFile(new URL('../dist/oled-test.wasm', import.meta.url));
 const memoryStorage = () => {
     const values = new Map();

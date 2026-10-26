@@ -1,7 +1,18 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { REGIONS, regionIndexForWave, RegionTimeline, envelope, CUE_MS } from '../regions.mjs';
-import { LaunchSequence, warpSpeed, WARP_ACTION_MS, drawHome } from '../presentation.mjs';
+import {
+    REGIONS,
+    regionIndexForWave,
+    RegionTimeline,
+    envelope,
+    CUE_MS,
+} from '../src/render/regions.mjs';
+import {
+    LaunchSequence,
+    warpSpeed,
+    WARP_ACTION_MS,
+    drawHome,
+} from '../src/render/presentation.mjs';
 
 const run = (timeline, wave, time, extra = {}) =>
     timeline.observe({ wave, time, run: true, ...extra });

@@ -1,9 +1,9 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { readFile } from 'node:fs/promises';
-import { createRuntime } from '../runtime.mjs';
-import { ThemeMusic } from '../music.mjs';
-import { defaults, sanitizeSettings, SettingsDraft, loadProfiles } from '../settings.mjs';
+import { createRuntime } from '../src/runtime/runtime.mjs';
+import { ThemeMusic } from '../src/audio/music.mjs';
+import { defaults, sanitizeSettings, SettingsDraft, loadProfiles } from '../src/state/settings.mjs';
 
 const bytes = await readFile(new URL('../dist/test.wasm', import.meta.url));
 

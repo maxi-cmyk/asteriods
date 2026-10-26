@@ -1,11 +1,11 @@
-import { S, BOSS } from '../scene-layout.mjs';
+import { S, BOSS } from '../src/runtime/scene-layout.mjs';
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { readFile } from 'node:fs/promises';
-import { createRuntime } from '../runtime.mjs';
+import { createRuntime } from '../src/runtime/runtime.mjs';
 import { BossBot } from './boss-bot.mjs';
-import { BossSound, describeSounds, voice, groupOf } from '../boss-sound.mjs';
-import { KINDS, BOSS_AT } from '../boss-scene.mjs';
+import { BossSound, describeSounds, voice, groupOf } from '../src/boss/sound.mjs';
+import { KINDS, BOSS_AT } from '../src/boss/scene.mjs';
 const bytes = await readFile(new URL('../dist/test.wasm', import.meta.url));
 
 // A voice that records what a sound asks of the synth instead of making noise.
@@ -150,7 +150,7 @@ test('a real synth renders without throwing against a fake audio graph', () => {
     assert.equal(groupOf(8), 'cinderforge');
 });
 
-import { GUIDE } from '../boss-guide.mjs';
+import { GUIDE } from '../src/boss/guide.mjs';
 test('the field guide documents every attack the engine actually runs, and every sound it names exists', async () => {
     for (const kind of KINDS.keys()) {
         let seed = 900 + kind;

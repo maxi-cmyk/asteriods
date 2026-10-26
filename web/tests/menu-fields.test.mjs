@@ -1,8 +1,8 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { adjustField } from '../menu-fields.mjs';
-import { MenuInput } from '../navigation.mjs';
-import { warpDistance, LaunchSequence } from '../presentation.mjs';
+import { adjustField } from '../src/input/menu-fields.mjs';
+import { MenuInput } from '../src/state/navigation.mjs';
+import { warpDistance, LaunchSequence } from '../src/render/presentation.mjs';
 
 function field(kind, values = {}) {
     const events = [];
@@ -69,7 +69,7 @@ test('warp travel never reverses during deceleration and frozen clock preserves 
 });
 
 test('decoration preferences migrate with safe defaults and never change input bindings', async () => {
-    const { defaults, sanitizeSettings } = await import('../settings.mjs');
+    const { defaults, sanitizeSettings } = await import('../src/state/settings.mjs');
     const before = defaults();
     const old = sanitizeSettings({ volume: 0.3 });
     assert.equal(old.backgroundMotion, 1);
