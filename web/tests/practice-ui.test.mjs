@@ -1,8 +1,8 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { readFileSync } from 'node:fs';
+import { assembleHtml } from '../tools/assemble-html.mjs';
 
-const html = readFileSync(new URL('../index.html', import.meta.url), 'utf8');
+const html = assembleHtml();
 const pause = html.slice(html.indexOf('id="pauseMenu"'), html.indexOf('id="runSummary"'));
 
 test('practice tools live in the Pause menu, not on the playfield', () => {

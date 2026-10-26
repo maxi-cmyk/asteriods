@@ -11,6 +11,7 @@ import {
     cpSync,
     rmSync,
 } from 'node:fs';
+import { assembleHtml } from './tools/assemble-html.mjs';
 const root = dirname(fileURLToPath(import.meta.url));
 const test = process.argv.includes('--test');
 const oled = process.argv.includes('--oled');
@@ -100,11 +101,6 @@ const coreObjects = ['scoring', 'difficulty', 'score_table'].map((name) => {
     if (result.status !== 0) process.exit(result.status || 1);
     return output;
 });
-function assembleHtml(file) {
-    return readFileSync(file, 'utf8').replace(/^[ \t]*<!-- @include (\S+) -->\n/gm, (_, name) =>
-        readFileSync(resolve(root, name), 'utf8'),
-    );
-}
 const args = [
     '--target=wasm32',
     '-std=c++17',
