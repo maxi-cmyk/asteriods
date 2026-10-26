@@ -128,8 +128,8 @@ local co-op rules below.
 
 ## Bosses and mini-bosses (browser solo and co-op)
 
-Design: `nextSteps.md` Part A. Engine: `native/boss.h` (shared framework) and
-`native/boss_fights.h` (the twelve fights). Waves 5, 10, 15, 20, 25 and 30 close
+Design: `nextSteps.md` Part A. Engine: `native/boss/` (shared framework) and
+`native/boss/fights/` (one header per boss family, a `BossOps` row per kind). Waves 5, 10, 15, 20, 25 and 30 close
 their region with a boss (Sentinel, Ringwarden, Cinderforge, Bastion,
 Tidecaller, Horizon Warden); the cycle then repeats as tiers (wave 35 is the
 Sentinel again, tier II). Waves 3, 8, 13, 18, 23 and 28 carry a mini-boss
@@ -167,11 +167,11 @@ Defeat awards `1500 + 250 * min(10, wave / 5)` (minis `400 + 100 * region`) as o
 scoring event through the multiplier, +50% when no life was lost during the
 fight. Boss kills are separate from asteroid kills and appear in Results and
 Records by name. Defeating a mini-boss in a real run for the first time unlocks
-its Hangar hull (`unlocks.mjs`); practice never unlocks. Co-op awards the killing
+its Hangar hull (`src/boss/unlocks.mjs`); practice never unlocks. Co-op awards the killing
 pilot, counts participation for every pilot who touched the boss, scales health by
 two, and alternates its aim between the nearer and the farther pilot.
 
-Every boss and mini-boss has its own defeat sequence (`boss-death.mjs`), played from a
+Every boss and mini-boss has its own defeat sequence (`src/boss/death.mjs`), played from a
 frozen copy of its last frame: the Sentinel's plates blast off, the Ringwarden shears and
 implodes, the Cinderforge splits on a column of fire, the Bastion breaks in two along a
 chain of explosions, the Tidecaller dissolves into bubbles, the Warden collapses to a point
@@ -181,7 +181,7 @@ Tier 3+ fights (wave 93 and later, or tier IV in boss practice) play in front of
 quasi-star, pulsar or magnetar; it is scenery only and never hurts the player.
 
 Sound: each boss has its own timbre, a charge-up for every attack, a release sound
-at the lethal moment and a distinct defeat sound (`boss-sound.mjs`). The
+at the lethal moment and a distinct defeat sound (`src/boss/sound.mjs`). The
 attack gallery (`boss-attacks.html`, linked from Pixel assets) lists every attack
 with its warning and answer and plays its sounds.
 

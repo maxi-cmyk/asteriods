@@ -7,47 +7,65 @@ import {
     keyLabel,
 } from '../state/settings.mjs';
 
-export function createSettingsScreen({
-    settings,
-    profileStore,
-    settingsDraft,
-    settingsUi,
-    applyButton,
-    settingsStatus,
-    storage,
-    controls,
-    unlockAudio,
-    calibration,
-}) {
-    function changed() {
-        const dirty = settingsDraft.changed();
-        applyButton.disabled = !dirty;
-        settingsStatus.textContent = dirty ? 'Unapplied changes' : '';
+// The numeric settings with a range input and a readout, in screen order.
+const SLIDERS = [
+    'volume',
+    'deadzone',
+    'aimDeadzone',
+    'aimSensitivity',
+    'mouseAimSensitivity',
+    'movementSensitivity',
+    'shake',
+    'backgroundMotion',
+    'backgroundBrightness',
+];
+const readout = (name, value) =>
+    name.endsWith('Sensitivity') ? `${value.toFixed(2)}×` : `${Math.round(value * 100)}%`;
+
+// The Settings screen: category tabs, sliders, toggles and the key and button bindings. It
+// edits the live `settings` object as a draft (`settingsDraft` decides what counts as changed).
+class SettingsScreen {
+    constructor(options) {
+        Object.assign(this, options);
+        this.#wire();
     }
-    function render() {
+    // Marks the draft changed (or clean) and updates the Apply button.
+    changed() {
+        const dirty = this.settingsDraft.changed();
+        this.applyButton.disabled = !dirty;
+        this.settingsStatus.textContent = dirty ? 'Unapplied changes' : '';
+    }
+    render() {
+        const { settings, profileStore } = this;
         element('inputProfile').value = profileStore.activeProfile;
         element('audioEnabled').checked = settings.soundEnabled;
         element('musicEnabled').checked = settings.musicEnabled;
         element('bossLongWarnings').checked = settings.bossLongWarnings;
         element('bossCalm').checked = settings.bossCalm;
-        if (!storage)
-            settingsStatus.textContent = 'Storage unavailable; settings apply for this visit';
-        for (const name of [
-            'volume',
-            'deadzone',
-            'aimDeadzone',
-            'aimSensitivity',
-            'mouseAimSensitivity',
-            'movementSensitivity',
-            'shake',
-            'backgroundMotion',
-            'backgroundBrightness',
-        ]) {
+        if (!this.storage)
+            this.settingsStatus.textContent = 'Storage unavailable; settings apply for this visit';
+        for (const name of SLIDERS) {
             element(name).value = settings[name];
-            element(`${name}Value`).textContent = name.endsWith('Sensitivity')
-                ? `${settings[name].toFixed(2)}×`
-                : `${Math.round(settings[name] * 100)}%`;
+            element(`${name}Value`).textContent = readout(name, settings[name]);
         }
+        this.#renderKeyBindings();
+        this.#renderPadBindings();
+    }
+    select(category) {
+        const { settingsUi } = this;
+        settingsUi.category = category;
+        for (const button of document.querySelectorAll('[data-category]'))
+            button.setAttribute('aria-pressed', String(button.dataset.category === category));
+        for (const panel of document.querySelectorAll('[data-settings-panel]')) {
+            panel.hidden = panel.dataset.settingsPanel !== category;
+            panel.inert = panel.hidden;
+        }
+        settingsUi.rebinding = null;
+        this.render();
+    }
+    // One button per key action; clicking starts a rebind that KeyRebinder completes.
+    #renderKeyBindings() {
+        const { settings, settingsUi } = this;
         const keys = element('keyBindings');
         keys.replaceChildren();
         for (const [action, [title]] of Object.entries(KEY_ACTIONS)) {
@@ -62,15 +80,19 @@ export function createSettingsScreen({
             );
             button.addEventListener('click', () => {
                 settingsUi.rebinding = action;
-                render();
+                this.render();
                 keys.querySelector(`[data-action="${action}"]`).focus();
-                settingsStatus.textContent = `Press a new key for ${title}; Esc cancels`;
+                this.settingsStatus.textContent = `Press a new key for ${title}; Esc cancels`;
             });
             button.dataset.action = action;
             if (settingsUi.rebinding === action) button.textContent = 'Press a key…';
             label.append(button);
             keys.append(label);
         }
+    }
+    // One select per controller action; choosing a taken button swaps the two.
+    #renderPadBindings() {
+        const { settings } = this;
         const pads = element('padBindings');
         pads.replaceChildren();
         for (const [action, [title]] of Object.entries(PAD_ACTIONS)) {
@@ -94,80 +116,61 @@ export function createSettingsScreen({
                 );
                 if (conflict) settings.buttons[conflict] = previous;
                 settings.buttons[action] = next;
-                controls.clear();
-                render();
-                changed();
+                this.controls.clear();
+                this.render();
+                this.changed();
                 document.querySelector(`#padBindings [data-action="${action}"]`).focus();
             });
             label.append(select);
             pads.append(label);
         }
     }
-    function select(category) {
-        settingsUi.category = category;
+    #wire() {
+        const { settings, profileStore, settingsUi } = this;
         for (const button of document.querySelectorAll('[data-category]'))
-            button.setAttribute('aria-pressed', String(button.dataset.category === category));
-        for (const panel of document.querySelectorAll('[data-settings-panel]')) {
-            panel.hidden = panel.dataset.settingsPanel !== category;
-            panel.inert = panel.hidden;
-        }
-        settingsUi.rebinding = null;
-        render();
-    }
-    for (const button of document.querySelectorAll('[data-category]'))
-        button.addEventListener('click', () => {
-            select(button.dataset.category);
-            button.focus();
+            button.addEventListener('click', () => {
+                this.select(button.dataset.category);
+                button.focus();
+            });
+        element('audioEnabled').addEventListener('change', (event) => {
+            settings.soundEnabled = event.target.checked;
+            this.changed();
         });
-    element('musicEnabled').addEventListener('change', (event) => {
-        settings.musicEnabled = event.target.checked;
-        changed();
-    });
-    for (const name of ['bossLongWarnings', 'bossCalm'])
-        element(name).addEventListener('change', (event) => {
-            settings[name] = event.target.checked;
-            changed();
+        element('musicEnabled').addEventListener('change', (event) => {
+            settings.musicEnabled = event.target.checked;
+            this.changed();
         });
-    element('audioEnabled').addEventListener('change', (event) => {
-        settings.soundEnabled = event.target.checked;
-        changed();
-    });
-    for (const name of [
-        'volume',
-        'deadzone',
-        'aimDeadzone',
-        'aimSensitivity',
-        'mouseAimSensitivity',
-        'movementSensitivity',
-        'shake',
-        'backgroundMotion',
-        'backgroundBrightness',
-    ]) {
-        element(name).addEventListener('input', (event) => {
-            settings[name] = Number(event.target.value);
-            element(`${name}Value`).textContent = name.endsWith('Sensitivity')
-                ? `${settings[name].toFixed(2)}×`
-                : `${Math.round(settings[name] * 100)}%`;
-            if (name === 'volume') {
-                settings.soundEnabled = true;
-                unlockAudio();
-            }
-            changed();
+        for (const name of ['bossLongWarnings', 'bossCalm'])
+            element(name).addEventListener('change', (event) => {
+                settings[name] = event.target.checked;
+                this.changed();
+            });
+        for (const name of SLIDERS)
+            element(name).addEventListener('input', (event) => {
+                settings[name] = Number(event.target.value);
+                element(`${name}Value`).textContent = readout(name, settings[name]);
+                if (name === 'volume') {
+                    settings.soundEnabled = true;
+                    this.unlockAudio();
+                }
+                this.changed();
+            });
+        element('inputProfile').addEventListener('change', (event) => {
+            profileStore.profiles[profileStore.activeProfile] = sanitizeSettings(settings);
+            profileStore.activeProfile = Number(event.target.value);
+            Object.assign(
+                settings,
+                sanitizeSettings(profileStore.profiles[profileStore.activeProfile]),
+            );
+            settingsUi.rebinding = null;
+            this.controls.clear();
+            this.calibration.reset();
+            this.render();
+            this.changed();
         });
     }
-    element('inputProfile').addEventListener('change', (event) => {
-        profileStore.profiles[profileStore.activeProfile] = sanitizeSettings(settings);
-        profileStore.activeProfile = Number(event.target.value);
-        Object.assign(
-            settings,
-            sanitizeSettings(profileStore.profiles[profileStore.activeProfile]),
-        );
-        settingsUi.rebinding = null;
-        controls.clear();
-        calibration.reset();
-        render();
-        changed();
-    });
-
-    return { render, select, changed };
 }
+
+// `options`: settings, profileStore, settingsDraft, settingsUi, applyButton, settingsStatus,
+// storage, controls, unlockAudio, calibration.
+export const createSettingsScreen = (options) => new SettingsScreen(options);

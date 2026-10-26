@@ -47,104 +47,109 @@ export class DriftSample {
     }
 }
 
-export function setupCalibration({ settings, findController, persist, render }) {
-    const panel = document.querySelector('#calibration');
-    const preview = document.querySelector('#inputPreview');
-    const status = document.querySelector('#calibrationStatus');
-    const sampleButton = document.querySelector('#sampleDrift');
-    const applyButton = document.querySelector('#applyDeadzone');
-    const previewControls = new Controls(settings);
-    const plotState = new Map();
-    let sampling = null,
-        suggestion = null,
-        previous = null,
-        elapsed = 0,
-        x = 160,
-        y = 65,
-        angle = 0,
-        pointer = null;
-    function reset() {
-        sampling = null;
-        suggestion = null;
-        previous = null;
-        elapsed = 0;
-        x = 160;
-        y = 65;
-        angle = 0;
-        pointer = null;
-        previewControls.clear();
-        plotState.clear();
-        applyButton.disabled = true;
-        status.textContent = 'Release both sticks, then sample.';
+// The controller calibration panel in Settings: a live stick plot, a movable preview ship
+// driven through the real Controls, and a two-second drift sample that suggests deadzones.
+class CalibrationPanel {
+    constructor({ settings, findController, persist, render }) {
+        this.settings = settings;
+        this.findController = findController;
+        this.persist = persist; // marks the settings draft changed
+        this.render = render; // redraws the settings screen
+        this.panel = document.querySelector('#calibration');
+        this.preview = document.querySelector('#inputPreview');
+        this.status = document.querySelector('#calibrationStatus');
+        this.sampleButton = document.querySelector('#sampleDrift');
+        this.applyButton = document.querySelector('#applyDeadzone');
+        this.previewControls = new Controls(settings);
+        this.plotState = new Map();
+        this.reset();
+        this.#wire();
     }
-    sampleButton.addEventListener('click', () => {
-        const pad = findController();
+    reset() {
+        this.sampling = null; // a DriftSample while measuring
+        this.suggestion = null; // [left, right] deadzones waiting to be applied
+        this.previous = null;
+        this.elapsed = 0;
+        this.x = 160; // preview ship position and heading
+        this.y = 65;
+        this.angle = 0;
+        this.pointer = null;
+        this.previewControls.clear();
+        this.plotState.clear();
+        this.applyButton.disabled = true;
+        this.status.textContent = 'Release both sticks, then sample.';
+    }
+    #wire() {
+        const { preview, previewControls } = this;
+        this.sampleButton.addEventListener('click', () => this.#startSample());
+        this.applyButton.addEventListener('click', () => this.#applySuggestion());
+        preview.addEventListener('pointermove', (event) => {
+            if (event.pointerType !== 'mouse') return;
+            previewControls.activateMouseAim();
+            const rect = preview.getBoundingClientRect();
+            this.pointer = [
+                ((event.clientX - rect.left) * 320) / rect.width,
+                ((event.clientY - rect.top) * 130) / rect.height,
+            ];
+        });
+        preview.addEventListener('pointerdown', () => preview.focus());
+        preview.addEventListener('keydown', (event) => {
+            const keys = ['ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight'];
+            if ([...keys, ...Object.values(this.settings.keys)].includes(event.code)) {
+                event.preventDefault();
+                previewControls.keyDown(event.code, event.repeat);
+            }
+        });
+        preview.addEventListener('keyup', (event) => previewControls.keyUp(event.code));
+        preview.addEventListener('blur', () => {
+            previewControls.clear();
+            this.pointer = null;
+        });
+        preview.addEventListener('pointerleave', () => {
+            this.pointer = null;
+        });
+    }
+    #startSample() {
+        const pad = this.findController();
         if (!pad) {
-            status.textContent =
+            this.status.textContent =
                 'Connect a standard controller and press a button, then try again.';
             return;
         }
-        sampling = new DriftSample(pad.index, performance.now());
-        suggestion = null;
-        applyButton.disabled = true;
-        status.textContent = 'Sampling for two seconds. Keep both sticks untouched…';
-    });
-    applyButton.addEventListener('click', () => {
+        this.sampling = new DriftSample(pad.index, performance.now());
+        this.suggestion = null;
+        this.applyButton.disabled = true;
+        this.status.textContent = 'Sampling for two seconds. Keep both sticks untouched…';
+    }
+    #applySuggestion() {
+        const { suggestion, settings } = this;
         if (suggestion === null) return;
         settings.deadzone = suggestion[0];
         settings.aimDeadzone = suggestion[1];
-        render();
-        persist();
-        status.textContent = `Selected left ${Math.round(suggestion[0] * 100)}%, right ${Math.round(suggestion[1] * 100)}%. Press Apply to keep them.`;
-        suggestion = null;
-        applyButton.disabled = true;
-    });
-    preview.addEventListener('pointermove', (event) => {
-        if (event.pointerType !== 'mouse') return;
-        previewControls.activateMouseAim();
-        const rect = preview.getBoundingClientRect();
-        pointer = [
-            ((event.clientX - rect.left) * 320) / rect.width,
-            ((event.clientY - rect.top) * 130) / rect.height,
-        ];
-    });
-    preview.addEventListener('pointerdown', () => preview.focus());
-    preview.addEventListener('keydown', (event) => {
-        if (
-            [
-                'ArrowUp',
-                'ArrowDown',
-                'ArrowLeft',
-                'ArrowRight',
-                ...Object.values(settings.keys),
-            ].includes(event.code)
-        ) {
-            event.preventDefault();
-            previewControls.keyDown(event.code, event.repeat);
-        }
-    });
-    preview.addEventListener('keyup', (event) => previewControls.keyUp(event.code));
-    preview.addEventListener('blur', () => {
-        previewControls.clear();
-        pointer = null;
-    });
-    preview.addEventListener('pointerleave', () => {
-        pointer = null;
-    });
-    function setText(element, text) {
-        if (element.textContent !== text) element.textContent = text;
+        this.render();
+        this.persist();
+        this.status.textContent = `Selected left ${Math.round(suggestion[0] * 100)}%, right ${Math.round(suggestion[1] * 100)}%. Press Apply to keep them.`;
+        this.suggestion = null;
+        this.applyButton.disabled = true;
     }
-    function update(now) {
-        const delta = previous === null ? 0 : Math.min(60, now - previous);
-        previous = now;
-        const pad = findController();
+    // Called every frame while the calibration tab is showing.
+    update(now) {
+        const delta = this.previous === null ? 0 : Math.min(60, now - this.previous);
+        this.previous = now;
+        const pad = this.findController();
         const connected = !!pad;
-        sampleButton.disabled = !connected || !!sampling;
+        this.sampleButton.disabled = !connected || !!this.sampling;
         setText(
-            panel.querySelector('#calibrationController'),
+            this.panel.querySelector('#calibrationController'),
             connected ? pad.id : 'No standard controller detected. Connect one and press a button.',
         );
-        const sticks = stickValues(pad, settings, plotState);
+        this.#plotSticks(pad);
+        this.#advanceSample(pad, now);
+        this.#advancePreview(pad, now, delta);
+    }
+    #plotSticks(pad) {
+        const { panel, settings } = this;
+        const sticks = stickValues(pad, settings, this.plotState);
         for (const [i, stick] of sticks.entries()) {
             const plot = panel.querySelector(i === 0 ? '#moveStick' : '#aimStick');
             for (const name of ['raw', 'adjusted']) {
@@ -162,35 +167,44 @@ export function setupCalibration({ settings, findController, persist, render }) 
                 `Raw ${stick.raw.map((v) => v.toFixed(2)).join(', ')} / adjusted ${stick.adjusted.map((v) => v.toFixed(2)).join(', ')}`,
             );
         }
-        if (sampling) {
-            const result = sampling.update(pad, now);
-            if (!result.pending) {
-                sampling = null;
-                if (result.error) status.textContent = result.error;
-                else {
-                    suggestion = result.deadzones;
-                    applyButton.disabled = false;
-                    status.textContent = `Suggested deadzones: left ${Math.round(suggestion[0] * 100)}%, right ${Math.round(suggestion[1] * 100)}%. Use these or keep your current settings.`;
-                }
-            }
+    }
+    #advanceSample(pad, now) {
+        if (!this.sampling) return;
+        const result = this.sampling.update(pad, now);
+        if (result.pending) return;
+        this.sampling = null;
+        if (result.error) this.status.textContent = result.error;
+        else {
+            this.suggestion = result.deadzones;
+            this.applyButton.disabled = false;
+            this.status.textContent = `Suggested deadzones: left ${Math.round(this.suggestion[0] * 100)}%, right ${Math.round(this.suggestion[1] * 100)}%. Use these or keep your current settings.`;
         }
-        // Match the game's fixed 20 ms input ticks, without advancing gameplay.
-        elapsed += delta;
-        while (elapsed >= 20) {
-            if (pointer) previewControls.aimAt(pointer[0] - x, pointer[1] - y);
+    }
+    // Match the game's fixed 20 ms input ticks, without advancing gameplay.
+    #advancePreview(pad, now, delta) {
+        const { previewControls } = this;
+        this.elapsed += delta;
+        while (this.elapsed >= 20) {
+            if (this.pointer)
+                previewControls.aimAt(this.pointer[0] - this.x, this.pointer[1] - this.y);
             const input = previewControls.sample(pad, now);
             const dx = (input.x - 2048) / (input.x >= 2048 ? 2047 : 2048),
                 dy = (input.y - 2048) / (input.y >= 2048 ? 2047 : 2048);
             const scale = (2 / Math.max(1, Math.hypot(dx, dy))) * (input.precision ? 0.5 : 1);
-            x = Math.max(14, Math.min(306, x + dx * scale));
-            y = Math.max(14, Math.min(116, y + dy * scale));
+            this.x = Math.max(14, Math.min(306, this.x + dx * scale));
+            this.y = Math.max(14, Math.min(116, this.y + dy * scale));
             if (input.aimX || input.aimY)
-                angle = (Math.atan2(input.aimY, input.aimX) * 180) / Math.PI;
-            elapsed -= 20;
+                this.angle = (Math.atan2(input.aimY, input.aimX) * 180) / Math.PI;
+            this.elapsed -= 20;
         }
-        preview
+        this.preview
             .querySelector('#previewShip')
-            .setAttribute('transform', `translate(${x} ${y}) rotate(${angle})`);
+            .setAttribute('transform', `translate(${this.x} ${this.y}) rotate(${this.angle})`);
     }
-    return { update, reset };
 }
+
+function setText(element, text) {
+    if (element.textContent !== text) element.textContent = text;
+}
+
+export const setupCalibration = (options) => new CalibrationPanel(options);

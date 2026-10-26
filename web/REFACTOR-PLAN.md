@@ -5,6 +5,28 @@ Every phase is a series of small commits that leave `npm test`, `sh tests/run_ho
 and the browser flow green. Nothing here changes gameplay, the saved-data formats,
 or the WASM export names.
 
+## Status (completed on branch `refactor`)
+
+All phases were carried out; every step was verified by the goldens (`tests/*-golden.test.mjs`),
+the 198-test suite, `sh tests/run_host.sh`, the browser smoke walk (`dev/smoke.mjs`) and, for CSS,
+the computed-style signature (`dev/style-signature.mjs`) at desktop and mobile widths.
+
+| Phase | Result | Deviations from the plan |
+| --- | --- | --- |
+| 0 Safety net | scene, render and sound goldens; smoke walk | screenshots replaced by the computed-style signature |
+| 1 Tooling | Prettier, ESLint, `.editorconfig`, `.git-blame-ignore-revs`, `npm run check` | Prettier skips HTML and `native/` |
+| 2 Scene ABI | `scene-layout.mjs` → generated `scene_layout.h`; `native/scene.h`; zero bare indexes (tested) | named constants and record helpers instead of a `SceneView` wrapper class |
+| 3 Folders | `src/`, `dev/`, `html/`; the build copies `src/` by glob | dev pages keep their URLs |
+| 4 App | `application.mjs` (1388 lines) → 20 modules, `app.mjs` 216 lines; `runtime.mjs` split into WasmHost / RunRecorder / CoopRun / InitialsEditor; Settings, Coop, Hangar, Calibration screens as classes | screen option bags and other `create*Screen` factories were left as they are |
+| 5 Render and boss | renderer layers, painters per body/hazard/shot, death scripts per region, Synth + sound books + data-driven cues, backgrounds split | |
+| 6 Engine | boss framework split into `native/boss/`, one header per fight family, `BossOps` table (no kind switches), named `aux`/`stamp` slots, `bridge.cpp` 92 lines + `exports/`; host tests split | `coop.h`/`combat.h` untouched |
+| 7 CSS/HTML | `theme.css` split into ordered files, 138 dead declarations pruned (`tools/prune-css.mjs`), `index.html` assembled from `html/` | override sections were not merged (order is preserved) and the CSS is not concatenated at build time |
+| 8 Docs | `web/ARCHITECTURE.md`, README, COMBAT and ART paths | `docs/` is git-ignored, so its edits are local |
+
+Still above the 50-line function target: screen factories and renderers that are linear
+sequences (`createBossUi`, `renderRecordsScreen`, `Presenter.draw`, `installActions`, the
+`drawWarp`/`bossBlast` effects). The original plan follows.
+
 ## 1. What is wrong today (measured)
 
 | Hotspot | Size | Problem |
