@@ -1,0 +1,331 @@
+/* Pixel identity, component theme, and presentation. Layout lives in shell.css. */
+@font-face {
+    font-family: 'Jersey 10';
+    src: url('../../assets/fonts/Jersey10-Regular.woff2') format('woff2');
+    font-weight: 400;
+    font-display: swap;
+}
+@font-face {
+    font-family: 'Pixelify Sans';
+    src: url('../../assets/fonts/PixelifySans-Variable.woff2') format('woff2');
+    font-weight: 400 700;
+    font-display: swap;
+}
+
+:root {
+    --font-display: 'Jersey 10', 'Pixelify Sans', ui-monospace, Consolas, monospace;
+    --font-body: 'Pixelify Sans', ui-monospace, 'SFMono-Regular', Consolas, monospace;
+    /* Jersey 10 is condensed and small on the page: these sizes are tuned to it. */
+    --size-label: 18px;
+    --size-menu: 24px;
+    --size-heading: 32px;
+    --size-body: 17px;
+    --size-small: 15px;
+    --space-1: 4px;
+    --space-2: 8px;
+    --space-3: 16px;
+    --space-4: 24px;
+    --space-5: 32px;
+    --background: #080d1c;
+    --surface: #0f1830;
+    --surface-raised: #16224a;
+    --ink: #eef2ff;
+    --muted: #aab6dc;
+    --edge: #33447f;
+    --accent: #6ef0ff;
+    --accent-fill: #173a6e;
+    --danger: #ff8a9a;
+    --danger-fill: #4a1830;
+    --focus: #ffe66d;
+    font-family: var(--font-body);
+    font-size: var(--size-body);
+}
+body {
+    letter-spacing: 0.03em;
+    font-family: var(--font-body);
+    font-size: var(--size-body);
+    line-height: 1.4;
+    font-variant-ligatures: none;
+    font-feature-settings:
+        'liga' 0,
+        'clig' 0;
+}
+button,
+input,
+select,
+textarea {
+    font-family: inherit;
+}
+p,
+dd,
+dt,
+label,
+li,
+figcaption,
+output {
+    font-size: var(--size-body);
+}
+
+/* Headings and identity use the display face. */
+h1,
+h2,
+h3,
+#screenTitle,
+dialog h2 {
+    font-family: var(--font-display);
+    font-weight: 400;
+    letter-spacing: 0;
+    text-transform: none;
+    line-height: 1.5;
+}
+h1 {
+    font-size: var(--size-heading);
+}
+.utility-view > h1 {
+    font-size: var(--size-heading);
+    margin: 0 0 var(--space-4);
+    color: var(--accent);
+}
+h2,
+.settings-heading h2,
+[data-settings-panel] > h2,
+.help-layout h2,
+.pause-menu h2,
+#navigationDecision h2,
+dialog h2 {
+    font-size: var(--size-menu);
+    color: var(--ink);
+    margin: 0 0 var(--space-3);
+}
+h3,
+.settings-bindings h3 {
+    font-size: var(--size-label);
+    color: var(--accent);
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    margin: var(--space-4) 0 var(--space-2);
+}
+#screenTitle {
+    font-size: var(--size-menu);
+}
+@media (min-width: 900px) and (min-height: 700px) {
+    .home-menu h1 {
+        font-size: 32px;
+    }
+}
+
+/* Body text reads at one comfortable size; status and notes are slightly smaller. */
+.utility-view p,
+.help-layout p,
+.settings-help,
+.settings-bindings p,
+#calibration p,
+.settings-intro,
+#settingsProfileNote,
+.binding-note,
+.utility-view .controls p,
+dialog p {
+    font-size: var(--size-body);
+    line-height: 1.3;
+    color: var(--muted);
+}
+.settings-intro,
+#settingsProfileNote,
+.result-hint,
+#pauseSettingsHint,
+#homeHint,
+#demoHint,
+.status,
+.toolbar,
+.binding-note {
+    font-size: var(--size-small);
+}
+.hud,
+.combat-hud,
+.live-stats {
+    font-size: var(--size-small);
+}
+.hud b,
+.combat-hud b,
+.live-stats b {
+    font-family: var(--font-display);
+    font-size: var(--size-label);
+    font-weight: 400;
+}
+#score {
+    font-family: var(--font-display);
+    font-size: var(--size-menu);
+    letter-spacing: 0;
+}
+.status,
+.toolbar {
+    font-size: var(--size-small);
+}
+#state {
+    font-family: var(--font-display);
+    font-size: var(--size-label);
+}
+.binding-list dt {
+    font-size: var(--size-small);
+    color: var(--muted);
+}
+
+.binding-list {
+    font-size: var(--size-body);
+}
+.run-summary dd {
+    font-family: var(--font-display);
+    font-size: clamp(16px, 2.4cqw, 28px);
+    line-height: 1.5;
+}
+.run-summary dt {
+    font-size: var(--size-small);
+}
+.run-summary h2 {
+    font-size: clamp(16px, 2.4cqw, 28px);
+}
+
+.profile-picker,
+.settings-sliders label,
+#keyBindings label,
+#padBindings label,
+.settings-bindings label,
+.toggle-label {
+    font-size: var(--size-body);
+}
+.settings-sliders output {
+    font-family: var(--font-display);
+    font-size: var(--size-label);
+}
+
+/* Controls: one set of states shared by every button, tab, and field. */
+button {
+    font-family: var(--font-body);
+    font-size: var(--size-body);
+    min-height: 40px;
+    padding: 8px 14px;
+    color: var(--ink);
+    background: transparent;
+    border: 2px solid var(--edge);
+    border-radius: 0;
+    transition:
+        background-color 0.12s ease-out,
+        border-color 0.12s ease-out,
+        color 0.12s ease-out,
+        transform 0.06s ease-out;
+}
+button:hover:not(:disabled) {
+    background: var(--surface-raised);
+    border-color: var(--muted);
+}
+button:active:not(:disabled) {
+    background: var(--accent-fill);
+    transform: translateY(1px);
+}
+button:disabled {
+    opacity: 0.45;
+    cursor: not-allowed;
+}
+button:focus-visible,
+a:focus-visible,
+input:focus-visible,
+select:focus-visible,
+summary:focus-visible,
+canvas:focus-visible,
+#inputPreview:focus-visible {
+    outline: 3px solid var(--focus);
+    outline-offset: 2px;
+}
+button[aria-pressed='true'] {
+    color: var(--accent);
+    border-color: var(--accent);
+    background: var(--accent-fill);
+}
+.primary,
+#applySettings:not(:disabled) {
+    color: var(--accent);
+    background: var(--accent-fill);
+    border-color: var(--accent);
+}
+.primary:hover:not(:disabled),
+#applySettings:hover:not(:disabled) {
+    background: #21508f;
+}
+.home-menu button,
+.pause-menu button,
+.settings-tabs button,
+.settings-footer button,
+#screenBack,
+.shell-header #sound,
+.shell-header #music,
+.shell-header #fullscreen,
+#stopDemo,
+#continueResults {
+    font-family: var(--font-display);
+    font-size: var(--size-label);
+    line-height: 1.6;
+}
+.home-menu button {
+    font-size: var(--size-menu);
+    min-height: 48px;
+    padding: 10px 16px;
+    border-color: transparent;
+}
+.home-menu button:hover:not(:disabled),
+.home-menu button:focus-visible {
+    border-color: var(--accent);
+    background: var(--accent-fill);
+    color: var(--accent);
+    outline: none;
+}
+.home-menu button:focus-visible::before,
+.home-menu button:hover:not(:disabled)::before {
+    content: '> ';
+}
+.home-menu button:focus-visible {
+    box-shadow: 0 0 0 3px var(--focus);
+}
+.settings-tabs button {
+    font-size: var(--size-label);
+    min-height: 44px;
+}
+.settings-tabs button[aria-pressed='true'] {
+    box-shadow: inset 0 -4px 0 var(--accent);
+}
+.settings-footer button {
+    font-size: var(--size-label);
+}
+.quiet {
+    font-family: var(--font-body);
+    font-size: var(--size-small);
+}
+.destructive,
+#quitRun,
+#resetSettings {
+    color: var(--danger);
+    border-color: #7a3550;
+}
+.destructive:hover:not(:disabled),
+#quitRun:hover:not(:disabled),
+#resetSettings:hover:not(:disabled) {
+    background: var(--danger-fill);
+    border-color: var(--danger);
+}
+input[type='range'] {
+    accent-color: var(--accent);
+}
+select,
+.profile-picker select,
+.settings-bindings select {
+    font-family: var(--font-body);
+    font-size: var(--size-body);
+    min-height: 40px;
+    color: var(--ink);
+    background: var(--background);
+    border: 2px solid var(--edge);
+    border-radius: 0;
+    padding: 6px 8px;
+}
+select:hover {
+    border-color: var(--muted);
+}

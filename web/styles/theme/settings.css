@@ -1,0 +1,349 @@
+/* ---- Settings on the violet theme -----------------------------------------
+   A left rail (profile and categories) beside one scrolling panel; rows are
+   quiet lines instead of boxes. Amber marks the selection and Apply. */
+[data-view='settings'] {
+    padding: clamp(16px, 3.4vh, 36px) clamp(18px, 5vw, 64px) clamp(12px, 2vh, 24px);
+    border: 0;
+    background:
+        linear-gradient(#0a0518d9, #0a0518f0),
+        url('../../assets/home-scene.png') center / cover;
+    image-rendering: pixelated;
+}
+[data-view='settings'] > h1 {
+    margin: 0 0 clamp(8px, 1.6vh, 18px);
+    font-size: clamp(28px, 3.6vw, 46px);
+    color: transparent;
+    background: linear-gradient(#fff4d6 0 40%, #ffbe6e 40% 72%, #e8608c 72%);
+    -webkit-background-clip: text;
+    background-clip: text;
+    -webkit-text-fill-color: transparent;
+    filter: drop-shadow(2px 2px 0 #340e4a);
+    width: max-content;
+    max-width: 100%;
+}
+[data-view='settings'] #settingsDialog {
+    width: min(100%, 1080px);
+    margin: 0;
+    display: grid;
+    grid-template-columns: clamp(170px, 20vw, 230px) minmax(0, 1fr);
+    grid-template-rows: auto auto auto minmax(0, 1fr) auto;
+    column-gap: clamp(16px, 3vw, 40px);
+    flex: 1;
+    min-height: 0;
+}
+[data-view='settings'] .settings-intro {
+    grid-column: 1 / -1;
+    margin: 0 0 clamp(8px, 1.6vh, 16px);
+    color: #8a76b0;
+    font-size: var(--size-small);
+}
+[data-view='settings'] .profile-picker {
+    grid-column: 1;
+    flex-direction: column;
+    align-items: stretch;
+    gap: 6px;
+    color: #be96e6;
+    font-family: var(--font-display);
+    font-size: var(--size-label);
+    letter-spacing: 0.08em;
+}
+[data-view='settings'] #settingsProfileNote {
+    grid-column: 1;
+    margin: 8px 0 clamp(8px, 1.6vh, 16px);
+    color: #8a76b0;
+    font-size: var(--size-small);
+    line-height: 1.35;
+}
+[data-view='settings'] .settings-tabs {
+    grid-column: 1;
+    grid-row: 4;
+    align-self: start;
+    flex-direction: column;
+    gap: 2px;
+    padding: 0;
+    border: 0;
+}
+[data-view='settings'] .settings-tabs button {
+    position: relative;
+    flex: none;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    min-height: 40px;
+    padding: 8px 10px;
+    text-align: left;
+    background: transparent;
+    border: 0;
+    border-left: 2px solid #3a2a64;
+    color: #aa8cd2;
+    font-family: var(--font-display);
+    font-size: var(--size-label);
+    letter-spacing: 0.06em;
+}
+[data-view='settings'] .settings-tabs button::before {
+    content: '';
+    flex: none;
+    width: 14px;
+    height: 14px;
+    background: url('../../assets/ui/chevron.png') center / 14px 14px no-repeat;
+    image-rendering: pixelated;
+    opacity: 0;
+}
+[data-view='settings'] .settings-tabs button[aria-pressed='true'] {
+    color: #ffe9c4;
+    border-left-color: #ffbe6e;
+    background: linear-gradient(90deg, #2a1450cc, transparent);
+    box-shadow: none;
+}
+[data-view='settings'] .settings-tabs button[aria-pressed='true']::before,
+[data-view='settings'] .settings-tabs button:focus::before {
+    opacity: 1;
+}
+[data-view='settings'] .settings-tabs button:hover:not(:disabled),
+[data-view='settings'] .settings-tabs button:focus {
+    color: #fff;
+    background: #1c0e3acc;
+    outline: 1px solid transparent;
+}
+[data-view='settings'] [data-settings-panel] {
+    grid-column: 2;
+    grid-row: 2 / 5;
+    background: #0e0624c7;
+    border: 1px solid #3a2a64;
+    padding: clamp(14px, 2.4vh, 26px) clamp(14px, 2vw, 28px);
+    scrollbar-color: #5a3c98 #0e0624;
+}
+[data-view='settings'] [data-settings-panel] > h2 {
+    margin: 0 0 clamp(12px, 2vh, 20px);
+    font-size: var(--size-menu);
+    color: #ffe9c4;
+}
+[data-view='settings'] .settings-bindings h3,
+[data-view='settings'] [data-settings-panel] h3 {
+    margin: clamp(14px, 2.4vh, 26px) 0 8px;
+    padding-bottom: 6px;
+    border-bottom: 1px solid #3a2a64;
+    color: #be96e6;
+    font-size: var(--size-label);
+}
+[data-view='settings'] .settings-sliders label {
+    display: grid;
+    grid-template-columns: 1fr auto;
+    gap: 6px 12px;
+    color: #cdb6f0;
+    font-size: var(--size-body);
+}
+[data-view='settings'] .settings-sliders output {
+    color: #ffbe6e;
+    text-align: right;
+}
+[data-view='settings'] .settings-sliders input[type='range'] {
+    grid-column: 1 / -1;
+}
+[data-view='settings'] input[type='range'] {
+    -webkit-appearance: none;
+    appearance: none;
+    height: 18px;
+    background: transparent;
+    accent-color: #ffbe6e;
+}
+[data-view='settings'] input[type='range']::-webkit-slider-runnable-track {
+    height: 4px;
+    background: #3a2466;
+}
+[data-view='settings'] input[type='range']::-moz-range-track {
+    height: 4px;
+    background: #3a2466;
+}
+[data-view='settings'] input[type='range']::-webkit-slider-thumb {
+    -webkit-appearance: none;
+    width: 12px;
+    height: 16px;
+    margin-top: -6px;
+    background: #ffbe6e;
+    border: 2px solid #340e4a;
+    border-radius: 0;
+}
+[data-view='settings'] input[type='range']::-moz-range-thumb {
+    width: 8px;
+    height: 12px;
+    background: #ffbe6e;
+    border: 2px solid #340e4a;
+    border-radius: 0;
+}
+[data-view='settings'] input[type='range']:focus {
+    outline: none;
+}
+[data-view='settings'] input[type='range']:focus::-webkit-slider-thumb {
+    background: #fff4d6;
+    box-shadow:
+        0 0 0 2px #ffbe6e,
+        0 0 14px #ff785a99;
+}
+[data-view='settings'] input[type='range']:focus::-moz-range-thumb {
+    background: #fff4d6;
+    box-shadow: 0 0 0 2px #ffbe6e;
+}
+[data-view='settings'] select,
+[data-view='settings'] .profile-picker select {
+    background: #120a2c;
+    border: 1px solid #3a2a64;
+    color: #ffe9c4;
+    font-family: var(--font-body);
+    font-size: var(--size-body);
+}
+[data-view='settings'] select:hover,
+[data-view='settings'] select:focus {
+    border-color: #ffbe6e;
+    outline: none;
+    box-shadow: 0 0 0 1px #ffbe6e;
+}
+[data-view='settings'] #keyBindings label,
+[data-view='settings'] #padBindings label {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    min-height: 40px;
+    border-bottom: 1px solid #2a1c4c;
+    color: #cdb6f0;
+    font-size: var(--size-body);
+}
+[data-view='settings'] #keyBindings button {
+    min-width: 96px;
+    min-height: 30px;
+    padding: 2px 10px;
+    background: #120a2c;
+    border: 1px solid #3a2a64;
+    color: #ffe9c4;
+    font-family: var(--font-display);
+    font-size: var(--size-label);
+}
+[data-view='settings'] #keyBindings button:hover,
+[data-view='settings'] #keyBindings button:focus {
+    border-color: #ffbe6e;
+    background: #1c0e3a;
+    outline: none;
+    box-shadow: 0 0 0 1px #ffbe6e;
+}
+[data-view='settings'] .toggle-label {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    margin-bottom: 14px;
+    color: #cdb6f0;
+}
+[data-view='settings'] input[type='checkbox'] {
+    -webkit-appearance: none;
+    appearance: none;
+    flex: none;
+    width: 20px;
+    height: 20px;
+    margin: 0;
+    background: #120a2c;
+    border: 2px solid #5a3c98;
+    border-radius: 0;
+    display: grid;
+    place-content: center;
+}
+[data-view='settings'] input[type='checkbox']::after {
+    content: '';
+    width: 10px;
+    height: 10px;
+    background: #ffbe6e;
+    transform: scale(0);
+}
+[data-view='settings'] input[type='checkbox']:checked::after {
+    transform: scale(1);
+}
+[data-view='settings'] input[type='checkbox']:focus {
+    outline: none;
+    border-color: #ffbe6e;
+    box-shadow:
+        0 0 0 1px #ffbe6e,
+        0 0 12px #ff785a66;
+}
+[data-view='settings'] .settings-help,
+[data-view='settings'] .settings-bindings p,
+[data-view='settings'] #calibration p {
+    color: #9a86c0;
+    font-size: var(--size-small);
+    line-height: 1.4;
+}
+[data-view='settings'] .settings-footer {
+    grid-column: 1 / -1;
+    grid-row: 5;
+    position: static;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 12px 0 0;
+    margin-top: 10px;
+    background: transparent;
+    border-top: 1px solid #3a2a64;
+}
+[data-view='settings'] .settings-footer button {
+    min-height: 36px;
+    padding: 6px 16px;
+    background: transparent;
+    border: 1px solid #3a2a64;
+    color: #cdb6f0;
+    font-family: var(--font-display);
+    font-size: var(--size-label);
+}
+[data-view='settings'] #applySettings:not(:disabled) {
+    background: #ffbe6e;
+    border-color: #ffbe6e;
+    color: #2a0e3a;
+}
+[data-view='settings'] #applySettings:disabled {
+    opacity: 0.45;
+}
+[data-view='settings'] #resetSettings {
+    color: #ff9aae;
+    border-color: #6a2a50;
+}
+[data-view='settings'] .settings-footer button:hover:not(:disabled),
+[data-view='settings'] .settings-footer button:focus {
+    border-color: #ffbe6e;
+    box-shadow: 0 0 0 1px #ffbe6e;
+    outline: none;
+}
+[data-view='settings'] #settingsStatus {
+    margin-left: auto;
+    color: #8a76b0;
+    font-size: var(--size-small);
+}
+@media (max-width: 800px) {
+    [data-view='settings'] #settingsDialog {
+        grid-template-columns: 1fr;
+        grid-template-rows: none;
+        overflow: auto;
+    }
+    [data-view='settings'] .settings-tabs,
+    [data-view='settings'] [data-settings-panel],
+    [data-view='settings'] .settings-footer,
+    [data-view='settings'] .profile-picker,
+    [data-view='settings'] #settingsProfileNote {
+        grid-column: 1;
+        grid-row: auto;
+    }
+    [data-view='settings'] .settings-tabs {
+        flex-direction: row;
+        flex-wrap: wrap;
+    }
+}
+@media (max-height: 650px) {
+    [data-view='settings'] #settingsProfileNote {
+        display: none;
+    }
+}
+
+[data-view='settings'] .settings-sliders label {
+    line-height: 1.3;
+}
+[data-view='settings'] .settings-footer #applySettings:disabled {
+    border-color: #3a2a64;
+    color: #8a76b0;
+    background: transparent;
+}

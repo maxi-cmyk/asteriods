@@ -77,7 +77,6 @@
         width: 100%;
     }
     .actions button {
-        flex: 1;
         padding: 8px;
     }
     .toolbar {
@@ -118,31 +117,19 @@
 }
 .run-summary dl {
     display: grid;
-    grid-template-columns: repeat(4, 1fr);
-    gap: 16px;
-    margin: 12px 0;
 }
 .run-summary dt {
     color: var(--muted);
-    font-size: 11px;
 }
 .run-summary dd {
     margin: 5px 0 0;
-    font-size: 16px;
     font-variant-numeric: tabular-nums;
 }
 dialog {
-    color: var(--ink);
-    background: var(--surface);
-    border: 1px solid var(--edge);
-    padding: 24px;
     width: min(760px, calc(100vw - 24px));
     max-height: 85dvh;
     overflow: auto;
     scrollbar-color: var(--edge) var(--surface);
-}
-dialog::backdrop {
-    background: #050a12d9;
 }
 dialog h2 {
     font-size: 20px;
@@ -156,11 +143,6 @@ dialog h3 {
     margin: 20px 0 10px;
     font-weight: 500;
     color: var(--accent);
-}
-dialog p {
-    font-size: 12px;
-    line-height: 1.7;
-    color: var(--muted);
 }
 .settings-heading,
 .settings-footer {
@@ -179,7 +161,6 @@ dialog p {
     display: grid;
     grid-template-columns: minmax(0, 1fr) auto;
     column-gap: 12px;
-    font-size: 12px;
     line-height: 1.7;
 }
 .settings-sliders output {
@@ -192,7 +173,6 @@ dialog p {
 input[type='range'] {
     display: block;
     width: 100%;
-    accent-color: var(--accent);
     min-height: 28px;
 }
 .settings-bindings label {
@@ -220,7 +200,6 @@ input[type='range'] {
     min-height: 62px;
 }
 .settings-footer {
-    border-top: 1px solid var(--edge);
     margin-top: 20px;
     padding-top: 16px;
     font-size: 11px;
@@ -251,9 +230,6 @@ select:focus-visible {
 }
 
 .profile-picker {
-    display: flex;
-    align-items: center;
-    gap: 16px;
     font-size: 12px;
 }
 .profile-picker select {
@@ -343,9 +319,6 @@ select:focus-visible {
         align-items: flex-start;
         gap: 6px;
     }
-    .settings-footer {
-        flex-wrap: wrap;
-    }
 }
 
 .screen {
@@ -420,7 +393,6 @@ select:focus-visible {
     margin: auto 0;
 }
 .run-summary h2 {
-    font-size: clamp(14px, 2.2cqw, 22px);
     text-transform: none;
     letter-spacing: 0;
     margin: 0 0 20px;
@@ -429,9 +401,6 @@ select:focus-visible {
     grid-template-columns: repeat(4, minmax(0, 1fr));
     gap: 24px 16px;
     margin: 0 0 20px;
-}
-.run-summary dd {
-    font-size: clamp(14px, 2.5cqw, 24px);
 }
 .run-summary .result-hint {
     font-size: 11px;

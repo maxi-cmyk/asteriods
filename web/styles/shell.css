@@ -1,0 +1,696 @@
+/* Focused-screen layout. */
+body {
+    min-width: 360px;
+}
+.app-shell {
+    width: 100%;
+    max-width: 1600px;
+    height: 100dvh;
+    min-height: 360px;
+    padding: 20px 28px;
+    display: grid;
+    grid-template-rows: 44px minmax(0, 1fr) 38px;
+    gap: 10px;
+}
+.shell-header {
+    grid-row: 1;
+    margin: 0;
+    display: flex;
+    min-width: 0;
+}
+#profileLabel {
+    margin-left: auto;
+    color: var(--muted);
+    white-space: nowrap;
+}
+.shell-header button {
+    min-height: 32px;
+}
+[data-view] {
+    grid-row: 2;
+    min-height: 0;
+    min-width: 0;
+}
+.home-view {
+    position: relative;
+    isolation: isolate;
+    overflow: hidden;
+    display: flex;
+    align-items: center;
+    background: #03071a url('../assets/home-scene.png') center/cover no-repeat;
+}
+.home-menu {
+    position: relative;
+    z-index: 1;
+    margin-left: clamp(20px, 6vw, 96px);
+}
+.home-menu nav {
+    display: flex;
+    flex-direction: column;
+}
+.home-menu button {
+    text-align: left;
+}
+.home-menu button:hover {
+    border-color: var(--edge);
+}
+.primary {
+    background: #183c4c;
+    color: var(--accent);
+    border-color: var(--accent);
+}
+.home-menu button:focus-visible {
+    outline: 2px solid var(--accent);
+    outline-offset: 0;
+    background: #183c4c;
+}
+#homeHint {
+    position: absolute;
+    z-index: 1;
+    bottom: 16px;
+    left: 20px;
+    right: 20px;
+    font-size: 12px;
+}
+#homeDemo {
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+    z-index: 0;
+}
+.shell-footer {
+    grid-row: 3;
+    padding-top: 8px;
+    border-top: 1px solid var(--edge);
+    display: flex;
+    align-items: center;
+    min-width: 0;
+    line-height: 1.3;
+}
+#controller {
+    max-width: 75%;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+.quiet {
+    color: var(--muted);
+    border-color: transparent;
+    padding: 4px 8px;
+    min-height: 26px;
+}
+.utility-view {
+    padding: clamp(16px, 3vw, 42px);
+    overflow: auto;
+    border: 1px solid var(--edge);
+    scrollbar-color: var(--edge) var(--surface);
+}
+.utility-view > h1:focus {
+    outline: none;
+}
+.utility-view p {
+    max-width: 75ch;
+    line-height: 1.7;
+}
+#settingsDialog {
+    width: min(100%, 980px);
+    margin: 0 auto;
+}
+.settings-heading h2 {
+    font-size: 18px;
+}
+.settings-footer {
+    bottom: -1px;
+    background: var(--surface);
+    padding-bottom: 12px;
+    z-index: 1;
+}
+
+.utility-view .controls {
+    padding: 0 0 24px;
+}
+.utility-view .controls p {
+    font-size: 13px;
+}
+.console {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    height: 100%;
+    padding: 10px;
+    align-items: stretch;
+}
+.console .status {
+    margin: 0;
+    min-height: 16px;
+    flex: none;
+}
+.console .hud {
+    min-height: 30px;
+    flex: none;
+}
+.console .screen {
+    width: 0;
+    height: 0;
+    max-width: 100%;
+    flex: none;
+    align-self: center;
+    aspect-ratio: 16/9;
+    min-height: 0;
+}
+.console .combat-hud,
+.console .live-stats {
+    padding: 0 4px;
+    min-height: 18px;
+    flex: none;
+}
+.console .toolbar {
+    margin: 0;
+    min-height: 36px;
+    flex: none;
+}
+.console .toolbar .actions {
+    width: auto;
+}
+.console .toolbar .actions button {
+    flex: 0 0 auto;
+}
+.pause-menu {
+    position: absolute;
+    inset: 0;
+    margin: auto;
+    height: fit-content;
+    z-index: 2;
+}
+.pause-menu h2 {
+    text-transform: none;
+    letter-spacing: 0;
+}
+.pause-menu button {
+    min-width: 0;
+    margin-top: 6px;
+    text-align: left;
+}
+.pause-menu p {
+    margin: 12px 0 0;
+}
+body[data-screen='play'] .shell-footer,
+body[data-screen='pause'] .shell-footer {
+    display: none;
+}
+.app-shell:fullscreen {
+    max-width: none;
+    background: var(--background);
+}
+#navigationDecision {
+    width: min(520px, calc(100vw - 32px));
+}
+#navigationDecision h2 {
+    font-size: 22px;
+    line-height: 1.4;
+}
+@media (max-width: 900px) {
+    .app-shell {
+        padding: 12px 16px;
+        gap: 8px;
+    }
+
+    .utility-view .controls {
+        grid-template-columns: 1fr 1fr;
+        gap: 24px;
+    }
+    .utility-view .note {
+        grid-column: 1/-1;
+    }
+}
+@media (max-height: 650px) {
+    .app-shell {
+        padding: 8px 16px;
+        grid-template-rows: 32px minmax(0, 1fr) 28px;
+        gap: 6px;
+    }
+    .home-menu {
+        padding: 16px 22px;
+        margin-left: 4vw;
+    }
+    .home-menu nav {
+        gap: 3px;
+    }
+    .home-menu button {
+        padding: 6px 12px;
+    }
+    #homeHint {
+        bottom: 6px;
+        font-size: 11px;
+        padding: 5px;
+    }
+    .pause-menu h2 {
+        font-size: 18px;
+        margin: 0 0 8px;
+    }
+    .pause-menu button {
+        min-height: 30px;
+        margin-top: 3px;
+        padding: 5px 10px;
+    }
+    .pause-menu p {
+        margin-top: 6px;
+        font-size: 10px;
+    }
+    .console {
+        gap: 5px;
+        padding: 6px;
+    }
+    .console .hud {
+        min-height: 24px;
+    }
+    .console .combat-hud,
+    .console .live-stats {
+        min-height: 15px;
+        font-size: 9px;
+    }
+    .console .toolbar {
+        min-height: 30px;
+    }
+    .console .toolbar button {
+        min-height: 28px;
+        padding: 4px 9px;
+    }
+}
+
+/* Focused-screen layout. */
+.shell-header {
+    gap: 12px;
+}
+.shell-header #sound,
+.shell-header #music,
+.shell-header #fullscreen {
+    font-size: 12px;
+    padding: 6px 10px;
+}
+#runDevice {
+    margin-left: auto;
+}
+#demoControls {
+    display: flex;
+    gap: 16px;
+    align-items: center;
+    min-width: 0;
+}
+#demoControls strong {
+    font-size: 18px;
+    font-weight: 500;
+    white-space: nowrap;
+}
+#stopDemo {
+    font-size: 12px;
+    padding: 6px 10px;
+}
+#demoHint {
+    font-size: 12px;
+    color: var(--muted);
+}
+#homeDemo {
+    object-fit: contain;
+    background: #060e18;
+}
+.home-menu h1 {
+    margin-bottom: 22px;
+}
+[data-view='settings'] {
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+}
+[data-view='settings'] > h1 {
+    margin-bottom: 12px;
+}
+#settingsDialog {
+    display: flex;
+    flex-direction: column;
+    flex: 1;
+    min-height: 0;
+}
+.settings-intro {
+    margin: 0 0 12px;
+    font-size: 13px;
+}
+.profile-picker {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    flex: none;
+    margin: 0;
+}
+#settingsProfileNote {
+    font-size: 12px;
+    margin: 10px 0;
+}
+.settings-tabs {
+    display: flex;
+    flex: none;
+    padding-bottom: 14px;
+    border-bottom: 1px solid var(--edge);
+}
+.settings-tabs button {
+    flex: 1;
+    padding: 10px 12px;
+}
+.settings-tabs button[aria-pressed='true'] {
+    color: var(--accent);
+    background: #183c4c;
+    border-color: var(--accent);
+}
+[data-settings-panel] {
+    min-height: 0;
+    overflow: auto;
+    flex: 1;
+    padding: 20px 12px 20px 0;
+    scrollbar-color: var(--edge) var(--surface);
+}
+[data-settings-panel] > h2 {
+    margin: 0 0 18px;
+    font-size: 18px;
+    text-transform: none;
+    color: var(--ink);
+}
+.settings-footer {
+    position: static;
+    flex: none;
+    padding: 14px 0 0;
+    margin: 0;
+    border-top: 1px solid var(--edge);
+    gap: 12px;
+}
+.settings-sliders {
+    margin: 0;
+    gap: 22px 32px;
+}
+.settings-sliders label {
+    font-size: 14px;
+}
+.settings-help,
+.settings-bindings p,
+#calibration p {
+    font-size: 13px;
+    line-height: 1.7;
+}
+.settings-bindings h3 {
+    margin-top: 24px;
+    font-size: 16px;
+    color: var(--ink);
+}
+#keyBindings label,
+#padBindings label {
+    font-size: 13px;
+    min-height: 42px;
+}
+.toggle-label {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    margin-bottom: 24px;
+}
+
+.help-layout {
+    display: grid;
+    grid-template-columns: minmax(240px, 0.9fr) minmax(0, 1.2fr);
+    gap: 48px;
+    max-width: 1150px;
+}
+.help-layout h2 {
+    font-size: 17px;
+    text-transform: none;
+    color: var(--ink);
+    margin: 24px 0 12px;
+}
+.help-layout h2:first-child {
+    margin-top: 0;
+}
+.help-layout p {
+    font-size: 14px;
+}
+.binding-list {
+    display: grid;
+    grid-template-columns: minmax(110px, 0.7fr) minmax(0, 1fr);
+    column-gap: 20px;
+    row-gap: 18px;
+    line-height: 1.6;
+}
+.binding-list dd {
+    margin: 0;
+    overflow-wrap: anywhere;
+}
+@media (max-width: 900px) {
+    .help-layout {
+        grid-template-columns: 1fr;
+        gap: 24px;
+    }
+}
+@media (max-width: 600px) {
+    .shell-header {
+        gap: 7px;
+    }
+    #profileLabel {
+        font-size: 11px;
+    }
+    .shell-header #sound,
+    .shell-header #music,
+    .shell-header #fullscreen {
+        padding: 5px;
+        font-size: 11px;
+    }
+    .utility-view {
+        padding: 16px;
+    }
+    .settings-tabs {
+        gap: 3px;
+    }
+    .settings-footer {
+        flex-wrap: wrap;
+    }
+    .settings-intro,
+    #settingsProfileNote {
+        font-size: 11px;
+    }
+}
+@media (max-height: 650px) {
+    .home-menu h1 {
+        margin-bottom: 12px;
+    }
+    [data-view='settings'] > h1 {
+        display: none;
+    }
+    #settingsProfileNote {
+        display: none;
+    }
+    .settings-intro {
+        margin-bottom: 6px;
+        font-size: 12px;
+    }
+    .settings-tabs {
+        padding-bottom: 8px;
+        margin-top: 8px;
+    }
+    [data-settings-panel] {
+        padding-top: 12px;
+    }
+    .settings-footer {
+        padding-top: 8px;
+    }
+}
+
+@media (max-width: 600px) {
+    body[data-demo='true'] .app-shell {
+        grid-template-rows: auto minmax(0, 1fr) 38px;
+    }
+    body[data-demo='true'] .shell-header {
+        flex-wrap: wrap;
+    }
+    body[data-demo='true'] #profileLabel {
+        display: none;
+    }
+    #demoControls {
+        gap: 8px;
+        margin-right: auto;
+    }
+    #demoControls strong {
+        font-size: 14px;
+    }
+    #demoHint {
+        font-size: 11px;
+    }
+}
+
+/* Local co-op extends the same arcade controls and fixed arena. */
+.mode-options button {
+    flex: 1;
+    min-height: 120px;
+    text-align: left;
+    padding: 24px;
+    font-size: 22px;
+}
+.mode-options span {
+    display: block;
+    margin-top: 16px;
+    color: var(--muted);
+    font-size: 16px;
+}
+.crew-slots {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 32px;
+    margin: 24px 0;
+}
+.crew-slot {
+    border: 1px solid var(--edge);
+    padding: 20px;
+    min-width: 0;
+}
+.crew-slot legend {
+    font-size: 22px;
+    padding: 0 8px;
+}
+.crew-slot[data-player='0'] legend,
+.pilot-hud[data-player='0'] {
+    color: #70d9ed;
+}
+.crew-slot[data-player='1'] legend,
+.pilot-hud[data-player='1'] {
+    color: #efb963;
+}
+.crew-slot label {
+    display: grid;
+    gap: 8px;
+    margin-bottom: 20px;
+}
+.crew-slot select,
+#coopReconnect select {
+    width: 100%;
+    min-width: 0;
+    text-overflow: ellipsis;
+}
+.crew-slot button {
+    width: 100%;
+}
+.crew-slot button[aria-pressed='true'] {
+    color: var(--ink);
+    background: #274c43;
+}
+.coop-lobby p {
+    max-width: 70ch;
+    color: var(--muted);
+}
+.friendly-option {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+}
+.coop-hud {
+    display: grid;
+    grid-template-columns: 1fr auto 1fr;
+    gap: 16px;
+    width: 100%;
+    padding: 4px 0;
+}
+.pilot-hud {
+    white-space: pre-line;
+    line-height: 1.45;
+    font-size: clamp(11px, 1.1vw, 16px);
+    font-variant-numeric: tabular-nums;
+}
+.pilot-hud[data-player='1'] {
+    text-align: right;
+}
+.team-hud {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+    font-size: 12px;
+}
+.team-hud b {
+    font-size: 20px;
+}
+.coop-hidden {
+    display: none !important;
+}
+#coopReconnect {
+    max-width: 360px;
+    margin: 12px auto;
+}
+#coopReconnect label {
+    display: grid;
+    gap: 4px;
+    margin: 8px 0;
+}
+#coopResults section {
+    margin: 20px 0;
+}
+@media (max-height: 650px) {
+    .coop-lobby h1 {
+        margin: 4px 0;
+    }
+    .coop-lobby p {
+        margin: 8px 0;
+    }
+    .crew-slots {
+        margin: 12px 0;
+        gap: 20px;
+    }
+    .crew-slot {
+        padding: 12px;
+    }
+    .crew-slot label {
+        margin-bottom: 10px;
+    }
+    .coop-hud {
+        gap: 8px;
+    }
+    .pilot-hud {
+        line-height: 1.3;
+        font-size: 11px;
+    }
+    .team-hud {
+        font-size: 10px;
+        gap: 3px;
+    }
+    .team-hud b {
+        font-size: 16px;
+    }
+}
+@media (max-width: 700px) {
+    .crew-slots {
+        gap: 12px;
+    }
+    .mode-options {
+        flex-direction: column;
+    }
+    .coop-hud {
+        grid-template-columns: 1fr 1fr;
+    }
+    .team-hud {
+        grid-column: 1 / -1;
+        grid-row: 1;
+        flex-direction: row;
+        flex-wrap: wrap;
+    }
+}
+.coop-lobby {
+    padding: 20px 28px;
+}
+.coop-lobby h1 {
+    margin: 0 0 12px;
+    font-size: clamp(24px, 3vw, 36px);
+}
+.coop-lobby p {
+    margin: 10px 0;
+}
+.coop-lobby .crew-slots {
+    margin: 16px 0;
+}
+.coop-lobby .crew-slot label {
+    margin-bottom: 12px;
+}

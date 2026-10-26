@@ -1,0 +1,116 @@
+/* ---- Home: logo and a bare menu over the violet backdrop ------------------
+   The list floats on a soft dark gradient baked into home-scene.png, so no
+   panel is needed. Selection is a chevron, a bright label, and an underline. */
+.home-view {
+    image-rendering: pixelated;
+}
+.home-menu {
+    background: transparent;
+    border: 0;
+    box-shadow: none;
+    padding: 0;
+    width: auto;
+    min-width: clamp(220px, 28vw, 340px);
+}
+.home-menu h1 {
+    font-family: var(--font-display);
+    font-size: clamp(44px, 7.2vw, 92px);
+    line-height: 1.1;
+    margin: 0 0 6px;
+    letter-spacing: 0;
+    background: linear-gradient(#fff4d6 0 38%, #ffbe6e 38% 70%, #e8608c 70%);
+    -webkit-background-clip: text;
+    background-clip: text;
+    color: transparent;
+    -webkit-text-fill-color: transparent;
+    text-shadow: none;
+    filter: drop-shadow(3px 3px 0 #340e4a) drop-shadow(0 0 14px #ff785a59);
+}
+.home-menu h1::after {
+    content: 'PIXEL FLIGHT';
+    display: block;
+    margin-top: 14px;
+    padding-bottom: 8px;
+    font-size: var(--size-label);
+    letter-spacing: 0.12em;
+    color: #be96e6;
+    -webkit-text-fill-color: #be96e6;
+    border-bottom: 1px solid #78469e;
+    width: max-content;
+    filter: none;
+}
+.home-menu nav {
+    margin-top: clamp(14px, 3vh, 34px);
+    gap: 2px;
+}
+.home-menu button,
+.home-menu button.primary {
+    display: flex;
+    align-items: center;
+    background: transparent;
+    border: 0;
+    box-shadow: none;
+    padding: 6px 4px;
+    color: #aa8cd2;
+    transition: color 0.12s;
+}
+.home-menu button::before {
+    content: '';
+    flex: none;
+    background: url('../../assets/ui/chevron.png') center / 14px 14px no-repeat;
+    image-rendering: pixelated;
+    opacity: 0;
+}
+.home-menu button.primary {
+    color: #ffd68c;
+}
+.home-menu button:hover:not(:disabled),
+.home-menu button:focus,
+.home-menu button.primary:hover:not(:disabled),
+.home-menu button.primary:focus {
+    background: transparent;
+    border: 0;
+    color: #fff4d6;
+    text-shadow: 0 0 10px #ffa05acc;
+    box-shadow: none;
+    outline: 1px solid transparent;
+}
+.home-menu button:focus::before,
+.home-menu button:hover:not(:disabled)::before {
+    content: '';
+    opacity: 1;
+}
+.home-menu button:focus span,
+.home-menu button:focus {
+    text-decoration: underline;
+    text-decoration-color: #ffbe6e;
+    text-underline-offset: 6px;
+    text-decoration-thickness: 2px;
+}
+.home-menu button:disabled {
+    color: #6a5890;
+}
+#homeHint {
+    background: transparent;
+    color: #8a76b0;
+    padding: 0;
+}
+body[data-screen='home'] .shell-header button,
+body[data-screen='home'] #screenTitle {
+    color: #a894cc;
+}
+body[data-screen='home'] .shell-header button {
+    background: transparent;
+    border-color: #3a2a64;
+}
+/* Play carries the selection until another entry takes focus. */
+.home-menu button.primary::before {
+    opacity: 1;
+}
+.home-menu:has(button:focus) button.primary:not(:focus)::before,
+.home-menu:has(button:hover:not(:disabled)) button.primary:not(:hover)::before {
+    opacity: 0;
+}
+.home-menu:has(button:focus) button.primary:not(:focus) {
+    color: #aa8cd2;
+}

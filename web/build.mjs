@@ -6,40 +6,34 @@ import {
     mkdirSync,
     copyFileSync,
     readFileSync,
+    readdirSync,
+    writeFileSync,
     cpSync,
     rmSync,
 } from 'node:fs';
+import { assembleHtml } from './tools/assemble-html.mjs';
 const root = dirname(fileURLToPath(import.meta.url));
 const test = process.argv.includes('--test');
 const oled = process.argv.includes('--oled');
-const outputName = oled
-    ? test
-        ? 'oled-test'
-        : 'oled'
-    : test
-      ? 'test'
-      : 'game';
+const outputName = oled ? (test ? 'oled-test' : 'oled') : test ? 'test' : 'game';
 const clang =
     process.env.CLANGXX ||
-    [
-        '/opt/homebrew/opt/llvm/bin/clang++',
-        '/opt/homebrew/opt/llvm@22/bin/clang++',
-    ].find(existsSync) ||
+    ['/opt/homebrew/opt/llvm/bin/clang++', '/opt/homebrew/opt/llvm@22/bin/clang++'].find(
+        existsSync,
+    ) ||
     'clang++';
 const linker =
     process.env.WASM_LD ||
     (existsSync('/opt/homebrew/opt/lld/bin/wasm-ld')
         ? '/opt/homebrew/opt/lld/bin/wasm-ld'
         : 'wasm-ld');
-if (
-    (clang.includes('/') && !existsSync(clang)) ||
-    (linker.includes('/') && !existsSync(linker))
-) {
-    throw new Error(
-        'Set CLANGXX and WASM_LD, or install LLVM and lld (brew install llvm lld).',
-    );
+if ((clang.includes('/') && !existsSync(clang)) || (linker.includes('/') && !existsSync(linker))) {
+    throw new Error('Set CLANGXX and WASM_LD, or install LLVM and lld (brew install llvm lld).');
 }
-mkdirSync(resolve(root, 'dist'), { recursive: true });
+mkdirSync(resolve(root, 'dist/gen'), { recursive: true });
+// The scene ABI lives in scene-layout.mjs; the engine gets the same offsets as a header.
+const { sceneHeader } = await import('./src/runtime/scene-layout.mjs');
+writeFileSync(resolve(root, 'dist/gen/scene_layout.h'), sceneHeader());
 const exports = [
     '__wasm_call_ctors',
     'web_init',
@@ -118,6 +112,7 @@ const args = [
     '-fno-threadsafe-statics',
     '-fno-builtin',
     `-I${root}/native`,
+    `-I${root}/dist/gen`,
     `-I${root}/../include`,
     '-Wl,--no-entry',
     '-Wl,--export-memory',
@@ -150,9 +145,7 @@ const allowedImports = new Set([
     'browser_storage_read',
     'browser_storage_write',
 ]);
-for (const item of WebAssembly.Module.imports(
-    new WebAssembly.Module(readFileSync(output)),
-)) {
+for (const item of WebAssembly.Module.imports(new WebAssembly.Module(readFileSync(output)))) {
     if (item.module !== 'env' || !allowedImports.has(item.name)) {
         throw new Error(`Unexpected WASM import: ${item.module}.${item.name}`);
     }
@@ -160,63 +153,21 @@ for (const item of WebAssembly.Module.imports(
 if (!test && !oled) {
     // The optional synthetic-controller QA page is never a release artifact.
     rmSync(resolve(root, 'dist/coop-browser.html'), { force: true });
-    for (const file of [
-        'index.html',
-        'style.css',
-        'shell.css',
-        'theme.css',
-        'app.mjs',
-        'application.mjs',
-        'dom.mjs',
-        'music.mjs',
-        'runtime.mjs',
-        'coop-records.mjs',
-        'coop-scene.mjs',
-        'coop-input.mjs',
-        'coop-menu.mjs',
-        'records.mjs',
-        'navigation.mjs',
-        'menu-fields.mjs',
-        'controls.mjs',
-        'calibration.mjs',
-        'renderer.mjs',
-        'regions.mjs',
-        'backgrounds.mjs',
-        'art-grade.mjs',
-        'fx.mjs',
-        'boss-scene.mjs',
-        'boss-art.mjs',
-        'boss-render.mjs',
-        'bossui.mjs',
-        'boss-sound.mjs',
-        'boss-death.mjs',
-        'boss-records.mjs',
-        'unlocks.mjs',
-        'hangar.mjs',
-        'showcase.mjs',
-        'presentation.mjs',
-        'settings.mjs',
-        'audio.mjs',
-        'assets.html',
-        'boss-attacks.html',
-        'boss-attacks.mjs',
-        'boss-guide.mjs',
-        'gallery.mjs',
-    ]) {
-        if (existsSync(resolve(root, file)))
-            copyFileSync(resolve(root, file), resolve(root, 'dist', file));
+    // Every module under src/ ships as-is (a new file can never be forgotten); the dev
+    // pages keep their old URLs at the site root, their scripts live under dist/dev.
+    for (const file of ['style.css', 'theme.css'])
+        copyFileSync(resolve(root, file), resolve(root, 'dist', file));
+    // index.html is a template: each `<!-- @include html/name.html -->` line is replaced by that
+    // partial, so every screen's markup lives in its own file.
+    writeFileSync(resolve(root, 'dist/index.html'), assembleHtml(resolve(root, 'index.html')));
+    for (const folder of ['src', 'styles', 'dev']) {
+        rmSync(resolve(root, 'dist', folder), { recursive: true, force: true });
+        cpSync(resolve(root, folder), resolve(root, 'dist', folder), { recursive: true });
     }
-    cpSync(resolve(root, 'styles'), resolve(root, 'dist/styles'), {
-        recursive: true,
-    });
-    cpSync(resolve(root, 'screens'), resolve(root, 'dist/screens'), {
-        recursive: true,
-    });
-    mkdirSync(resolve(root, 'dist/demo'), { recursive: true });
-    copyFileSync(
-        resolve(root, 'demo/engine.mjs'),
-        resolve(root, 'dist/demo/engine.mjs'),
-    );
+    for (const page of readdirSync(resolve(root, 'dev')).filter((name) => name.endsWith('.html'))) {
+        copyFileSync(resolve(root, 'dev', page), resolve(root, 'dist', page));
+        rmSync(resolve(root, 'dist/dev', page));
+    }
     cpSync(resolve(root, 'assets'), resolve(root, 'dist/assets'), {
         recursive: true,
         // Notes about the art stay in the repo; only the art itself ships.

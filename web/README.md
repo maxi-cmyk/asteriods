@@ -21,14 +21,21 @@ npm start
 ```
 
 Open http://127.0.0.1:4173. Use http://127.0.0.1:4173/assets.html to inspect
-the comparison scene and sprite atlas. No npm dependencies or install step
-are needed. `PORT=8080 npm start` selects another port. Rebuild after editing
+the comparison scene and sprite atlas. The game has no runtime dependencies, so playing needs no install step (`npm install` adds the
+development tools: Prettier, ESLint, PostCSS). `PORT=8080 npm start` selects another port. Rebuild after editing
 firmware or browser source. Use localhost or HTTPS for controller support.
 Set `CLANGXX` and `WASM_LD` to use another compatible toolchain.
 
+## Development
+
+[ARCHITECTURE.md](ARCHITECTURE.md) maps the source tree. From `web/`: `npm test` builds the test
+engines and runs every suite; `npm run check` also runs Prettier and ESLint; `npm run format`
+formats. Characterisation tests (`tests/*-golden.test.mjs`) pin the engine scene, the rendering
+and the boss sound design; regenerate them with `UPDATE_GOLDEN=1` only for a deliberate change.
+
 ## Art and rendering
 
-`renderer.mjs` reads a versioned scene buffer exported by `native/bridge.cpp`.
+`src/render/renderer.mjs` reads a versioned scene buffer written by `native/scene.h` (see [ARCHITECTURE.md](ARCHITECTURE.md)).
 It renders entity state directly; it does not enlarge the old OLED framebuffer.
 `assets/sprites.png` and `assets/sprites.json` contain 99 original sprite cells:
 

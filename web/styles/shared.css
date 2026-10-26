@@ -1,14 +1,6 @@
 /* Shared primitives and gameplay readouts. */
 :root {
     color-scheme: dark;
-    --background: #0b121c;
-    --surface: #101d2a;
-    --ink: #e4ecea;
-    --muted: #a3b5c3;
-    --edge: #314553;
-    --accent: #70d9ed;
-    font-family: 'SFMono-Regular', Consolas, 'Liberation Mono', monospace;
-    font-size: 14px;
 }
 * {
     box-sizing: border-box;
@@ -34,7 +26,6 @@ header {
     margin-bottom: 18px;
 }
 h1 {
-    font-size: 28px;
     font-weight: 500;
     line-height: 1;
     letter-spacing: -0.03em;
@@ -53,7 +44,6 @@ a:hover {
 .console {
     background: var(--surface);
     border: 1px solid var(--edge);
-    padding: 12px;
 }
 .status,
 .toolbar {
@@ -61,7 +51,6 @@ a:hover {
     align-items: center;
     justify-content: space-between;
     gap: 16px;
-    font-size: 11px;
     color: var(--muted);
 }
 .status {
@@ -99,10 +88,6 @@ a:hover {
     display: flex;
     align-items: center;
     gap: 12px;
-}
-#score {
-    font-size: 18px;
-    letter-spacing: 0.07em;
 }
 .chain {
     display: flex;
@@ -185,12 +170,6 @@ canvas:focus-visible {
 }
 button {
     font: inherit;
-    font-size: 11px;
-    min-height: 36px;
-    color: var(--ink);
-    background: transparent;
-    border: 1px solid #526d7e;
-    padding: 8px 12px;
     cursor: pointer;
 }
 button:hover {
@@ -200,14 +179,6 @@ button:focus-visible,
 a:focus-visible {
     outline: 2px solid var(--accent);
     outline-offset: 3px;
-}
-button:disabled {
-    opacity: 0.5;
-    cursor: default;
-}
-button[aria-pressed='true'] {
-    color: var(--accent);
-    border-color: var(--accent);
 }
 .controls {
     display: grid;

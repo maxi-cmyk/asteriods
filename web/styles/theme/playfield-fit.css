@@ -1,0 +1,74 @@
+/* ---- Gameplay: no dead bands ---------------------------------------------- 
+   fitCanvas publishes the height of the letterbox bars as --bar on the body.
+   When a bar is tall enough, the HUD moves into it, hugging the playfield,
+   and the bars carry the same violet scene instead of a flat panel. */
+body:is([data-screen='play'], [data-screen='pause']) {
+    background: #0a0518;
+}
+body:is([data-screen='play'], [data-screen='pause']) .app-shell {
+    background:
+        linear-gradient(#0a0518e6, #0a0518ee),
+        url('../../assets/home-scene.png') center / cover no-repeat,
+        #0a0518;
+    image-rendering: pixelated;
+}
+body:is([data-screen='play'], [data-screen='pause']) .console {
+    background: transparent;
+}
+body[data-bars='true']:is([data-screen='play'], [data-screen='pause']) .screen {
+    box-shadow:
+        0 0 0 1px #3a2a64,
+        0 0 70px #6a2a8a40;
+}
+body[data-bars='true']:is([data-screen='play'], [data-screen='pause']):not([data-coop='true'])
+    .console
+    .hud {
+    top: max(0px, calc(var(--bar, 0px) / 2 - 38px));
+}
+body[data-bars='true']:is([data-screen='play'], [data-screen='pause']):not([data-coop='true'])
+    .console
+    .combat-hud {
+    bottom: max(14px, calc(var(--bar, 0px) / 2 - 14px));
+}
+body[data-bars='true']:is([data-screen='play'], [data-screen='pause']):not([data-coop='true'])
+    .console
+    .toolbar {
+    bottom: max(10px, calc(var(--bar, 0px) / 2 - 16px));
+}
+body[data-bars='true']:is([data-screen='play'], [data-screen='pause']) .shell-header {
+    top: max(8px, calc(var(--bar, 0px) / 2 - 18px));
+}
+/* With the HUD in the bars the ship can never be under it. */
+body[data-bars='true'] .console .hud,
+body[data-bars='true'] .console .combat-hud {
+    opacity: 1 !important;
+}
+
+/* ---- Launch overlay --------------------------------------------------------- */
+#launch,
+#launchCanvas {
+    background: #07031a;
+}
+#launchHint p {
+    background: transparent;
+    color: #8a76b0;
+    font-size: var(--size-small);
+}
+#skipLaunch {
+    background: transparent;
+    border: 1px solid #5a3c98;
+    color: #cdb6f0;
+    font-family: var(--font-display);
+    font-size: 24px;
+    min-height: 40px;
+    padding: 4px 22px;
+}
+#skipLaunch:hover,
+#skipLaunch:focus {
+    border-color: #ffbe6e;
+    color: #fff4d6;
+    box-shadow:
+        0 0 0 1px #ffbe6e,
+        0 0 16px #ff785a66;
+    outline: none;
+}

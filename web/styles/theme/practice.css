@@ -1,0 +1,86 @@
+/* ---- Practice: a quiet tag instead of a panel -------------------------------
+   Score, lives and wave mean nothing in practice, so the HUD shows only a
+   PRACTICE tag and a note that fades after a few seconds. The tools (reset
+   targets, try pickups, end practice) live in the Pause menu. */
+.practice-tag,
+.practice-note {
+    display: none;
+}
+body[data-practice='true']:is([data-screen='play'], [data-screen='pause']):not([data-coop='true'])
+    .hud
+    .hud-group,
+body[data-practice='true']:is([data-screen='play'], [data-screen='pause']):not([data-coop='true'])
+    .hud
+    .score {
+    display: none;
+}
+body[data-practice='true']:is([data-screen='play'], [data-screen='pause']):not([data-coop='true'])
+    .practice-tag {
+    display: inline-block;
+    grid-column: 1;
+    justify-self: start;
+    align-self: start;
+    padding: 2px 12px 1px;
+    border: 1px solid #ffbe6e;
+    color: #ffbe6e;
+    font-family: var(--font-display);
+    font-size: 22px;
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+    background: #ffbe6e1f;
+}
+body[data-practice='true']:is([data-screen='play'], [data-screen='pause']):not([data-coop='true'])
+    .practice-note {
+    display: block;
+    grid-column: 2;
+    justify-self: center;
+    align-self: start;
+    padding-top: 4px;
+    color: #cdb6f0;
+    font-size: var(--size-small);
+    white-space: nowrap;
+    animation: practice-note 6s ease forwards;
+}
+@keyframes practice-note {
+    0%,
+    70% {
+        opacity: 1;
+    }
+    100% {
+        opacity: 0;
+    }
+}
+.practice-tools[hidden] {
+    display: none;
+}
+.practice-tools {
+    margin: 8px 0;
+    padding: 6px 0;
+    border-top: 1px solid #3a2a64;
+    border-bottom: 1px solid #3a2a64;
+}
+.practice-tools button {
+    min-height: 40px;
+    font-size: clamp(22px, 2vw, 28px);
+}
+.pause-menu #endPractice {
+    color: #ffd68c;
+}
+.pause-menu {
+    max-height: 96%;
+    overflow-y: auto;
+}
+body[data-practice='true'] .pause-menu h2 {
+    margin-bottom: 8px;
+    font-size: clamp(32px, 4vw, 48px);
+}
+body[data-practice='true'] .pause-menu button {
+    min-height: 36px;
+    font-size: clamp(22px, 2vw, 28px);
+}
+.pause-menu {
+    scrollbar-width: none;
+}
+.pause-menu::-webkit-scrollbar {
+    display: none;
+}

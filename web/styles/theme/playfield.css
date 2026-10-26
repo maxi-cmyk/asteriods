@@ -1,0 +1,242 @@
+/* Gameplay fills the window: no bezels, header, or footer. The HUD, ability
+   readouts, and actions float over the 16:9 playfield instead of shrinking it. */
+body[data-screen='play'] .app-shell,
+body[data-screen='pause'] .app-shell {
+    max-width: none;
+    padding: 0;
+    gap: 0;
+    grid-template-rows: minmax(0, 1fr);
+}
+body[data-screen='play'] .shell-header,
+body[data-screen='pause'] .shell-header {
+    position: absolute;
+    top: 8px;
+    right: 10px;
+    z-index: 6;
+    width: auto;
+    gap: 8px;
+}
+body[data-screen='play'] #screenTitle,
+body[data-screen='pause'] #screenTitle,
+body[data-screen='play'] #profileLabel,
+body[data-screen='pause'] #profileLabel,
+body[data-screen='play'] #screenBack,
+body[data-screen='pause'] #screenBack {
+    display: none;
+}
+body[data-screen='play'] .shell-header button,
+body[data-screen='pause'] .shell-header button {
+    background: #050a1ab3;
+    min-height: 28px;
+    padding: 4px 8px;
+}
+body[data-screen='play'] .console,
+body[data-screen='pause'] .console {
+    position: relative;
+    padding: 0;
+    gap: 0;
+    border: 0;
+    background: #03060f;
+    justify-content: center;
+}
+body[data-screen='play'] .console > :not(.screen),
+body[data-screen='pause'] .console > :not(.screen) {
+    position: absolute;
+    z-index: 3;
+    margin: 0;
+}
+body[data-screen='play'] .console .status,
+body[data-screen='pause'] .console .status {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    overflow: hidden;
+    clip: rect(0 0 0 0);
+    white-space: nowrap;
+}
+.console .hud {
+    top: 10px;
+    left: 16px;
+    right: 470px;
+    padding: 0;
+}
+.console .live-stats {
+    top: 46px;
+    left: 16px;
+    right: auto;
+    justify-content: flex-start;
+    padding: 0;
+    gap: 4px 18px;
+}
+.console .combat-hud {
+    bottom: 48px;
+    left: 16px;
+    right: 16px;
+    padding: 0;
+    justify-content: flex-start;
+}
+.console .toolbar {
+    bottom: 8px;
+    left: 16px;
+    right: 16px;
+    flex-wrap: nowrap;
+}
+.console .hud,
+.console .live-stats,
+.console .combat-hud,
+.console .toolbar {
+    text-shadow: 0 1px 0 #000;
+}
+body[data-screen='play'] .console,
+body[data-screen='pause'] .console {
+    grid-row: 1;
+}
+body[data-screen='play'] canvas,
+body[data-screen='pause'] canvas {
+    outline: 0;
+}
+.console .combat-hud,
+.console .live-stats {
+    font-size: var(--size-small) !important;
+}
+/* Letterbox bars match the playfield so wide or tall windows show no seam. */
+body[data-screen='play'] .console,
+body[data-screen='pause'] .console,
+body[data-screen='play'] .app-shell,
+body[data-screen='pause'] .app-shell {
+    background: #080f19;
+}
+body[data-screen='play'] .screen,
+body[data-screen='pause'] .screen {
+    background: #080f19;
+    border: 0;
+    outline: 0;
+    box-shadow: none;
+}
+
+/* Animated Home layer sits between the backdrop image and the menu panel. */
+#homeFx {
+    background: transparent;
+    outline: 0;
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    z-index: 0;
+    pointer-events: none;
+    image-rendering: pixelated;
+}
+/* Reading screens keep the same backdrop, dimmed and static. */
+.utility-view {
+    background:
+        linear-gradient(#0b1328f0, #0b1328f2),
+        url('../../assets/home-scene.png') center/cover;
+}
+/* First-person launch overlay. */
+#launch {
+    position: fixed;
+    inset: 0;
+    z-index: 50;
+    background: #03060f;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+#launchCanvas {
+    width: 100vw;
+    height: 100dvh;
+    object-fit: contain;
+    image-rendering: pixelated;
+    background: #03060f;
+}
+#launchHint {
+    position: absolute;
+    bottom: 18px;
+    left: 0;
+    right: 0;
+    text-align: center;
+    margin: 0;
+    font-size: var(--size-small);
+    color: var(--muted);
+}
+
+#calibrationController,
+#inputRaw,
+#runDevice {
+    overflow-wrap: anywhere;
+    min-width: 0;
+}
+#backgroundMotion,
+#backgroundBrightness {
+    width: 100%;
+}
+#launchHint {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 12px;
+}
+#launchHint p {
+    margin: 0;
+    padding: 4px 12px;
+}
+
+/* Header actions stay reachable on compact windows. */
+@media (max-width: 720px) {
+    .shell-header {
+        flex-wrap: wrap;
+    }
+    .app-shell {
+        grid-template-rows: auto minmax(0, 1fr) 38px;
+    }
+    #profileLabel {
+        display: none;
+    }
+    body[data-screen='play'] .shell-header,
+    body[data-screen='pause'] .shell-header {
+        top: 6px;
+        right: 8px;
+    }
+}
+
+/* Two-player status has its own space, outside the shared combat geometry. */
+body[data-coop='true']:is([data-screen='play'], [data-screen='pause']) .console {
+    padding: 44px 12px 8px;
+    gap: 8px;
+    justify-content: flex-start;
+}
+body[data-coop='true']:is([data-screen='play'], [data-screen='pause']) .console > #coopHud,
+body[data-coop='true']:is([data-screen='play'], [data-screen='pause']) .console > .toolbar {
+    position: relative;
+    inset: auto;
+    width: auto;
+    flex: none;
+    margin: 0;
+}
+body[data-coop='true'] #coopHud {
+    padding: 4px 8px;
+}
+body[data-coop='true'] .pilot-hud {
+    font-family: var(--font-body);
+}
+body[data-coop='true'] .screen {
+    margin: auto 0;
+}
+body[data-coop='true'] #coopReconnect {
+    font-size: var(--size-small);
+}
+body[data-coop='true'] .pause-menu {
+    max-height: 95%;
+    overflow-y: auto;
+}
+.coop-lobby.utility-view {
+    padding: 20px 28px;
+}
+.coop-lobby.utility-view > h1 {
+    margin: 0 0 12px;
+    font-size: clamp(22px, 2.5vw, 32px);
+}
+.coop-lobby .crew-slot label {
+    font-family: var(--font-body);
+}

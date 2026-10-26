@@ -1,0 +1,110 @@
+/* The shared top bar picks up the violet palette on every screen. */
+.shell-header button,
+.shell-header #screenBack {
+    background: transparent;
+    border: 1px solid #3a2a64;
+    color: #cdb6f0;
+}
+.shell-header button:hover:not(:disabled),
+.shell-header button:focus {
+    border-color: #ffbe6e;
+    color: #fff4d6;
+    box-shadow: 0 0 0 1px #ffbe6e;
+    outline: none;
+}
+.shell-header button[aria-pressed='true'] {
+    color: #ffe9c4;
+    border-color: #ffbe6e;
+}
+#screenTitle {
+    color: #ffe9c4;
+}
+.shell-footer {
+    color: #8a76b0;
+}
+
+/* One column keeps every control in a straight up/down line, which is what a
+   d-pad can walk: left/right on a slider or select adjusts it instead of moving. */
+[data-view='settings'] .settings-sliders,
+[data-view='settings'] .settings-bindings {
+    display: grid;
+    grid-template-columns: 1fr;
+    gap: 14px;
+}
+[data-view='settings'] .settings-bindings > div {
+    min-width: 0;
+}
+[data-view='settings'] .settings-calibration-actions button,
+[data-view='settings'] .calibration-actions button {
+    background: transparent;
+    border: 1px solid #3a2a64;
+    color: #cdb6f0;
+    font-family: var(--font-display);
+    font-size: var(--size-label);
+}
+[data-view='settings'] .calibration-actions button:hover:not(:disabled),
+[data-view='settings'] .calibration-actions button:focus {
+    border-color: #ffbe6e;
+    box-shadow: 0 0 0 1px #ffbe6e;
+    outline: none;
+}
+
+/* Keep the HUD out of the ship's way: no darkening band, and the readouts fade
+   while the ship is underneath them. */
+body:is([data-screen='play'], [data-screen='pause']):not([data-coop='true']) .console .hud {
+    background: none;
+    transition: opacity 0.15s;
+}
+body:is([data-screen='play'], [data-screen='pause']):not([data-coop='true']) .hud,
+body:is([data-screen='play'], [data-screen='pause']):not([data-coop='true']) .combat-hud {
+    text-shadow:
+        0 1px 0 #080416,
+        0 0 6px #080416;
+}
+body[data-ship-top='true']:is([data-screen='play'], [data-screen='pause']):not([data-coop='true'])
+    .console
+    .hud {
+    opacity: 0.22;
+}
+body[data-ship-bottom='true']:is([data-screen='play'], [data-screen='pause']):not(
+        [data-coop='true']
+    )
+    .console
+    .combat-hud {
+    opacity: 0.22;
+}
+
+/* ---- Less chrome, less copy ----------------------------------------------- */
+#screenTitle {
+    display: none;
+}
+body:not([data-demo='true']) #homeHint {
+    display: none;
+}
+#settingsProfileNote:empty,
+#hangarStatus:empty,
+#controller:empty,
+#settingsStatus:empty,
+#pauseSettingsHint:empty {
+    display: none;
+}
+.shell-header {
+    justify-content: flex-end;
+}
+.shell-header #screenBack {
+    margin-right: auto;
+}
+
+/* ---- Home buttons: bigger -------------------------------------------------- */
+.home-menu button,
+.home-menu button.primary {
+    font-size: clamp(26px, 2.5vw, 36px);
+    min-height: 46px;
+    gap: 12px;
+    letter-spacing: 0.02em;
+}
+.home-menu button::before {
+    width: 18px;
+    height: 18px;
+    background-size: 18px 18px;
+}

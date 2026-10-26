@@ -16,9 +16,9 @@ Every shipped asset is original, and every image is regenerable from a script in
 | `ui/` | HUD glyphs (bolt, shield, 2×), selection chevron, ship-life icon | hand-authored 7×7 pixel grids |
 | `fonts/` | Jersey 10 (display) and Pixelify Sans (body), SIL OFL, with licence texts | Google Fonts |
 
-Procedural, no image: region skies, nebulae and stars (`backgrounds.mjs`), explosions,
-glows and the Sentinel finale (`fx.mjs`), Home overlay and launch warp
-(`presentation.mjs`), ship re-lighting (`art-grade.mjs`).
+Procedural, no image: region skies, nebulae and stars (`src/render/backgrounds.mjs`), explosions,
+glows and the Sentinel finale (`src/render/fx.mjs`), Home overlay and launch warp
+(`src/render/presentation.mjs`), ship re-lighting (`src/render/art-grade.mjs`).
 
 ## Regions
 
@@ -53,7 +53,7 @@ frame 0. Region ids, wave ranges, transitions and fallback colours are in
   chunky 4 px blocks, flat low-poly facets in five flat shades with no gradients or fine
   dither, a dark silhouette with an amber rim on the lit upper-left edge, a few dark
   speckle blocks, angular shard-shaped rubble for the defeat. Glows are four flat
-  4 px steps (`pixelGlow` in `fx.mjs`) and the fireball is stepped ragged discs.
+  4 px steps (`pixelGlow` in `src/render/fx.mjs`) and the fireball is stepped ragged discs.
   Painter: `tools/boss_facets.py`; sprites: `tools/boss_sprites.py`. Sprites load per
-  region on demand; collision shapes are circles defined in `native/boss_fights.h`,
+  region on demand; collision shapes are circles defined in `native/boss/fights/`,
   independent of the art.

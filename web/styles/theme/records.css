@@ -1,0 +1,219 @@
+/* ---- Records ------------------------------------------------------------------
+   The Hangar's voice: sunset title, chip filters, no boxes. Big Jersey numbers for
+   the board and the bests, silhouettes for bosses not yet beaten. */
+.chips {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+}
+.chips button {
+    background: transparent;
+    border: 1px solid #3a2a64;
+    color: #aa8cd2;
+    font-family: var(--font-display);
+    font-size: var(--size-label);
+    min-height: 32px;
+    padding: 6px 12px;
+}
+.chips button[aria-pressed='true'] {
+    border-color: #ffbe6e;
+    color: #ffe9c4;
+    box-shadow: inset 0 -3px 0 #ffbe6e;
+}
+.chips button:disabled {
+    opacity: 0.35;
+}
+.records-filters {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 10px clamp(14px, 3vw, 36px);
+}
+.records-grid {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1.25fr);
+    gap: clamp(18px, 4vw, 56px);
+}
+.records h2 {
+    margin: 0 0 4px;
+    font-size: clamp(24px, 2.6vw, 32px);
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    color: #ffe9c4;
+    text-shadow: 2px 2px 0 #340e4a;
+}
+.records-note {
+    margin: 0;
+    color: #8a76b0;
+    font-size: var(--size-small);
+}
+.records-note:empty {
+    display: none;
+}
+#leaderboard {
+    list-style: none;
+    margin: 10px 0 8px;
+    padding: 0;
+    display: grid;
+    gap: 6px;
+}
+#leaderboard li {
+    display: grid;
+    grid-template-columns: 2ch 1fr auto;
+    align-items: baseline;
+    gap: 14px;
+    padding: 6px 12px;
+    border-left: 3px solid #3a2a64;
+    background: linear-gradient(90deg, #1c0e3a99, transparent);
+    font-family: var(--font-display);
+    font-size: clamp(24px, 3vw, 34px);
+    letter-spacing: 0.08em;
+    color: #e6d4ff;
+}
+#leaderboard li:first-child {
+    border-left-color: #ffbe6e;
+    color: #ffe9c4;
+    background: linear-gradient(90deg, #4a2a3a99, transparent);
+}
+#leaderboard .rank {
+    color: #8a76b0;
+    font-size: 0.65em;
+}
+#leaderboard .score {
+    text-align: right;
+    color: #ffc88a;
+    font-variant-numeric: tabular-nums;
+}
+#leaderboard li[data-empty='true'] {
+    opacity: 0.35;
+}
+#leaderboard li[data-latest='true'] {
+    border-left-color: #6ef0ff;
+    box-shadow: inset 0 0 0 1px #6ef0ff55;
+}
+.metric-grid {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 12px 18px;
+    margin: 10px 0;
+}
+.metric-grid > div {
+    padding: 4px 12px;
+    border-left: 3px solid #3a2a64;
+}
+.metric-grid dt {
+    margin: 0;
+    font-family: var(--font-display);
+    font-size: var(--size-label);
+    letter-spacing: 0.18em;
+    text-transform: uppercase;
+    color: #be96e6;
+}
+.metric-grid dd {
+    margin: 0;
+    font-family: var(--font-display);
+    font-size: clamp(32px, 4vw, 50px);
+    line-height: 1.1;
+    color: #ffe9c4;
+    text-shadow: 3px 3px 0 #340e4a;
+    font-variant-numeric: tabular-nums;
+}
+.metric-grid > .empty-record {
+    grid-column: 1 / -1;
+}
+.metric-grid > .empty-record dd {
+    font-family: var(--font-body);
+    font-size: var(--size-body);
+    text-shadow: none;
+    color: #8a76b0;
+}
+.records-log {
+    display: grid;
+    gap: 4px;
+}
+.boss-log {
+    display: grid;
+    grid-template-columns: repeat(6, minmax(0, 1fr));
+    gap: 10px;
+    margin: 8px 0 4px;
+}
+.boss-log figure {
+    margin: 0;
+    display: grid;
+    justify-items: center;
+    align-content: start;
+    gap: 4px;
+    padding: 8px 4px;
+    border: 1px solid #3a2a64;
+    background: #160a3490;
+}
+.boss-log figure[data-state='beaten'] {
+    border-color: #ffbe6e;
+    box-shadow: inset 0 -3px 0 #ffbe6e;
+}
+.boss-log canvas {
+    background: transparent;
+    width: 100%;
+    max-width: 96px;
+    aspect-ratio: 1;
+    image-rendering: pixelated;
+}
+.boss-log figure[data-state='unseen'] canvas {
+    filter: brightness(0.22) saturate(0.3);
+}
+.boss-log figcaption {
+    display: grid;
+    justify-items: center;
+    font-family: var(--font-display);
+    font-size: 16px;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    color: #ffe9c4;
+    text-align: center;
+}
+.boss-log figcaption span {
+    color: #ffbe6e;
+    font-size: 14px;
+}
+.boss-log figure[data-state='unseen'] figcaption {
+    color: #6c5a92;
+}
+.boss-log figure[data-state='unseen'] figcaption span {
+    color: #54447a;
+}
+.records-data {
+    margin-top: auto;
+    padding-top: 12px;
+    border-top: 1px solid #3a2a64;
+    display: grid;
+    gap: 6px;
+}
+.records-actions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+}
+.records-actions button {
+    background: transparent;
+    border: 1px solid #3a2a64;
+    color: #aa8cd2;
+    font-family: var(--font-display);
+    font-size: var(--size-label);
+    min-height: 34px;
+    padding: 4px 12px;
+}
+.records-actions button[hidden] {
+    display: none;
+}
+.records-actions #clearBrowserRecords:hover,
+.records-actions #clearBrowserRecords:focus-visible {
+    color: var(--danger);
+    border-color: var(--danger);
+}
+@media (max-width: 760px) {
+    .records-grid {
+        grid-template-columns: 1fr;
+    }
+    .boss-log {
+        grid-template-columns: repeat(4, minmax(0, 1fr));
+    }
+}

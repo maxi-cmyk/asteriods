@@ -1,0 +1,53 @@
+            <section data-view="records" class="utility-view records" hidden inert aria-label="Records">
+                <h1 tabindex="-1">Records</h1>
+                <div class="records-filters" role="group" aria-label="Which records to show">
+                    <div class="chips" data-for="recordsMode" role="group" aria-label="Mode">
+                        <button type="button" data-value="solo">Solo</button>
+                        <button type="button" data-value="coop-off">Co-op</button>
+                        <button type="button" data-value="coop-on">Co-op · friendly fire</button>
+                    </div>
+                    <div class="chips" data-for="recordsProfile" role="group" aria-label="Profile">
+                        <button type="button" data-value="0">Player 1</button>
+                        <button type="button" data-value="1">Player 2</button>
+                    </div>
+                    <div class="chips" data-for="recordsType" role="group" aria-label="Run type">
+                        <button type="button" data-value="normal">Normal</button>
+                        <button type="button" data-value="practice">Practice</button>
+                    </div>
+                    <div hidden>
+                        <select id="recordsMode"><option value="solo">Solo</option><option value="coop-off">Co-op · Friendly fire off</option><option value="coop-on">Co-op · Friendly fire on</option></select>
+                        <select id="recordsProfile"><option value="0">Player 1</option><option value="1">Player 2</option></select>
+                        <select id="recordsType"><option value="normal">Normal</option><option value="practice">Practice</option></select>
+                    </div>
+                </div>
+                <div class="records-grid">
+                    <section class="records-board" aria-labelledby="boardTitle">
+                        <h2 id="boardTitle">Top five</h2>
+                        <p id="leaderboardContext" class="records-note"></p>
+                        <ol id="leaderboard"></ol>
+                        <p id="leaderboardStatus" class="records-note" role="status"></p>
+                    </section>
+                    <section class="records-bests" aria-labelledby="bestsTitle">
+                        <h2 id="bestsTitle">Personal bests</h2>
+                        <p id="recordsScope" class="records-note"></p>
+                        <dl id="recordsValues" class="metric-grid"></dl>
+                        <p id="recordsAccuracy" class="records-note"></p>
+                    </section>
+                </div>
+                <section class="records-log" aria-labelledby="logTitle">
+                    <h2 id="logTitle">Boss log</h2>
+                    <div id="recordsBossLog" class="boss-log"></div>
+                    <p id="recordsBosses" class="records-note"></p>
+                </section>
+                <div class="records-data">
+                    <p id="recordsStatus" class="records-note" role="status"></p>
+                    <div class="records-actions">
+                        <button id="retryRecords" hidden>Retry saving personal bests</button>
+                        <button id="resetRecords">Reset this profile’s personal bests</button>
+                        <button id="cancelResetRecords" hidden>Cancel reset</button>
+                        <button id="clearBrowserRecords">Clear this browser’s records</button>
+                        <button id="cancelBrowserReset" hidden>Cancel clear</button>
+                    </div>
+                    <p id="browserResetStatus" class="records-note" role="status"></p>
+                </div>
+            </section>
