@@ -8,3 +8,8 @@ export function element(id) {
     }
     return ids.get(id);
 }
+
+/** Writes text only when it changed, so per-frame presenters never thrash layout. */
+export function setText(node, text) {
+    if (node.textContent !== text) node.textContent = text;
+}

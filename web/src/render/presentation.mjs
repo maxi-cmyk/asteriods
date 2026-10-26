@@ -1,10 +1,10 @@
+import { WIDTH, HEIGHT } from './constants.mjs';
 // Menu-time presentation: the animated Home overlay and the Play launch
 // sequence. Both are pure functions of a presentation clock, so they hold no
 // gameplay state, never touch the simulation RNG, and freeze when not drawn.
 import { glow } from './fx.mjs';
 import { hullSprite } from '../state/hangar.mjs';
-export const WIDTH = 480;
-export const HEIGHT = 270;
+export { WIDTH, HEIGHT };
 const TAU = Math.PI * 2;
 const hash = (n) => {
     const x = Math.sin(n * 127.1 + 311.7) * 43758.5453;

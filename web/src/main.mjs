@@ -1,2 +1,4 @@
-// The application owns one simulation loop and composes independent screens.
-import './app/app.mjs';
+// Starts the application: all wiring lives in app/app.mjs.
+import { App } from './app/app.mjs';
+
+new App().start();

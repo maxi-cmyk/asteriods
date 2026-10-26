@@ -1,3 +1,4 @@
+import { WIDTH, HEIGHT } from './constants.mjs';
 // Original, procedurally authored pixel backgrounds for each region. Nothing
 // here is copied from the inspiration references: those are watermarked
 // previews, so only their moods (a violet gas giant, a red world over pink
@@ -5,8 +6,7 @@
 // Light comes from the upper left, matching the sprite atlas.
 import { REGIONS, RegionTimeline } from './regions.mjs';
 
-export const WIDTH = 480;
-export const HEIGHT = 270;
+export { WIDTH, HEIGHT };
 const BAYER = [0, 8, 2, 10, 12, 4, 14, 6, 3, 11, 1, 9, 15, 7, 13, 5];
 const LIGHT = (() => {
     const x = -0.55,

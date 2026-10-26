@@ -1,3 +1,4 @@
+import { WIDTH, HEIGHT } from './constants.mjs';
 import {
     S,
     BOSS,
@@ -15,8 +16,7 @@ import { BossArt } from '../boss/art.mjs';
 import { BossLayer } from '../boss/render.mjs';
 import { deathMs, drawDeath } from '../boss/death.mjs';
 import { BOSS_AT, KINDS } from '../boss/scene.mjs';
-export const WIDTH = 480;
-export const HEIGHT = 270;
+export { WIDTH, HEIGHT };
 const COLOUR = {
     background: '#080f19',
     ink: '#f2f1df',

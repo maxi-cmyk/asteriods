@@ -35,6 +35,7 @@ export async function runSmoke() {
     click('skipLaunch');
     await until(() => window.asteroids.state() === 'playing');
     note('play', [screen(), window.asteroids.state()]);
+    await wait(400); // the first tick after launch waits for the keys to be released
     const before = window.asteroids.snapshot()[1];
     key('keydown', 'KeyD');
     await wait(700);
