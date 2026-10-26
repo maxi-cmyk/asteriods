@@ -1,5 +1,8 @@
 # Browser combat controls
 
+> This page is the player-facing rulebook. For how the engine implements each rule, function by
+> function, see [combat/README.md](combat/README.md).
+
 The browser's combat loop is implemented in `native/combat.h`. It reuses the
 production ship, input, asteroid, bullet, scoring, and power-up modules.
 The OLED game retains its original fixed-facing combat and automatic shield.

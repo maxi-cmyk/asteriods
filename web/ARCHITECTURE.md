@@ -2,7 +2,7 @@
 
 The gameplay engine is the firmware's C++ compiled to WebAssembly; everything else is plain
 ES modules, CSS and HTML with no runtime dependencies. This page is the map. For the rules of
-play see [COMBAT.md](COMBAT.md); for the contributor workflow see [README.md](README.md).
+play see [COMBAT.md](COMBAT.md) and, for engine internals, [combat/README.md](combat/README.md); for the contributor workflow see [README.md](README.md).
 
 ```
 web/
