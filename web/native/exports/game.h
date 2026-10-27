@@ -101,6 +101,10 @@ void web_demo() {
     demo_running = true;
     set_state(STATE_DEMO);
 }
+// The Home demo has no run to lose: its engine hands the pilot lives back when they run out.
+void web_demo_lives(int lives) {
+    ship.lives = lives;
+}
 void web_menu() {
     demo_running = false;
     menu_input_ready = false;

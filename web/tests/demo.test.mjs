@@ -57,3 +57,29 @@ test('isolated manual demo never advances or writes the player runtime and freez
     assert.equal(demo.active, true);
     demo.stop();
 });
+
+test('the Home demo plays the whole game: bosses, deaths and all, until it is stopped', async () => {
+    const { createDemo } = await import('../src/demo/engine.mjs');
+    const { S } = await import('../src/runtime/scene-layout.mjs');
+    const bytes = await readFile(new URL('../dist/test.wasm', import.meta.url));
+    const demo = await createDemo(bytes);
+    demo.start();
+    let bossSeen = false,
+        maxWave = 0,
+        lastLives = 3,
+        livesLost = 0;
+    for (let i = 0; i < 20000; i++) {
+        demo.step();
+        const scene = demo.scene();
+        // Never the menu, score entry or game over: the run goes on whatever happens.
+        assert(![0, 5, 6].includes(scene[S.STATE]), `the demo left play at tick ${i}`);
+        bossSeen ||= !!scene[S.BOSS_ACTIVE];
+        maxWave = Math.max(maxWave, scene[S.WAVE]);
+        if (scene[S.LIVES] < lastLives) livesLost++;
+        lastLives = scene[S.LIVES];
+    }
+    assert(bossSeen, 'a boss appears');
+    assert(maxWave >= 8, `reached wave ${maxWave}`);
+    assert(livesLost > 0, 'the pilot loses lives like anyone, and keeps flying');
+    demo.stop();
+});

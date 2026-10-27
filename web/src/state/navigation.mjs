@@ -1,5 +1,13 @@
 export const UTILITIES = ['records', 'settings', 'help', 'developer', 'hangar'];
 export const LIVE_STATES = ['countdown', 'playing', 'paused', 'death'];
+// The run states in which the pilot is at the controls. Moving between them (the countdown
+// ending, a death, a respawn) is the flight carrying on, not an interruption.
+export const FLIGHT_STATES = ['countdown', 'playing', 'death'];
+// Does going from run state `previous` to `next` need the controls released before gameplay
+// resumes? Yes for menus, pause, score entry and results (a held key must not leak into them);
+// no inside the flight, where a held direction key has to keep steering through a respawn.
+export const needsRelease = (previous, next) =>
+    next !== previous && !(FLIGHT_STATES.includes(previous) && FLIGHT_STATES.includes(next));
 export function routeFromHash(hash) {
     const route = String(hash).replace(/^#/, '').toLowerCase();
     return UTILITIES.includes(route) ? route : 'home';

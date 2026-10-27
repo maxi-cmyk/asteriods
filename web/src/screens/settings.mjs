@@ -1,4 +1,5 @@
 import { element } from '../app/dom.mjs';
+import { MENU_GROUPS, MENU_THEMES } from '../audio/menu-themes.mjs';
 import {
     KEY_ACTIONS,
     PAD_ACTIONS,
@@ -40,6 +41,7 @@ class SettingsScreen {
         element('inputProfile').value = profileStore.activeProfile;
         element('audioEnabled').checked = settings.soundEnabled;
         element('musicEnabled').checked = settings.musicEnabled;
+        element('menuTheme').value = settings.menuTheme;
         element('bossLongWarnings').checked = settings.bossLongWarnings;
         element('bossCalm').checked = settings.bossCalm;
         if (!this.storage)
@@ -138,6 +140,25 @@ class SettingsScreen {
         });
         element('musicEnabled').addEventListener('change', (event) => {
             settings.musicEnabled = event.target.checked;
+            this.changed();
+        });
+        // One option per theme, grouped. Choosing one previews it at once (the music follows the
+        // live settings) until Apply keeps it or closing Settings puts the old one back.
+        const themes = element('menuTheme');
+        for (const name of MENU_GROUPS) {
+            const group = document.createElement('optgroup');
+            group.label = name;
+            for (const theme of MENU_THEMES.filter((theme) => theme.group === name)) {
+                const option = document.createElement('option');
+                option.value = theme.id;
+                option.textContent = theme.title;
+                group.append(option);
+            }
+            themes.append(group);
+        }
+        themes.addEventListener('change', (event) => {
+            settings.menuTheme = event.target.value;
+            this.unlockAudio();
             this.changed();
         });
         for (const name of ['bossLongWarnings', 'bossCalm'])

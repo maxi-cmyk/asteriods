@@ -1,3 +1,5 @@
+import { DEFAULT_MENU_THEME, isMenuTheme } from '../audio/menu-themes.mjs';
+
 export const SETTINGS_KEY = 'asteroids.web.settings-v1';
 export const KEY_ACTIONS = {
     up: ['Move up', 'KeyW'],
@@ -46,6 +48,7 @@ export function defaults() {
         shake: 0.5,
         soundEnabled: false,
         musicEnabled: false,
+        menuTheme: DEFAULT_MENU_THEME,
         backgroundMotion: 1,
         backgroundBrightness: 1,
         bossLongWarnings: false,
@@ -78,6 +81,7 @@ export function sanitizeSettings(raw = {}) {
         settings.mouseAimSensitivity = settings.aimSensitivity;
     settings.soundEnabled = raw.soundEnabled === true;
     settings.musicEnabled = raw.musicEnabled === true;
+    if (isMenuTheme(raw.menuTheme)) settings.menuTheme = raw.menuTheme;
     settings.bossLongWarnings = raw.bossLongWarnings === true;
     settings.bossCalm = raw.bossCalm === true;
     const used = new Set();

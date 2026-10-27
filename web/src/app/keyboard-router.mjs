@@ -1,5 +1,6 @@
 import { adjustField } from '../input/menu-fields.mjs';
 import { element } from './dom.mjs';
+import { FLIGHT_STATES } from '../state/navigation.mjs';
 
 const ARROWS = ['ArrowLeft', 'ArrowUp', 'ArrowRight', 'ArrowDown'];
 const ADJUSTABLE = 'select,input[type=range]';
@@ -13,8 +14,16 @@ export class KeyboardRouter {
     install() {
         window.addEventListener('keydown', (event) => this.keyDown(event));
         window.addEventListener('keyup', (event) => {
-            this.app.input.physicalKeys.delete(event.code);
-            this.app.session.keyboardControls()?.keyUp(event.code);
+            const { input, session } = this.app;
+            input.physicalKeys.delete(event.code);
+            session.keyboardControls()?.keyUp(event.code);
+            // macOS swallows the keyup of every key released while Cmd is down, which leaves
+            // them "held" for good. Letting go of Cmd drops them; a key still really held
+            // comes straight back with its next auto-repeat.
+            if (event.key === 'Meta') {
+                input.physicalKeys.clear();
+                session.keyboardControls()?.keys.clear();
+            }
         });
     }
     keyDown(event) {
@@ -93,7 +102,7 @@ export class KeyboardRouter {
     }
     playKey(event) {
         const { app } = this,
-            { navigation, session, settings } = app;
+            { navigation, runtime, session, settings } = app;
         const controls = session.keyboardControls();
         if (
             navigation.live &&
@@ -108,11 +117,15 @@ export class KeyboardRouter {
         }
         const keySettings = controls?.settings ?? settings;
         const accepted = [...ARROWS, 'Enter', 'Escape', ...Object.values(keySettings.keys)];
-        if (
-            !accepted.includes(event.code) ||
-            event.target.closest('button, input, select, textarea')
-        )
-            return;
+        if (!accepted.includes(event.code)) return;
+        if (event.target.closest('button, input, select, textarea')) {
+            // Clicking Fullscreen, Music or Sound mid-flight leaves focus on that button. While
+            // flying, a game key takes focus back to the field instead of being dropped (and
+            // Space no longer presses the button). Anywhere else the control keeps its keys.
+            const flying = FLIGHT_STATES.includes(runtime.state);
+            if (!flying || !event.target.closest('button')) return;
+            app.canvas.focus({ preventScroll: true });
+        }
         event.preventDefault();
         app.unlockAudio();
         controls?.keyDown(event.code, event.repeat);

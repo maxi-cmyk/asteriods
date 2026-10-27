@@ -7,8 +7,10 @@ import {
     HOME_PLAYLIST,
     MusicDirector,
     bossRequest,
+    menuRequest,
     planetRequest,
 } from '../src/audio/soundtrack.mjs';
+import { MENU_THEMES, MENU_GROUPS, SILENT_MENUS, isMenuTheme } from '../src/audio/menu-themes.mjs';
 import { S, BOSS, BOSS_AT } from '../src/runtime/scene-layout.mjs';
 import { defaults, sanitizeSettings, SettingsDraft, loadProfiles } from '../src/state/settings.mjs';
 
@@ -229,4 +231,65 @@ test('old profiles default music off; music and SFX preferences remain independe
     assert.equal(draft.changed(), true);
     draft.discard();
     assert.equal(live.musicEnabled, false);
+});
+
+test('the menu theme setting defaults to the playlist, keeps only known themes and drafts like the rest', () => {
+    assert.equal(defaults().menuTheme, 'cycle');
+    assert.equal(sanitizeSettings({}).menuTheme, 'cycle', 'older saves have no theme');
+    assert.equal(sanitizeSettings({ menuTheme: 'boss_bastion' }).menuTheme, 'boss_bastion');
+    for (const bad of ['nope', 7, null, {}, 'HOME', ''])
+        assert.equal(sanitizeSettings({ menuTheme: bad }).menuTheme, 'cycle', String(bad));
+    const live = defaults();
+    const draft = new SettingsDraft(loadProfiles(), live);
+    live.menuTheme = 'ember';
+    assert.equal(draft.changed(), true);
+    draft.discard();
+    assert.equal(live.menuTheme, 'cycle');
+});
+
+test('the menu theme list is grouped, has no duplicates and matches the soundtrack manifest', async () => {
+    const dir = new URL('../assets/soundtracks/', import.meta.url);
+    const { tracks } = JSON.parse(await readFile(new URL('soundtracks.json', dir), 'utf8'));
+    assert.equal(new Set(MENU_THEMES.map((theme) => theme.id)).size, MENU_THEMES.length);
+    for (const theme of MENU_THEMES) {
+        assert.ok(MENU_GROUPS.includes(theme.group), theme.id);
+        assert.ok(isMenuTheme(theme.id));
+        if (theme.id === 'cycle' || theme.id === SILENT_MENUS) continue;
+        assert.ok(tracks[theme.id], `${theme.id} is in the manifest`);
+        assert.equal(tracks[theme.id].title, theme.title, `${theme.id} title matches`);
+    }
+    // Every planet and boss theme the game plays in flight can be chosen for the menus.
+    for (let wave = 1; wave <= 30; wave += 5) assert.ok(isMenuTheme(planetRequest(wave).key));
+    for (let kind = 0; kind < 6; kind++) assert.ok(isMenuTheme(bossRequest(kind).key));
+    assert.equal(tracks.home.title, 'Ready or Not');
+});
+
+test('the menus play the chosen theme on Home, Mode, Hangar, Lobby and screens opened from them', () => {
+    const director = new MusicDirector();
+    const on = (screen, extra = {}) => director.request({ screen, ...extra });
+    // The default is the playlist everywhere in the menus.
+    for (const screen of ['home', 'mode', 'lobby', 'hangar', 'records', 'help', 'settings'])
+        assert.deepEqual(on(screen).tracks, HOME_PLAYLIST, screen);
+    // One track loops under its own key, and the key stays put from screen to screen, so the
+    // music carries on without a restart or a crossfade.
+    const keys = new Set();
+    for (const id of ['home', 'boss_sentinel', 'rift', 'insert-another-coin']) {
+        keys.clear();
+        for (const screen of ['home', 'mode', 'hangar', 'lobby', 'settings'])
+            keys.add(on(screen, { menuTheme: id }).key);
+        assert.deepEqual([...keys], [id]);
+        assert.deepEqual(on('lobby', { menuTheme: id }).tracks, [id]);
+    }
+    assert.equal(on('lobby', { menuTheme: SILENT_MENUS }), null);
+    assert.equal(on('home', { menuTheme: SILENT_MENUS }), null);
+    assert.deepEqual(menuRequest('not a theme').tracks, HOME_PLAYLIST);
+    // Opened from the pause menu, Settings keeps today's behaviour: no menu music mid-run.
+    assert.equal(on('settings', { menuTheme: 'ember', origin: 'pause' }), null);
+    // The demo on Home still follows its stage, whatever the menu theme is.
+    const demo = new Float32Array(2000);
+    demo[S.WAVE] = 16;
+    assert.equal(on('home', { menuTheme: 'ember', demoScene: demo }).key, 'ruins');
+    // Pause keeps what was playing, and a run's end screens stay silent.
+    assert.equal(on('pause').key, 'ruins');
+    assert.equal(on('play', { runtimeState: 'results', scene: demo }), null);
 });

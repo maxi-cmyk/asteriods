@@ -25,10 +25,9 @@ export { loadArt } from './art.mjs';
 // Draws one scene per call: the region backdrop, then the flight as an ordered stack of
 // layers (boss, rocks, pickups, bullets, ships, effects, cues), or a full-canvas screen.
 export class PixelRenderer {
-    // `calm` pins the opening scene (demo flights); otherwise the wave picks the region.
-    constructor(canvas, art, { calm = false } = {}) {
+    // The wave picks the region, in a run and in the Home demo alike.
+    constructor(canvas, art) {
         this.canvas = canvas;
-        this.calm = calm;
         this.cue = null;
         const query =
             typeof matchMedia === 'function'
@@ -107,7 +106,7 @@ export class PixelRenderer {
             hold,
             dim,
             run: state >= 1 && state !== 0,
-            practice: this.calm || !!scene[S.PRACTICE] || state === 7,
+            practice: !!scene[S.PRACTICE],
             fight:
                 scene[S.BOSS_ACTIVE] && scene[BOSS_AT + BOSS.TIER] >= 3
                     ? { kind: scene[BOSS_AT + BOSS.KIND], tier: scene[BOSS_AT + BOSS.TIER] }
@@ -117,7 +116,7 @@ export class PixelRenderer {
     // Everything besides the scene that changes what render() paints.
     #settingsKey() {
         const { backgrounds } = this;
-        return `${this.shake}|${backgrounds.motion}|${backgrounds.brightness}|${this.reduced}|${this.calm}|${this.hulls.join()}|${this.bossArt.version}`;
+        return `${this.shake}|${backgrounds.motion}|${backgrounds.brightness}|${this.reduced}|${this.hulls.join()}|${this.bossArt.version}`;
     }
     // render() for the live loop: the same pixels, but only when the scene or a setting moved
     // since the last call. Repeat calls between engine ticks cost a comparison, not a repaint.

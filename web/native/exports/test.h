@@ -48,17 +48,9 @@ const float *web_test_boss_stats() {
 #endif
     return values;
 }
-// Contact circles (count, then x, y, r triples) for fairness and bot tests.
+// The contact circles now ship in every build (web_boss_body in read.h, for the demo pilot).
 const float *web_test_boss_body() {
-    static float values[1 + 3 * 32];
-    memset(values, 0, sizeof(values));
-#ifdef WEB_HD
-    float body[96];
-    unsigned n = boss.active ? bs_kind_body(body) : 0;
-    values[0] = n;
-    for (unsigned i = 0; i < n * 3; i++) values[1 + i] = body[i];
-#endif
-    return values;
+    return web_boss_body();
 }
 void web_test_boss_set(int field, float value) {
 #ifdef WEB_HD

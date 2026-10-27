@@ -170,10 +170,7 @@ export class App {
         const art = (this.gameArt = await loadArt()),
             bytes = await response.arrayBuffer();
         this.renderer = new PixelRenderer(this.canvas, art);
-        this.demo = await createDemo(
-            bytes,
-            new PixelRenderer(element('homeDemo'), art, { calm: true }),
-        );
+        this.demo = await createDemo(bytes, new PixelRenderer(element('homeDemo'), art));
         element('watchDemo').disabled = false;
         this.runtime = await createRuntime(bytes, {
             storage: this.storage,

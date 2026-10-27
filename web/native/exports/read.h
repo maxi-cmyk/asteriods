@@ -30,6 +30,19 @@ const float *web_stats() {
 #endif
     return values;
 }
+// Contact circles of the boss on screen: a count, then x, y, r for each. Read-only; the Home
+// demo's pilot and the fairness tests steer around them.
+const float *web_boss_body() {
+    static float values[1 + 3 * 32];
+    memset(values, 0, sizeof(values));
+#ifdef WEB_HD
+    float body[96];
+    unsigned n = boss.active ? bs_kind_body(body) : 0;
+    values[0] = n;
+    for (unsigned i = 0; i < n * 3; i++) values[1 + i] = body[i];
+#endif
+    return values;
+}
 uint8_t *web_pixels() {
     return display_get().pixels;
 }

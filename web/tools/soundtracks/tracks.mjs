@@ -8,7 +8,7 @@ const FULL_HARM = 'pad arp bass lead drums harm';
 export const TRACKS = {
     home: {
         id: 'home',
-        title: 'Home screen',
+        title: 'Ready or Not',
         tonic: 69,
         scale: 'minor',
         bpm: 100,

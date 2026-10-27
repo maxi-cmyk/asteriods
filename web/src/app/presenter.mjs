@@ -6,6 +6,7 @@ import { renderResultsScreen } from '../screens/results.mjs';
 import { renderRecordsScreen } from '../screens/records.mjs';
 import { renderHomeScreen } from '../screens/home.mjs';
 import { accuracyText } from '../state/records.mjs';
+import { needsRelease } from '../state/navigation.mjs';
 import { MusicDirector } from '../audio/soundtrack.mjs';
 import { element, setAttr, setText } from './dom.mjs';
 
@@ -109,7 +110,7 @@ export class Presenter {
             isSettingsOpen: () => app.isSettingsOpen(),
         });
         app.coopScreen.render();
-        if (nextState !== this.lastState) {
+        if (needsRelease(this.lastState, nextState)) {
             app.input.gameplayReady = false;
             if (runtime.coop && nextState === 'game-over') element('fire').focus();
         }
@@ -126,6 +127,8 @@ export class Presenter {
                 runtimeState: runtime.state,
                 scene,
                 demoScene: app.demo?.active ? app.demo.scene() : null,
+                menuTheme: app.settings.menuTheme,
+                origin: navigation.origin,
             }),
         );
     }

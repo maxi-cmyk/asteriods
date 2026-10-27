@@ -184,6 +184,16 @@
     background: #fff4d6;
     box-shadow: 0 0 0 2px #ffbe6e;
 }
+[data-view='settings'] .menu-theme label {
+    color: #be96e6;
+    font-family: var(--font-display);
+    font-size: var(--size-label);
+    letter-spacing: 0.08em;
+}
+[data-view='settings'] .menu-theme p {
+    color: #8a76b0;
+    font-size: var(--size-small);
+}
 [data-view='settings'] select,
 [data-view='settings'] .profile-picker select {
     background: #120a2c;
