@@ -1,4 +1,4 @@
-import { element } from '../app/dom.mjs';
+import { element, setData, setHidden } from '../app/dom.mjs';
 import { accuracyText } from '../state/records.mjs';
 import { regionForWave } from '../render/regions.mjs';
 import { bossNames } from '../boss/scene.mjs';
@@ -19,11 +19,11 @@ export function renderResultsScreen({
         if (showResults) results.focus({ preventScroll: true });
         else if (lastState === 'results') canvas.focus({ preventScroll: true });
     }
-    document.body.dataset.results = String(showResults);
+    setData(document.body, 'results', String(showResults));
     if (showResults) {
         const coop = !!result.players;
-        results.querySelector('dl').hidden = coop;
-        element('resultLaser').hidden = coop || !result.laserShots;
+        setHidden(results.querySelector('dl'), coop);
+        setHidden(element('resultLaser'), coop || !result.laserShots);
         const seconds = Math.floor(result.elapsedMs / 1000);
         const clock = `${Math.floor(seconds / 60)}:${String(seconds % 60).padStart(2, '0')}`;
         const defeated = bossNames(result.bossMask || 0);
@@ -32,7 +32,7 @@ export function renderResultsScreen({
             ? `Defeated · ${defeated.join(', ')}${result.rules?.practice ? ` · hit ${result.bossHits || 0}×` : ''}`
             : '';
         update(bosses, line);
-        bosses.hidden = !line;
+        setHidden(bosses, !line);
         update(element('resultScore'), String(result.score));
         update(
             element('resultRegion'),

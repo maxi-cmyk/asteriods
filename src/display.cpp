@@ -5,7 +5,12 @@
 static const int OLED_SDA_PIN = 21;
 static const int OLED_SCL_PIN = 22;
 static const int OLED_RESET_PIN = -1;
-static const unsigned long OLED_I2C_CLOCK_HZ = 400000;
+// The panel is the frame-time bottleneck: a full 1 KB frame is about 25 ms at 400 kHz. Many
+// SSD1306 modules accept 800 kHz-1 MHz; build with -DOLED_I2C_CLOCK_HZ=800000UL to try it.
+#ifndef OLED_I2C_CLOCK_HZ
+#define OLED_I2C_CLOCK_HZ 400000UL
+#endif
+static const int FRAME_BYTES = SCREEN_W * SCREEN_H / 8;
 static const int LIFE_ICON_X = 2;
 static const int LIFE_ICON_SPACING = 8;
 static const int LIFE_ICON_TIP_OFFSET = 5;
@@ -68,11 +73,43 @@ void display_hud(uint8_t lives,
     oled.drawFastHLine(0, HUD_HEIGHT - 1, SCREEN_W, SSD1306_WHITE);
 }
 
+// The last frame sent to the panel. A frame identical to it (the menu, pause, game over and
+// the countdown hold still for many frames) needs no I2C transfer at all.
+static uint8_t sent_frame[FRAME_BYTES] = {};
+static bool sent_valid = false;
+
 void display_flip() {
+    const uint8_t *frame = oled.getBuffer();
+    if (frame) {
+        // Plain loops rather than memcmp/memcpy: this file also builds for the browser, which
+        // has no libc. A kilobyte compares in a few microseconds.
+        bool same = sent_valid;
+        for (int i = 0; same && i < FRAME_BYTES; i++) {
+            same = frame[i] == sent_frame[i];
+        }
+        if (same) {
+            return;
+        }
+        for (int i = 0; i < FRAME_BYTES; i++) {
+            sent_frame[i] = frame[i];
+        }
+        sent_valid = true;
+    }
     oled.display();
 }
 
 static uint8_t shake_frames_left = 0;
+static int applied_offset = 0;
+
+// Each SETDISPLAYOFFSET is its own I2C transaction, so only send one when the offset moves.
+static void apply_display_offset(int offset) {
+    if (offset == applied_offset) {
+        return;
+    }
+    applied_offset = offset;
+    oled.ssd1306_command(SSD1306_SETDISPLAYOFFSET);
+    oled.ssd1306_command((uint8_t)(offset & OLED_OFFSET_MASK));
+}
 
 void display_shake(uint8_t frames) {
     shake_frames_left = frames;
@@ -89,11 +126,8 @@ void display_shake_update() {
             direction = 1;
         }
 
-        int offset = magnitude * direction;
-        oled.ssd1306_command(SSD1306_SETDISPLAYOFFSET);
-        oled.ssd1306_command((uint8_t)(offset & OLED_OFFSET_MASK));
+        apply_display_offset(magnitude * direction);
     } else {
-        oled.ssd1306_command(SSD1306_SETDISPLAYOFFSET);
-        oled.ssd1306_command(0);
+        apply_display_offset(0);
     }
 }

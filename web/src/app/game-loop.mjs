@@ -1,6 +1,9 @@
 import { element } from './dom.mjs';
 
 const TICK_MS = 20;
+// The Hangar and Mode vignettes are slow ambience; 30 fps is plenty and halves their cost on
+// high-refresh displays.
+const VIGNETTE_MS = 33;
 
 // The one requestAnimationFrame loop: it feeds the engine exact 20 ms ticks (a long stall
 // freezes physics rather than skipping it), runs menu input between runs and asks the
@@ -11,6 +14,7 @@ export class GameLoop {
         this.suspended = false; // the window lost focus or went hidden
         this.previousTime = null;
         this.accumulator = 0;
+        this.vignetteFrame = -1;
     }
     // A screen change must not carry a stale tick backlog into the next screen.
     resetTiming() {
@@ -59,8 +63,12 @@ export class GameLoop {
             return;
         }
         app.homeBackdrop.frame();
-        if (navigation?.screen === 'hangar') app.hangarScreen.draw(app.clock.time);
-        else if (navigation?.screen === 'mode') app.modeScreen.draw(app.clock.time);
+        const vignette = Math.floor(app.clock.time / VIGNETTE_MS);
+        if (vignette !== this.vignetteFrame) {
+            if (navigation?.screen === 'hangar') app.hangarScreen.draw(app.clock.time);
+            else if (navigation?.screen === 'mode') app.modeScreen.draw(app.clock.time);
+            this.vignetteFrame = vignette;
+        }
         session.pauseFrame(now);
         const pad = session.menuPad();
         app.diagnosticPad = pad;

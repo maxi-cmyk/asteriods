@@ -26,6 +26,10 @@ class Adafruit_SSD1306 {
     }
     void display() {
     }
+    // The browser has no paged panel buffer to compare, so frames are always "sent".
+    uint8_t *getBuffer() {
+        return nullptr;
+    }
     void ssd1306_command(uint8_t command) {
         if (expecting_offset) {
             display_offset = command > 31 ? int(command) - 64 : command;

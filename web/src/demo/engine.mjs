@@ -13,6 +13,7 @@ export async function createDemo(bytes, renderer) {
         start() {
             runtime.abandon();
             runtime.api.web_demo();
+            renderer?.gate.invalidate();
             active = true;
         },
         stop() {
@@ -25,7 +26,7 @@ export async function createDemo(bytes, renderer) {
             if (runtime.state === 'menu') runtime.api.web_demo();
         },
         render() {
-            if (active) renderer?.render(runtime.scene());
+            if (active) renderer?.renderIfChanged(runtime.scene());
         },
         scene() {
             return runtime.scene();

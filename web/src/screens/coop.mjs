@@ -1,5 +1,5 @@
 import { S } from '../runtime/scene-layout.mjs';
-import { element, setText } from '../app/dom.mjs';
+import { element, setData, setHidden, setProp, setText } from '../app/dom.mjs';
 import { accuracyText } from '../state/records.mjs';
 import { supportedPad } from '../input/coop-input.mjs';
 import { CoopMenu } from '../input/coop-menu.mjs';
@@ -65,7 +65,8 @@ class CoopScreen {
     // Rebuilds the input choosers when controllers come or go.
     #syncDevices(pads) {
         const { input } = this;
-        const signature = JSON.stringify(pads.filter(supportedPad).map((p) => [p.index, p.id]));
+        let signature = '';
+        for (const p of pads) if (supportedPad(p)) signature += `${p.index}\u0000${p.id}\u0001`;
         if (signature === this.deviceSignature) return;
         this.deviceSignature = signature;
         for (const prefix of ['coopDevice', 'reconnectDevice'])
@@ -94,18 +95,24 @@ class CoopScreen {
         this.#syncDevices(pads);
         if (navigation?.screen === 'lobby') this.#renderLobby(pads);
         const active = !!runtime?.coop;
-        document.body.dataset.coop = String(active);
-        element('coopHud').hidden = !active;
-        element('coopResults').hidden = !active || !runtime?.result?.players;
-        document.querySelector('.hud').hidden = active;
-        document.querySelector('.combat-hud')?.classList.toggle('coop-hidden', active);
-        document.querySelector('.live-stats')?.classList.toggle('coop-hidden', active);
-        element('coopReassign').hidden = !active;
+        setData(document.body, 'coop', String(active));
+        setHidden(element('coopHud'), !active);
+        setHidden(element('coopResults'), !active || !runtime?.result?.players);
+        this.chrome ??= {
+            hud: document.querySelector('.hud'),
+            combat: document.querySelector('.combat-hud'),
+            stats: document.querySelector('.live-stats'),
+        };
+        setHidden(this.chrome.hud, active);
+        for (const node of [this.chrome.combat, this.chrome.stats])
+            if (node && node.classList.contains('coop-hidden') !== active)
+                node.classList.toggle('coop-hidden', active);
+        setHidden(element('coopReassign'), !active);
         if (navigation?.screen !== 'pause') this.reassign = false;
         if (active && !this.input.valid(pads)) this.reassign = true;
-        element('coopReconnect').hidden = !active || !this.reassign;
+        setHidden(element('coopReconnect'), !active || !this.reassign);
         if (!active) {
-            element('resume').disabled = false;
+            setProp(element('resume'), 'disabled', false);
             return;
         }
         this.#renderHud(runtime, navigation, pads);
@@ -151,13 +158,9 @@ class CoopScreen {
     // The team HUD, and the pause menu's controller-lost notice.
     #renderHud(runtime, navigation, pads) {
         const { input } = this;
-        element('runLabel').textContent = 'Local co-op';
-        element('screenTitle').textContent =
-            navigation.screen === 'pause'
-                ? 'Paused'
-                : navigation.screen === 'play'
-                  ? 'Local co-op'
-                  : element('screenTitle').textContent;
+        setText(element('runLabel'), 'Local co-op');
+        if (navigation.screen === 'pause') setText(element('screenTitle'), 'Paused');
+        else if (navigation.screen === 'play') setText(element('screenTitle'), 'Local co-op');
         const players = runtime.coopPlayers();
         players.forEach((p, i) => {
             const status = p.alive
@@ -167,13 +170,13 @@ class CoopScreen {
                   : ' · ELIMINATED';
             const text = `P${i + 1} · ${p.lives} LIVES${status}\n${p.score} · ×${p.multiplier}\nLASER ${p.charging ? 'CHARGING' : p.laserMs ? `${(p.laserMs / 1000).toFixed(1)}s` : 'READY'} · SHIELD ${p.shield}\nMULTI ${(p.multishotMs / 1000).toFixed(1)}s · 2× ${(p.stats.doubleFireMs / 1000).toFixed(1)}s`;
             setText(element('coopHud' + i), text);
-            element('reconnectDevice' + i).value = input.devices[i];
+            setProp(element('reconnectDevice' + i), 'value', input.devices[i]);
         });
         setText(element('coopTeamScore'), `TEAM ${players[0].teamScore}`);
         setText(element('coopWave'), `WAVE ${players[0].scene[S.WAVE]}`);
         setText(element('coopRules'), `FRIENDLY FIRE ${runtime.coop.friendlyFire ? 'ON' : 'OFF'}`);
         if (navigation.screen === 'pause') {
-            element('resume').disabled = !input.valid(pads);
+            setProp(element('resume'), 'disabled', !input.valid(pads));
             setText(
                 element('pauseSettingsHint'),
                 !input.valid(pads)

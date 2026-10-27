@@ -9,8 +9,8 @@ import { WIDTH, HEIGHT } from './constants.mjs';
 //   backgrounds/region-painters.mjs one painter per region
 import { REGIONS, RegionTimeline } from './regions.mjs';
 import { BUILDERS } from './backgrounds/region-painters.mjs';
-import { rand } from './backgrounds/raster.mjs';
-import { tile, drawWorld } from './backgrounds/scenery.mjs';
+import { rand, canvasOf } from './backgrounds/raster.mjs';
+import { tile, tileX, drawWorld } from './backgrounds/scenery.mjs';
 
 export { WIDTH, HEIGHT };
 
@@ -41,12 +41,14 @@ export class Backgrounds {
         this.fightMix = 0;
         this.fightPick = null;
         this.fightTime = null;
+        this.baked = null; // the sky and star layers of the current region, pre-composited
     }
     // Sprites arrive after the game art loads; regions built earlier are rebuilt.
     setWorlds(worlds) {
         this.worlds = worlds;
         this.built.clear();
         this.failed.clear();
+        this.baked = null;
     }
     setReduced(value) {
         this.reduced = value;
@@ -86,13 +88,34 @@ export class Backgrounds {
             ctx.fillRect(0, 0, WIDTH, HEIGHT);
             return;
         }
-        ctx.drawImage(art.back, 0, 0);
-        tile(ctx, art.stars[0], motion * time * 0.0016);
-        tile(ctx, art.stars[1], motion * time * 0.004);
+        if (extra.bake)
+            ctx.drawImage(this.sky(art, motion * time * 0.0016, motion * time * 0.004), 0, 0);
+        else {
+            ctx.drawImage(art.back, 0, 0);
+            tile(ctx, art.stars[0], motion * time * 0.0016);
+            tile(ctx, art.stars[1], motion * time * 0.004);
+        }
         ctx.save();
         ctx.translate(extra.offsetX || 0, extra.offsetY || 0);
         art.paint(ctx, time, motion, extra);
         ctx.restore();
+    }
+    // The sky and both star layers as one canvas. The stars drift a whole pixel only every few
+    // hundred milliseconds, so the same bake serves many frames; a change of region or of either
+    // layer's pixel offset rebuilds it. Only used outside a transition, where the layers draw
+    // opaque and unblended, so the bake is pixel-identical to drawing them one by one.
+    sky(art, farOffset, nearOffset) {
+        const far = tileX(farOffset),
+            near = tileX(nearOffset);
+        const bake = this.baked;
+        if (bake && bake.art === art && bake.far === far && bake.near === near) return bake.canvas;
+        // `back` is opaque, so the previous bake's canvas is simply drawn over.
+        const { canvas, ctx } = bake ?? canvasOf(WIDTH, HEIGHT);
+        ctx.drawImage(art.back, 0, 0);
+        tile(ctx, art.stars[0], farOffset);
+        tile(ctx, art.stars[1], nearOffset);
+        this.baked = { art, far, near, canvas, ctx };
+        return canvas;
     }
     // Draws the scene for the current region and any transition in progress.
     draw(ctx, { time, wave, run, practice, dim, hold = false, fight = null }) {
@@ -101,7 +124,7 @@ export class Backgrounds {
         const index = lines.index;
         this.preload(index + 1);
         const move = lines.progress(time);
-        if (!move) this.paintRegion(ctx, index, time);
+        if (!move) this.paintRegion(ctx, index, time, { bake: true });
         else {
             const { from, to, e, gesture } = move;
             if (gesture === 'orbital-pass') {

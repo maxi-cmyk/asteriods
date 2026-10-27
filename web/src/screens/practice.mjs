@@ -1,5 +1,5 @@
 import { S } from '../runtime/scene-layout.mjs';
-import { element } from '../app/dom.mjs';
+import { element, setData } from '../app/dom.mjs';
 export function renderPractice({ scene, navigation, runtime, update, practiceButton, fitCanvas }) {
     const practice = !!scene[S.PRACTICE];
     const title =
@@ -18,7 +18,8 @@ export function renderPractice({ scene, navigation, runtime, update, practiceBut
                       : 'Solo flight';
     if (['play', 'pause'].includes(navigation.screen)) {
         update(element('screenTitle'), title);
-        document.title = `${title} · Asteroids`;
+        const heading = `${title} · Asteroids`;
+        if (document.title !== heading) document.title = heading;
     }
     update(
         element('runLabel'),
@@ -27,13 +28,15 @@ export function renderPractice({ scene, navigation, runtime, update, practiceBut
             : 'Solo flight',
     );
     // The tools live in the Pause menu; the HUD shows a quiet tag instead of score and lives.
-    document.body.dataset.practice = String(
-        practice || (runtime.state === 'results' && !!runtime.result?.rules.practice),
+    setData(
+        document.body,
+        'practice',
+        String(practice || (runtime.state === 'results' && !!runtime.result?.rules.practice)),
     );
     const tools = element('practiceTools');
     if (tools.hidden === practice) {
         tools.hidden = !practice;
         fitCanvas();
     }
-    practiceButton.disabled = false;
+    if (practiceButton.disabled) practiceButton.disabled = false;
 }

@@ -1,4 +1,5 @@
 import { S } from '../runtime/scene-layout.mjs';
+import { copyScene } from '../runtime/scene-copy.mjs';
 import { MusicPlayer } from './music.mjs';
 import { bossHazards } from '../boss/scene.mjs';
 import { BossSound } from '../boss/sound.mjs';
@@ -7,6 +8,7 @@ export class GameAudio {
         this.settings = settings;
         this.frequency = 0;
         this.previous = null;
+        this.copies = [];
         this.suspended = false;
         this.manifest = null;
         this.launchBuffer = null;
@@ -154,16 +156,18 @@ export class GameAudio {
         const old = this.previous;
         if (this.context) {
             const charging = scene[S.CHARGING] && scene[S.STATE] === 2 && !this.suspended;
-            this.charge.frequency.setTargetAtTime(
-                180 + (scene[S.CHARGE_MS] / 1500) * 900,
-                this.context.currentTime,
-                0.025,
-            );
-            this.chargeGain.gain.setTargetAtTime(
-                charging ? 0.07 : 0,
-                this.context.currentTime,
-                0.025,
-            );
+            const pitch = 180 + (scene[S.CHARGE_MS] / 1500) * 900,
+                level = charging ? 0.07 : 0;
+            // Every automation call adds an event to the audio timeline, so only schedule
+            // when the target moved (not 60 times a second while nothing is charging).
+            if (pitch !== this.chargePitch) {
+                this.charge.frequency.setTargetAtTime(pitch, this.context.currentTime, 0.025);
+                this.chargePitch = pitch;
+            }
+            if (level !== this.chargeLevel) {
+                this.chargeGain.gain.setTargetAtTime(level, this.context.currentTime, 0.025);
+                this.chargeLevel = level;
+            }
         }
         if (old && scene[S.GAME_MS] >= old[S.GAME_MS] && scene[S.STATE] === 2) {
             if (scene[S.BEAM_MS] > old[S.BEAM_MS]) this.cue('discharge');
@@ -187,12 +191,15 @@ export class GameAudio {
                 }
             }
         }
-        this.previous = new Float32Array(scene);
+        this.previous = copyScene(this.copies, scene, old);
     }
     suspend(value) {
         if (value) this.stopWarp();
         this.suspended = value;
         this.apply();
-        if (value && this.context) this.chargeGain.gain.setValueAtTime(0, this.context.currentTime);
+        if (value && this.context) {
+            this.chargeGain.gain.setValueAtTime(0, this.context.currentTime);
+            this.chargeLevel = 0;
+        }
     }
 }

@@ -7,7 +7,7 @@ import { renderRecordsScreen } from '../screens/records.mjs';
 import { renderHomeScreen } from '../screens/home.mjs';
 import { accuracyText } from '../state/records.mjs';
 import { MusicDirector } from '../audio/soundtrack.mjs';
-import { element, setText } from './dom.mjs';
+import { element, setAttr, setText } from './dom.mjs';
 
 const HUD_IDS = [
     'lives',
@@ -36,8 +36,8 @@ export class Presenter {
         const scene = runtime.scene();
         if (['play', 'pause'].includes(navigation.screen) && runtime.state !== 'results') {
             app.renderer.hulls = session.hulls();
-            app.renderer.render(scene, session.players());
-        }
+            app.renderer.renderIfChanged(scene, session.players());
+        } else app.renderer?.gate.invalidate();
         app.bossUnlocks.track(scene);
         app.bossUi.render(
             scene,
@@ -69,15 +69,18 @@ export class Presenter {
         });
         const result = runtime.result;
         const showResults = runtime.state === 'results';
-        this.#liveStats(runtime, update);
-        renderRecordsScreen({
-            runtime,
-            resetRecordsArmed: app.recordsActions.armed,
-            resetProfile: app.recordsActions.profile,
-            disarmRecordsReset: app.recordsActions.disarmRecordsReset,
-            bossArt: app.renderer?.bossArt,
-            update,
-        });
+        if (['play', 'pause'].includes(navigation.screen)) this.#liveStats(runtime, update);
+        // Records reads storage and diffs a lot of DOM; nobody sees it off its own screen, and
+        // entering the screen redraws once (screen-router calls draw()).
+        if (navigation.screen === 'records')
+            renderRecordsScreen({
+                runtime,
+                resetRecordsArmed: app.recordsActions.armed,
+                resetProfile: app.recordsActions.profile,
+                disarmRecordsReset: app.recordsActions.disarmRecordsReset,
+                bossArt: app.renderer?.bossArt,
+                update,
+            });
         renderResultsScreen({
             results: element('runSummary'),
             showResults,
@@ -132,9 +135,9 @@ export class Presenter {
             element('doubleFireStatus'),
             stats.doubleFireMs ? `${(stats.doubleFireMs / 1000).toFixed(1)}s` : 'INACTIVE',
         );
-        element('doubleFireStatus')
-            .closest('.ability')
-            ?.setAttribute('data-state', stats.doubleFireMs ? 'active' : 'empty');
+        this.doubleFireCard ??= element('doubleFireStatus').closest('.ability');
+        if (this.doubleFireCard)
+            setAttr(this.doubleFireCard, 'data-state', stats.doubleFireMs ? 'active' : 'empty');
         update(element('liveCps'), String(stats.cps));
         update(element('liveAccuracy'), accuracyText(stats.hits, stats.spawned));
         update(element('liveChain'), String(stats.longestChain));

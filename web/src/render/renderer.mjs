@@ -6,6 +6,7 @@ import { bossShake } from './fx.mjs';
 import { BossArt } from '../boss/art.mjs';
 import { BossLayer } from '../boss/render.mjs';
 import { PixelCanvas } from './pixel-canvas.mjs';
+import { FrameGate } from './frame-gate.mjs';
 import { SceneObserver } from './scene-observer.mjs';
 import {
     RockLayer,
@@ -49,6 +50,7 @@ export class PixelRenderer {
         this.art = art;
         this.px = new PixelCanvas(this.context, art);
         this.observer = new SceneObserver();
+        this.gate = new FrameGate();
         this.shake = 0.5; // screen-shake strength, 0-1, from settings
         this.title = new TitleScreen();
         this.summary = new SummaryScreen();
@@ -111,6 +113,19 @@ export class PixelRenderer {
                     ? { kind: scene[BOSS_AT + BOSS.KIND], tier: scene[BOSS_AT + BOSS.TIER] }
                     : null,
         });
+    }
+    // Everything besides the scene that changes what render() paints.
+    #settingsKey() {
+        const { backgrounds } = this;
+        return `${this.shake}|${backgrounds.motion}|${backgrounds.brightness}|${this.reduced}|${this.calm}|${this.hulls.join()}|${this.bossArt.version}`;
+    }
+    // render() for the live loop: the same pixels, but only when the scene or a setting moved
+    // since the last call. Repeat calls between engine ticks cost a comparison, not a repaint.
+    renderIfChanged(scene, players = null) {
+        const scenes = players ? [scene, ...players.map((p) => p.scene)] : [scene];
+        if (!this.gate.changed(this.#settingsKey(), scenes)) return false;
+        this.render(scene, players);
+        return true;
     }
     render(scene, players = null) {
         this.observer.observe(scene);

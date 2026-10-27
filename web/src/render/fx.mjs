@@ -36,11 +36,14 @@ function blob(rgb, radius) {
 export function glow(ctx, x, y, radius, rgb, alpha = 1) {
     if (alpha <= 0) return;
     const canvas = blob(rgb, radius);
-    ctx.save();
+    // Only the blend mode and alpha change, so restore those instead of the whole state stack.
+    const mode = ctx.globalCompositeOperation,
+        previous = ctx.globalAlpha;
     ctx.globalCompositeOperation = 'lighter';
     ctx.globalAlpha = Math.min(1, alpha);
     ctx.drawImage(canvas, Math.round(x) - radius - 1, Math.round(y) - radius - 1);
-    ctx.restore();
+    ctx.globalCompositeOperation = mode;
+    ctx.globalAlpha = previous;
 }
 
 // Blocky glow for bosses: concentric 4 px steps in flat colour, never a gradient,

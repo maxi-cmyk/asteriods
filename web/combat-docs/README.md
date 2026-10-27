@@ -1,6 +1,6 @@
 # Combat engine internals
 
-Low-level reference for how combat works in the C++ engine. `../COMBAT.md` is the player-facing
+Reference for how combat works in the C++ engine. `../COMBAT.md` is the player-facing
 rulebook (what the rules are); these files say **which function does it, in what order, with what
 numbers**. Source of truth is always the code; every file names the functions it describes.
 

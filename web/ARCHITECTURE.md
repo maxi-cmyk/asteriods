@@ -73,6 +73,14 @@ players, effects, boss finale, cues) or a full-canvas screen. `SceneObserver` co
 consecutive scenes to create explosions and the boss finale; `PixelCanvas` draws sprites,
 bitmap text, boxes and rays.
 
+The live loop calls `renderIfChanged`, not `render`: the engine ticks at 50 Hz, so on a faster
+display most frames carry the same scene, and `FrameGate` skips them (it compares the scene,
+and the settings that shape the picture, with the last one drawn). Anything new that changes the
+picture without changing the scene must either go in `PixelRenderer#settingsKey` or call
+`renderer.gate.invalidate()`. While no region transition is running, `Backgrounds` draws the sky
+and star layers from one pre-composited canvas that is rebuilt only when a star layer moves a
+whole pixel.
+
 ## Bosses (src/boss + native/boss)
 
 | Presentation | |

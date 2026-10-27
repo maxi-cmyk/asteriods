@@ -10,7 +10,6 @@
 /.clang-format
 /inspo/
 ./assets
-/docs/
+/docs/nextSteps-2026-10-26.archive.md
 /tools/
 node_modules/
-DESIGN-DECISIONS.md

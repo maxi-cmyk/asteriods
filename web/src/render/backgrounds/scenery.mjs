@@ -23,8 +23,10 @@ export const starLayer = (seed, count, colours, flares = 0) => {
     }
     return r.toCanvas();
 };
+// Where a layer scrolled by `offset` pixels starts; whole pixels only, so it changes rarely.
+export const tileX = (offset) => -Math.floor(((offset % WIDTH) + WIDTH) % WIDTH);
 export const tile = (ctx, layer, offset, alpha = 1) => {
-    const x = -Math.floor(((offset % WIDTH) + WIDTH) % WIDTH);
+    const x = tileX(offset);
     ctx.globalAlpha = alpha;
     ctx.drawImage(layer, x, 0);
     ctx.drawImage(layer, x + WIDTH, 0);

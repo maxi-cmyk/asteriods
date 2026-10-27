@@ -120,7 +120,12 @@ export class MusicPlayer {
                 voice.target > voice.level
                     ? Math.min(voice.target, voice.level + step)
                     : Math.max(voice.target, voice.level - step);
-            voice.node.gain.setTargetAtTime(voice.track.gain * equalPower(voice.level), now, 0.02);
+            const gain = voice.track.gain * equalPower(voice.level);
+            // A voice holding steady (fully in or out) needs no new automation event.
+            if (gain !== voice.applied) {
+                voice.node.gain.setTargetAtTime(gain, now, 0.02);
+                voice.applied = gain;
+            }
         }
         this.voices = this.voices.filter((voice) => {
             const finished = voice.target === 0 && voice.level === 0;
@@ -159,7 +164,11 @@ export class MusicPlayer {
     update(request, enabled, volume, suspended) {
         const now = this.context.currentTime;
         const live = enabled && !suspended;
-        this.bus.gain.setTargetAtTime(live ? volume : 0, now, 0.03);
+        const level = live ? volume : 0;
+        if (level !== this.busLevel) {
+            this.bus.gain.setTargetAtTime(level, now, 0.03);
+            this.busLevel = level;
+        }
         if (!live) {
             this.#pause();
             // Turning music off forgets the request; a pause or a hidden tab keeps its place.

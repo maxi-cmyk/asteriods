@@ -33,6 +33,7 @@ export class BossArt {
         this.sheets = new Map();
         this.flashes = new Map();
         this.chunks = new Map();
+        this.version = 0; // bumps whenever a sheet finishes loading, so a gated redraw picks it up
     }
     // Starts loading a sheet once; failures are remembered so play never waits.
     load(name) {
@@ -45,10 +46,12 @@ export class BossArt {
         ])
             .then(([image, cells]) => {
                 Object.assign(sheet, { image, cells, state: 'ready' });
+                this.version++;
                 return sheet;
             })
             .catch((error) => {
                 sheet.state = 'failed';
+                this.version++;
                 console.warn(`Boss art ${name} unavailable`, error);
                 return sheet;
             });
