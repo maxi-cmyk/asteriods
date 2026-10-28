@@ -45,7 +45,10 @@ coop_load(0)
 
 Wherever two pilots could race (lasers, projectile impacts, pickup contest), the order is
 `(i + coop_tick) % 2`, which alternates who goes first each tick. Respawn and weapon updates run in
-fixed order 0, 1, which is safe because each only touches that pilot's own state. Pickups go to the
+fixed order 0, 1, which is safe because each only touches that pilot's own state. (As an analogy:
+alternating the order is the permutation matrix `[[0, 1], [1, 0]]`, with eigenvalue +1 on the
+team-sum direction `(1, 1)/√2` and −1 on the difference `(1, −1)/√2`; it squares to the identity,
+so over two ticks each pilot goes first exactly once and the antisymmetric part cancels.) Pickups go to the
 **nearest** alive pilot (ties by the alternating order).
 
 ## Shots and impacts — `coop_projectiles`
@@ -60,6 +63,9 @@ Not one bullet at a time per player, but a **global earliest-impact resolution**
    destroyed a rock, **but never to a fragment created this tick**.
 4. Splits are applied after the loop (`split_asteroid(parent)`), and the loop tracks
    `pending_fragments` so a pool without room for both children rejects the hit like solo does.
+
+(Closest approach is the midpoint of the two roots of the ray/circle quadratic and entry time is the
+smaller root; 09 derives it.)
 
 Entry-time (not closest-approach) ordering is deliberate: a friendly ship in front of a farther
 enemy blocks the shot at high speed.

@@ -72,6 +72,12 @@ It proves a fight is **beatable**, measures its length, and drives the fairness 
 speed-run; people take about 1.5× as long. After any attack change, re-run the bot and record the
 new clear times (`nextSteps.md` S0.1).
 
+**Exercise: PCA of the bot's movement.** The bot's `(x, y)` per tick is a cloud of points. Centre it
+(`Xc = X − mean`), form the 2×2 covariance `C = XcᵀXc/(n − 1)`, and take its eigenvectors: the first
+axis is the direction the pilot uses most, and `λ₁/λ₂` says how one-dimensional the dodging is. Do
+the same on bullet impact points on a boss for the aim spread. Predict the axis before you run it.
+(`RunRecorder` stores results only, so log positions from the scene in a test.) Not run.
+
 ## How to add a test for a new attack
 
 1. Use `practiceGame(kind, tier, seed)` and `until(game, …)` to reach the phase (or

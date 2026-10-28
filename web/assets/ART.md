@@ -39,6 +39,14 @@ frame 0. Region ids, wave ranges, transitions and fallback colours are in
 
 - Native grid 480×270, drawn at integer scale with nearest-neighbour filtering.
 - Light comes from the upper left, in every sprite and background.
+- Rotation is by lookup, not by transforming pixels. The ship has 16 aiming cells: the renderer picks
+  `round(atan2(dy, dx)·8/π) mod 16`, the nearest multiple of 22.5° (`layers/players.mjs`), so the
+  drawn nose can be up to 11.25° off the true aim vector. Bullets use the exact aim, so at the 13 px
+  muzzle offset the shot can leave up to `13·sin 11.25° ≈ 2.5 px` off the drawn nose. Rocks use 8
+  frames (multiples of 45°). Rotating a pixel bitmap by an arbitrary `R(θ)` would resample it and
+  break the clean clusters and the fixed light direction, which is presumably why the cells are
+  drawn ahead (ART does not say so). Worlds crossfade between 16 frames, a per-pixel convex blend of
+  two images.
 - Colour is posterised with 4×4 ordered dither; no smoothed gradients except
   additive glows.
 - Layer order, back to front: sky and nebula, far stars, near stars, scenery,

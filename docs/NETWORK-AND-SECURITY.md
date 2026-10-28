@@ -46,6 +46,28 @@ The server program is identical for LAN and Online. Only the deployment differs.
 Reference numbers: tick 50 Hz, snapshot 25 Hz, target under 20 kB/s per client, reconnect
 grace 10 s, interpolation delay about 2 snapshots. Raw scene is 1408 floats (5.6 kB) per tick.
 
+### The maths behind the numbers
+
+- **Bandwidth.** A raw scene is 1408 × 4 B = 5632 B. At 25 Hz that is about 141 kB/s per client, so
+  the 20 kB/s target needs roughly 7× from delta coding and quantisation. A delta `s_k − s_{k−1}` is
+  mostly zeros (inactive pool slots), which is why delta coding suits this data. A low-rank (SVD/PCA)
+  model of the scene stream is the other idea; spawns and despawns are jumps a linear subspace models
+  badly, so it is an experiment, not a plan (`web/combat-docs/12`).
+- **Quantisation error.** A uniform step `q` leaves at most `q/2` error per number, so at most
+  `(q/2)·√1408 ≈ 19·q` in norm if every number were at its worst; in practice positions matter and
+  most of the vector is zero. Choose `q` per field from what the renderer can show (one playfield
+  pixel is the natural ceiling).
+- **Interpolation (N7).** Snapshots arrive every second tick. Drawing at `render time − 2 snapshots`
+  (80 ms) always has two snapshots to blend: `(1 − α)·a + α·b`, `α` the fraction between them. Blend
+  only slots that are active in both snapshots and moved less than a threshold; spawns, despawns and
+  teleports (Lens Imp blink, Warden cloak) must snap. The same rule applies to local interpolation
+  (`web/combat-docs/01`).
+- **Prediction (N9).** The ship has no velocity state: the stick sets the velocity each tick
+  (`web/combat-docs/02`). So predicting your own ship is replaying the unacknowledged inputs on the
+  last acknowledged position, `p ← clamp(p + c·u)`, where the clamp is a projection onto the
+  playfield box. If the server applies the same input sequence the correction is exact; if it
+  differs, snap or blend over a few ticks.
+
 ## 3. Decisions still to make
 
 Recommendations are defaults I would take unless you object.
@@ -118,6 +140,10 @@ Validate every frame before it touches the simulation. Starting limits:
 | Handshake timeout | 5 s |
 
 - [ ] Reject: wrong version, unknown type, non-finite numbers, stick/aim outside [-1, 1], bad `seq`.
+- [ ] Check the **norm**, not only each component: the real range is `‖stick‖ ≤ 1`, and a per-axis
+  check lets `(1, 1)` through (`‖·‖ = √2`). The engine already projects the stick onto the unit disc
+  (`combat_move_ship` divides by `max(1, ‖s‖)`) and normalises aim, so an oversized vector cannot buy
+  extra speed while the server runs the unmodified engine; the norm check is defence in depth.
 - [ ] Never allocate by a client-supplied length; fixed-size binary frames only.
 - [ ] Queue per player capped; late/duplicate frames discarded, never replayed.
 

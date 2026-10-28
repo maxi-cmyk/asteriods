@@ -18,7 +18,7 @@ has no cooldown, heat, overheating, or movement penalty on either version.
 The 12-bullet pool still limits simultaneous projectiles. Full-pool presses
 are consumed without queuing or playing a shoot sound. A 20 ms debounce
 filters mechanical bouncing; both press and release must register.
-Diagonal movement speed is capped at straight-line speed.
+Diagonal movement speed is capped at straight-line speed (the stick vector is divided by its length when that exceeds 1, a projection onto the unit disc, so the corner of the square stick range cannot exceed full speed).
 
 ## Rules
 

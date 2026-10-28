@@ -96,3 +96,49 @@ Notes:
 | `web_coop_start(friendly)` | `coop_begin` (see 11) |
 | `web_menu()` / `web_demo()` | back to menu / autopilot demo |
 | `web_boss_assist(long, calm)` | sets `boss_assist_long` (+30% warnings) and `boss_assist_calm` |
+
+## Ticks, frames and refresh rates
+
+The engine ticks at 50 Hz; the browser draws at the display's rate (60–240 Hz). The two clocks
+never line up, and the maths of that mismatch is short.
+
+**Fixed timestep.** `GameLoop.advance` (`src/app/game-loop.mjs`) adds each frame's delta to an
+accumulator and runs exact 20 ms ticks while it holds at least `TICK_MS`; a delta over 100 ms is
+dropped, so a stall freezes physics instead of fast-forwarding. Because speeds are px per *tick*
+(README), `Δt = 1`, and a free-flying object is the discrete linear system
+`x_{k+1} = A x_k` with the constant integer matrix `[[1, 1], [0, 1]]` on (position, velocity).
+Its powers are `Aⁿ = [[1, n], [0, 1]]`, so position after `n` ticks is `x₀ + n·v` with no stepping
+(more in 04).
+
+**Repaint only on change.** `FrameGate` (`src/render/frame-gate.mjs`) compares the scene floats and
+skips frames that would draw identical pixels. Nothing is interpolated: the screen shows a 50 Hz
+signal sampled at the display rate. Per display refresh `f`, the pattern of "this frame has a new
+tick / this frame doesn't" repeats every `f/gcd(f,50)` frames, i.e. at `gcd(f, 50)` Hz:
+
+| Display | Frames per tick | Pattern repeats every | Frames with no new tick |
+| --- | --- | --- | --- |
+| 50 Hz | 1 | 20 ms | 0 of 1 |
+| 60 Hz | 1.2 | 100 ms (10 Hz) | 1 of 6 |
+| 75 Hz | 1.5 | 40 ms (25 Hz) | 1 of 3 |
+| 100 Hz | 2 | 20 ms | 1 of 2 |
+| 120 Hz | 2.4 | 100 ms (10 Hz) | 7 of 12 |
+| 144 Hz | 2.88 | 500 ms (2 Hz) | 47 of 72 |
+| 240 Hz | 4.8 | 100 ms (10 Hz) | 19 of 24 |
+
+At 60 Hz one frame in six has no tick, so motion advances 1,1,1,1,0,1 ticks per frame. That 10 Hz
+beat is the visible judder; the gate makes the empty frames free to draw but does not smooth them.
+
+**Input is sampled at 50 Hz too.** A press is a rising edge between two samples (02). The browser
+latches `browser_fire_edge` so a tap that comes and goes between two ticks is still seen, but at
+most one press registers per tick, so at most 50 per second. Counting only sampled levels, a press
+needs a low sample then a high one, so the Nyquist limit is 25 presses/s. Human tapping is far
+below either, and the 64-slot ring behind `cps` (02) can never fill (64 > 50; this is a consequence
+of the tick rate, not something the code states).
+
+**Exercise: interpolated rendering.** Draw at `x = (1 − α)·x_prev + α·x_curr` with
+`α = accumulator / TICK_MS`, a convex combination of two scenes (linear in the scene vector, 12).
+`PixelRenderer.previous` already exposes the last scene. Rules: it adds up to one tick (20 ms) of
+display latency; slots that *jump* must not be blended (pool slots switching on/off, Lens Imp blink,
+Warden cloak, ring wraps), so blend only when the slot was active in both scenes and moved less than
+a threshold; gameplay never reads the blended value, so hit tests stay exact. Extrapolation
+(`x_curr + α·v`) has no extra latency but overshoots when velocity changes.

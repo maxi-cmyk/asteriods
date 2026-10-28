@@ -39,6 +39,24 @@ Read order: 01 → 02 → 03 → 06 → 07 → 08 → 09 for the solo path, then
   `boss_*` boss entry points, `web_*` exported to JS.
 - **Determinism:** randomness comes only from `rock_random_bounded` / `bs_rand`; see
   `../../DESIGN-DECISIONS.md` card 3 for what "same game" requires.
+- **Linear algebra notes** are woven into the file that owns the code, and each is labelled:
+  **In the code** (the engine does exactly this), **Reading** (the code has the structure but never
+  uses the name, e.g. an SVD hiding in an orbit) or **Exercise** (an analysis not implemented).
+  The engine uses no EVD, SVD or PCA at runtime; it is 2-D geometry. Where to find each topic:
+
+| Topic | Where |
+| --- | --- |
+| Norms, dot/cross product, projection onto the unit disc, rotation matrices, aim | [02](02-player-weapons.md#vectors-and-rotation-in-the-weapon-code) |
+| Free flight as a defective shear, reflection, PCA of the difficulty curve | [04](04-asteroids-waves-pickups.md) |
+| Cyclic-shift matrix of attack sequences | [06](06-boss-framework.md) |
+| Rotation matrices and eigenvalues of curving shots | [07](07-boss-projectiles.md#rotation-matrices-in-the-motion-code) |
+| Orthogonal projector, change of basis, EVD of the hazard test | [08](08-boss-hazards-fairness.md#the-geometry-test-as-a-projection) |
+| Swept circle as a quadratic, least squares, SVD ellipse exercise | [09](09-boss-hit-detection.md#the-raycircle-solve-is-a-quadratic-in-a-projection) |
+| SVD of the Warden orbits, Markov exercise | [10](10-boss-fight-scripts.md) |
+| Permutation matrix (co-op ordering) | [11](11-coop-combat.md) |
+| Scene as a vector, affine/homogeneous maps, projection matrices | [12](12-combat-in-the-scene.md#the-scene-as-a-vector-and-the-path-to-pixels) |
+| PCA of bot movement (exercise) | [13](13-testing-combat.md) |
+| Tick vs refresh rate, sampling, interpolation | [01](01-tick-and-states.md#ticks-frames-and-refresh-rates) |
 
 ## One-page call graph (solo, playing)
 

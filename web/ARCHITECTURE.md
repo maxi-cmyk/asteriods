@@ -41,6 +41,8 @@ The engine publishes each frame as one `Float32Array` (1408 floats). Every offse
 those names. No other module may use a bare scene number (a test enforces this). Boss detail
 lives in a block starting at `BOSS_AT`, decoded by [src/boss/scene.mjs](src/boss/scene.mjs).
 Add a field in `scene-layout.mjs`, write it in `scene.h`, read it by name.
+A scene is a point in ℝ¹⁴⁰⁸; snapshot deltas and drawing between two scenes are vector operations
+(`combat-docs/12`).
 
 ## App (src/app)
 
@@ -75,7 +77,10 @@ bitmap text, boxes and rays.
 
 The live loop calls `renderIfChanged`, not `render`: the engine ticks at 50 Hz, so on a faster
 display most frames carry the same scene, and `FrameGate` skips them (it compares the scene,
-and the settings that shape the picture, with the last one drawn). Anything new that changes the
+and the settings that shape the picture, with the last one drawn); nothing is interpolated between
+ticks, and the frames-per-tick pattern per refresh rate is tabulated in `combat-docs/01`. The
+playfield (480 × 270) maps to the screen by a uniform scale, a 16:9 box with pixelated scaling, so
+circles stay circles; screen shake is a translation (`combat-docs/12`). Anything new that changes the
 picture without changing the scene must either go in `PixelRenderer#settingsKey` or call
 `renderer.gate.invalidate()`. While no region transition is running, `Backgrounds` draws the sky
 and star layers from one pre-composited canvas that is rebuilt only when a star layer moves a

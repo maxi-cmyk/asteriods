@@ -87,3 +87,37 @@ both pilots' scenes; only the pilot-owned fields differ.
 
 A remote client needs only these floats to draw the fight. The engine decides, the scene describes;
 the network design (`docs/NETWORK-AND-SECURITY.md`) sends compressed deltas of exactly this data.
+
+## The scene as a vector, and the path to pixels
+
+A scene is a point in ℝ¹⁴⁰⁸ (5.6 kB as `float32`). Two consequences:
+
+- **Delta and interpolation are vector operations.** A snapshot delta is `s_k − s_{k−1}`, mostly zero
+  because most pool slots are inactive; blending two scenes for display is
+  `(1 − α)·s_prev + α·s_curr` (the exercise in 01).
+- **Exercise: SVD of the scene stream.** Stack `T` consecutive scenes into a `T × 1408` matrix and
+  plot its singular values. Expect a quick drop (many inactive zeros), but spawns and despawns are
+  jumps that a low-rank linear subspace models badly, so compare against plain delta coding
+  (`docs/NETWORK-AND-SECURITY.md`). Not run.
+
+**Playfield to screen.** The playfield is 480 × 270 logical pixels (`src/render/constants.mjs`), shown
+in a 16:9 box with `image-rendering: pixelated`, so playfield-to-screen is a uniform scale `s·I`, a
+similarity that keeps angles and circles. A non-uniform `diag(sₓ, s_y)` has singular values `sₓ, s_y`;
+its condition number `sₓ/s_y` is the distortion, and keeping `κ = 1` is what makes a hit *circle*
+draw as a circle. Screen shake is `ctx.translate(0, dy)` (`PixelRenderer.#shake`). Translation is
+not linear in ℝ², so 2-D graphics use homogeneous coordinates `(x, y, 1)`: `setTransform(a, b, c, d,
+e, f)` stores the top two rows of
+
+```
+[ a c e ]          translate(0, dy): [1 0 0 ]     scale(s): [s 0 0]
+[ b d f ]                            [0 1 dy]               [0 s 0]
+[ 0 0 1 ]                            [0 0 1 ]               [0 0 1]
+```
+
+and composition is matrix multiplication, so order matters (`translate ∘ scale ≠ scale ∘ translate`).
+The game uses Canvas 2D and never builds a projection matrix; the equivalent for a WebGL port would
+be the orthographic map to clip space `[−1, 1]²` (y flipped because the playfield's y points down):
+`[[2/W, 0, 0, −1], [0, −2/H, 0, 1], [0, 0, 1, 0], [0, 0, 0, 1]]`, `W = 480`, `H = 270`. It is
+invertible, not the idempotent projector of 08. A perspective projection would add a row that copies
+depth into `w` and divide by it; that divide is the one nonlinear step, which homogeneous
+coordinates let the rest of the pipeline avoid.

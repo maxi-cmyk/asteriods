@@ -135,6 +135,10 @@ Key idioms:
 - Attack sequences are `BossRow`s `{count, id…}` per phase; `bs_seq_pick` cycles
   `(seq − 1) % total`. **Tier ≥ 1** appends the next phase's last attack to each row.
 - `bs_rest_scaled`: tier ≥ 1 → ×0.85; tier ≥ 2 in the frenzy → ×0.7.
+- The fixed rows are a cycle: `(seq − 1) % total` is the cyclic-shift permutation matrix `C_n`, whose
+  eigenvalues are the `n`-th roots of unity (eigenvectors are Fourier modes), so a boss's pattern has
+  a period of `n` attacks. Where picks are random (Warden, 10) the transition matrix is no longer a
+  permutation and has a stationary distribution instead.
 - `bs_density(n)`: tier ≥ 2 → `(5n + 3)/4` (×1.25 projectile counts).
 
 ## Defeat (`bs_defeat`, in 09)

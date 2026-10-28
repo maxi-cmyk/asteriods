@@ -151,6 +151,25 @@ p3 adds `PULSE`.
 `{a,b,rotation}` = `(138,78,.5) (152,96,2.2) (124,70,4.1) (106,60,3.2)`. Each star fires one needle
 (speed 2.2, after a 500 ms aim line) every 4000 ms, staggered 1000 ms apart.
 
+**Orbit maths (SVD reading).** `bs_star_pos` places star `i` at
+`boss + R(rot)·diag(a, b)·(cos t, sin t)`, so the orbit map is `M = R(rot)·diag(a, b)`. That is
+already a singular value decomposition: `U = R(rot)`, `Σ = diag(a, b)`, `V = I`, and `(cos t, sin t)`
+is the unit circle that `M` stretches into the orbit. The singular values are the semi-axes, the
+eigenvalues of `MMᵀ` are `a²` and `b²`, `|det M| = ab` gives the area `π·ab`, and `κ = a/b` is the
+squash. (`rot` is an angle: values over π duplicate the ellipse at `rot − π`. The phase is
+`clock·(100/a) + 2·rot`, so larger orbits turn more slowly and the speed along each long axis is the
+same for all four stars.)
+
+| Star | `σ₁ = a` | `σ₂ = b` | `rot` (rad) | `κ = a/b` | eigenvalues of `MMᵀ` | orbit area |
+| --- | --- | --- | --- | --- | --- | --- |
+| 0 | 138 | 78 | 0.5 | 1.77 | 19044, 6084 | 33 816 px² |
+| 1 | 152 | 96 | 2.2 | 1.58 | 23104, 9216 | 45 842 px² |
+| 2 | 124 | 70 | 4.1 | 1.77 | 15376, 4900 | 27 269 px² |
+| 3 | 106 | 60 | 3.2 | 1.77 | 11236, 3600 | 19 981 px² |
+
+(Checked with `numpy.linalg.svd` on `M` and `eigvalsh` on `MMᵀ`.) The same decomposition would turn
+these orbits into exact elliptical hit shapes; see the exercise in 09.
+
 **Core window:** every 8 s the core is hittable for 2000 ms (`stamp[1]`, `aux[1]` = halo). Circles:
 star circles always (flags 3, r9); outside the window a `BC_BLOCK` r100 plus a laser-only core r46;
 inside the window (or with all stars dead) the core r46 flags 3. A window that would land during a
@@ -171,11 +190,17 @@ other bosses run through their own `*_run` function with the Warden's position.
 
 | New attack | Detail |
 | --- | --- |
-| SPIRAL | tell 700; 15 steps 160 apart, each fires 3 pellets (speed 1.7) from a ring of radius 124, angles `k·0.30 + j·2π/3`, skipping those pointing at the right wall |
+| SPIRAL | tell 700; 15 steps 160 apart, each fires 3 pellets (speed 1.7) from a ring of radius 124, angles `k·0.30 + j·2π/3`, skipping those pointing at the right wall (`cosf(a) > .5`: a dot product `u·e_x > 0.5`, i.e. within 60° of straight right) |
 | CURVE | aim line 500; `n=5` `SF_CURVE` shots 300 apart, speed 2.0, `turn ±0.012`/tick away from the core; initial angle pre-compensated so they arrive near the pilot. Calm assist: turn 0 |
 | ACCRETE | per alive pilot a closing ring at their position (radius 96 shrinking 6% per pass to a floor of 48, collapsing at 0.9/tick to 32; half-gap 0.52; gap spin 0.011; warn 900) |
 | PULL | tell 1200 then `HK_PULL` live 1500, 0.8 px/tick toward the core; used **once** (`stamp[4]`); never under calm assist |
 | BURST / JETS / NOVA | Ringwarden burst / Cinderforge jets / nova re-cut for the Warden |
+
+**Exercise (Markov view).** From phase 3 every even attack is drawn uniformly from `WARDEN_POOL`, so
+attack-to-attack behaviour is a Markov chain with a transition matrix `T` whose rows sum to 1. The
+long-run attack frequencies are its stationary distribution, the left eigenvector of `T` with
+`λ = 1`. Build `T` from the sequence rows and the pool, compute that eigenvector, and compare with
+attack counts from many seeded runs (13). Not done here.
 
 **Lens Imp** (mini): `{380,135,k6,1,–,1000}`; core r30. Alternates `CURVE1` (one curving shot, aim
 line 500) and `BLINK` (900 ms tell, then reappears at another height ≥ 50 px away); while blinking it

@@ -49,6 +49,12 @@ Deeper docs: network + security `docs/NETWORK-AND-SECURITY.md`; combat engine in
 - **Gap 1:** `sin/cos` come from the browser, so two browsers can differ in the last bit.
 - **Gap 2:** randomness is unseeded unless the host injects a seed (tests and the server do).
 - **Consequence:** never expect two browsers to simulate identically. This drives card 6.
+- **How big is gap 1?** `sin/cos` feed the rotation matrices of curving shots (`v ← R(turn)·v`,
+  `web/combat-docs/07`). A one-ulp difference in the angle grows only *linearly* in ticks (`n·δθ`,
+  not exponentially, because a rotation has `|λ| = 1`), so a curving shot drifts by a tiny fraction
+  of a pixel. The danger is not that growth but the thresholds: a hit test is a discontinuous
+  comparison, so a tiny difference can flip a hit into a miss (our reasoning, not measured), which
+  is why the server decides (card 6).
 
 ## 4. The scene (the engine-to-UI contract) [built]
 
@@ -60,6 +66,9 @@ Deeper docs: network + security `docs/NETWORK-AND-SECURITY.md`; combat engine in
 - **To add a field:** add to the layout file, write it in `native/scene.h`, read it by name, review
   the golden diff. Never reuse or renumber a slot.
 - **Payoff:** a network client only needs scenes to draw the game (card 6).
+- **Shape:** a scene is a vector in ℝ¹⁴⁰⁸. A snapshot delta is a vector difference (mostly zeros,
+  since most pool slots are inactive) and drawing between two snapshots is a convex blend
+  `(1 − α)·a + α·b`. See `web/combat-docs/12` and `docs/NETWORK-AND-SECURITY.md` §2.
 
 ## 5. Browser code layout and co-op [built]
 

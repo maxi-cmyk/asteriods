@@ -51,6 +51,55 @@ multiply by 3.75 for the web):
 
 `pattern_level`: 0 below wave 4, 1 from 4, 2 from 8, 3 from 12. Population is floored.
 
+#### PCA of the curve: four columns, one dial
+
+`core_difficulty_for_wave` blends two anchor rows: `row(w) = (1 − p)·start + p·end`, so the table is
+a piecewise-linear curve through ℝ⁴ with coordinates *(speed, spawn gap, large rocks, max drift)*.
+Stack waves 1–24 into a 24 × 4 matrix `X` and run PCA (this is analysis of the table, not something
+the engine does):
+
+```
+Z  = (X − column means) / column std       standardise: the columns have different units
+C  = Zᵀ Z / (n − 1)                        the correlation matrix, symmetric PSD
+C  = V Λ Vᵀ   (EVD)     or   Z = U Σ Vᵀ   (SVD, λᵢ = σᵢ² / (n − 1))
+```
+
+| PC | Eigenvalue | Variance explained | Loadings (speed, gap, rocks, drift) |
+| --- | --- | --- | --- |
+| 1 | 3.919 | **97.96%** | +0.50, −0.50, +0.49, +0.50 |
+| 2 | 0.071 | 1.78% | +0.20, −0.42, −0.86, +0.22 |
+| 3 | 0.009 | 0.22% | +0.48, +0.76, −0.15, +0.42 |
+| 4 | 0.002 | 0.04% | +0.69, −0.04, −0.00, −0.73 |
+
+- **PC1 is "difficulty".** All four loadings have magnitude ≈ 0.5, with the spawn gap opposite:
+  faster, more drift, more rocks, *shorter* gaps. Its score correlates 0.967 with the wave number.
+- A rank-1 model of the table has **14%** relative Frobenius error (`√(1 − 0.9796)`), the Eckart–Young
+  best rank-1 fit; singular values are `[9.49, 1.28, 0.45, 0.20]`.
+- **PC2 is the rock count**: the only column that moves in integer steps (the blend floors it). The
+  kinks in the curve live in the 1.8% PC1 cannot see.
+- Use: to make the game 10% harder, move along PC1 rather than tuning four numbers by feel.
+- Caveats: PCA only finds straight-line structure and ranks directions by variance, not importance;
+  standardising changes the answer; the 24 waves lie on one curve, so the percentages describe this
+  table, not a statistical estimate.
+
+To reproduce (anchors are the table above; run with Python and NumPy):
+
+```python
+import numpy as np
+A = [(1,.34,2000,3,.02),(3,.40,1800,4,.03),(4,.42,1700,4,.04),(7,.55,1400,5,.06),
+     (8,.57,1350,5,.07),(12,.72,1100,6,.09),(13,.74,1050,6,.10),(24,.85,900,8,.12)]
+def row(w):                                     # mirrors core_difficulty_for_wave
+    u = 1
+    while u < len(A) - 1 and w > A[u][0]: u += 1
+    s, e = A[u-1], A[u]; p = min(1, (w - s[0]) / (e[0] - s[0]))
+    return [s[1] + p*(e[1]-s[1]), s[2] - int(p*(s[2]-e[2])), s[3] + int(p*(e[3]-s[3])), s[4] + p*(e[4]-s[4])]
+X = np.array([row(w) for w in range(1, 25)])
+Z = (X - X.mean(0)) / X.std(0, ddof=1)
+lam, V = np.linalg.eigh(np.corrcoef(X.T))      # ascending; reverse for PC1 first
+print(lam[::-1], lam[::-1] / lam.sum())
+print(np.linalg.svd(Z, compute_uv=False))       # sigma; sigma**2/(n-1) == lam
+```
+
 ### Spawning (`spawn_pending_asteroid`)
 
 Spawns only when `now ≥ next_spawn_ms`, at least `SPAWN_MIN_FREE_SLOTS = 3` slots are free, and
@@ -68,6 +117,14 @@ point). Otherwise it retries every 100 ms (`SPAWN_RETRY_MS`) — pending rocks a
 
 `move_asteroid`: add velocity, spin, bounce off top/bottom (clamped with 1 px gap, `vy` flips),
 deactivate once `x + radius < 0` (no penalty for escaped rocks).
+
+Eigen-reading of the motion: free flight is the shear `A = [[1, 1], [0, 1]]` on (position, velocity).
+It has eigenvalue 1 twice but only one eigenvector `(1, 0)`, so it is *defective*: no EVD exists
+(it is a Jordan block). That is why position grows **linearly** with the tick count
+(`Aⁿ = [[1, n], [0, 1]]`) instead of exponentially, and why `x₀ + n·v` predicts a rock's position
+without stepping. The bounce is the reflection `diag(1, −1)`: eigenvalue +1 along the wall (`vx`
+untouched), −1 along its normal (`vy` flips). Every straight shot, pickup and needle moves the same
+way.
 
 ## Bullet vs rock
 

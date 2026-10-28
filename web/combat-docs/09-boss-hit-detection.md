@@ -49,6 +49,35 @@ for each active bullet:
     bs_build_circles()                        // parts may have changed
 ```
 
+#### The ray/circle solve is a quadratic in a projection
+
+With `o = p₀ − centre` and `d = p₁ − p₀`, the segment is `o + t·d`, `t ∈ [0, 1]`, and it touches the
+circle where `‖o + t·d‖² = r²`:
+
+```
+‖d‖² t² + 2 (o·d) t + (‖o‖² − r²) = 0
+```
+
+`bs_first_circle` and `bs_entry` use `projection = o·d`, `outside = ‖o‖² − r²`,
+`disc = projection² − ‖d‖²·outside`, and take `t = (−projection − √disc)/‖d‖²`.
+
+- The midpoint of the two roots, `t* = −(o·d)/‖d‖²`, minimises `‖o + t·d‖²`. Setting the derivative
+  to zero gives the normal equation `dᵀ(o + t·d) = 0`: it is the projection of `−o` onto `d`, the
+  point of **closest approach** (a least-squares fit).
+- The code takes the **entry** root: closest approach minus half the chord. 11 says entry order is
+  deliberate (a friendly ship in front blocks a shot at something behind it); closest-approach order
+  would sometimes pick the wrong target.
+- `outside ≤ 0` means the segment starts inside, so `t = 0`; `disc < 0` means the line misses.
+- An invertible affine map `x ↦ Mx` sends the segment to `Mo + t·(Md)`, **the same `t`**. The code
+  does not use this, but it enables an exercise.
+
+**Exercise: an exact elliptical target.** Hit targets are circles (`BossCircle`); the four-circle
+Bastion body approximates a long hull. For an ellipse `{c + M·u : ‖u‖ = 1}` with SVD `M = UΣVᵀ`:
+map both segment endpoints by `M⁻¹ = VΣ⁻¹Uᵀ`, run `bs_first_circle` unchanged with `r = 1`, and the
+returned `t` is already the `t` in playfield coordinates. Cost: one 2×2 multiply per endpoint. The
+condition number `κ = σ₁/σ₂` matters: the Warden orbits in 10 have `κ < 1.8`, which is harmless in
+`float32`; an ellipse with `κ ≫ 100` would amplify rounding error.
+
 ## `bs_circle_hit(index, owner, damage, laser)`
 
 ```

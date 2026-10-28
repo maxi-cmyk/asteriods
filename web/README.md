@@ -176,6 +176,12 @@ with the same rejection sampling; individual runs differ from the ESP32.
   `1 / response`. Higher responds sooner; full-stick speed is unchanged.
   Keyboard/D-pad movement is digital. Diagonals remain bounded and precision
   still halves movement speed. Mouse position sets aim rather than movement.
+  Maths: the deadzone is *radial* (`radial()` in `src/input/controls.mjs`). It keeps the stick's
+  direction and remaps its length, `(min(1, ‖v‖) − d)/(1 − d)`, so `[d, 1] → [0, 1]`; a per-axis
+  deadzone would clip a square and bend diagonals towards the axes. The response curve is
+  `v ↦ v·‖v‖^(1/s − 1)`. Both change only the magnitude, and `min(1, ‖v‖)` is a projection onto the
+  unit disc. The aim-response limit clamps the angle difference per tick (`atan2(sin Δ, cos Δ)`
+  wraps it); see `combat-docs/02`.
 - Test your controls shows both sticks' raw/adjusted vectors and the deadzone.
   Sample stick drift measures two hands-off seconds, takes the largest radial
   deviation across both sticks, and adds three percentage points of margin

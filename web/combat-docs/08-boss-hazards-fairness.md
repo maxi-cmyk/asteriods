@@ -35,6 +35,28 @@ d, e`, and timers `warn_total`, `warn_left`, `live_left` (ms).
 - **Lane / beam / arm:** rotate the pilot into the hazard frame (`along`, `across`); hit when
   `0 ≤ along ≤ length` and `|across| < half-width + r`.
 - **Pool:** `dist² < (c + r)²`.
+
+#### The geometry test as a projection
+
+For a unit vector `u`, the orthogonal projector onto `span(u)` is `P = uuᵀ`: `Px = (u·x)u`, `P² = P`,
+`Pᵀ = P`, rank 1, eigenvalues `{1, 0}`. `bs_hazard_hits` computes, with `d = p − origin`:
+
+```
+[along ]   [ ca  sa ] [dx]       ca, sa = cos h.a, sin h.a
+[across] = [−sa  ca ] [dy]  =  R(−a)·d
+```
+
+- `along = d·u` is the scalar projection onto the hazard axis; `across = d×u` is the signed length of
+  the rejected part `(I − P)d`.
+- In that frame the lane is an **axis-aligned box**, so the test is two interval checks. The rotation
+  is a change of basis that makes the problem trivial, which is what an eigenbasis does: it is the
+  eigenbasis of the hazard's projector, `P = R(a)·diag(1, 0)·R(a)ᵀ`, with `along` on the `λ = 1` axis
+  and `across` on the `λ = 0` axis.
+- The lane ends use the ship's centre; only the sides add the ship radius `r`.
+- The ring is the exception: it needs `‖d‖` and the angle of `d` relative to the gap centre
+  (`bs_atan2`, `bs_wrap`), i.e. polar coordinates, which are nonlinear.
+- Naming trap: an orthogonal projector is idempotent and singular. A renderer's "projection matrix"
+  (12) is generally invertible and not idempotent.
 - **Ring:** `|dist − b| < 4 + 0.6 r` **and** the angle to the pilot differs from the gap centre by at
   least `c` (inside `c` is the safe gap).
 

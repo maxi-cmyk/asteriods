@@ -36,6 +36,47 @@ combat_primary_event()
   shots fly about 8.6° off-axis. With fewer than 3 free slots it fires the single straight shot
   (atomic allocation, no partial volleys).
 
+## Vectors and rotation in the weapon code
+
+Notation: `‖v‖` is the Euclidean norm, `u·v` the dot product, `u×v = u_x v_y − u_y v_x` the 2-D cross
+product (a scalar, `det[u v]`), `R(θ) = [[cos θ, −sin θ], [sin θ, cos θ]]`. The y axis points down,
+so positive angles turn clockwise on screen; the algebra is unchanged.
+
+**Norms and the unit disc.**
+- Every circle test compares squared norms, `‖d‖² < (r₁ + r₂)²`, never the root: `x ↦ x²` is
+  monotone for `x ≥ 0`, so the order is the same and the `sqrt` is saved.
+- Aim is normalised only above the deadzone (`‖aim‖ > 0.25`): a zero vector has no direction, and the
+  threshold also filters stick noise.
+- `combat_move_ship` divides the stick by `max(1, ‖s‖)`. Inside the unit disc nothing changes;
+  outside, the vector is pulled radially to the rim. That is the closest-point *projection onto a
+  convex set*; it is nonlinear, so it is not a matrix. It is why a full diagonal (`‖(1,1)‖ = √2`) is
+  not 41% faster. The JS side does the same before the engine sees the stick (`radial` in
+  `src/input/controls.mjs`, see `../README.md` Flight improvements).
+
+**Aim is the column of a rotation.** `combat_fire_volley` multiplies each new bullet's velocity by
+
+```
+[vx']   [ax  −ay] [vx]          (ax, ay) = combat.aim = (cos φ, sin φ), unit length
+[vy'] = [ay   ax] [vy]          i.e. R(φ), built with no sin/cos call
+```
+
+- The straight shot is `(18.75, 0)`; the multishot side shots are `(√(18.75² − 2.8125²), ±2.8125)`,
+  which is `18.75 · R(±θ)e_x` with `θ = asin(2.8125/18.75) ≈ 8.63°` (the "about 8.6°" above).
+- `R(φ)R(±θ) = R(φ ± θ)`, so the fan keeps its shape at every aim, and `RᵀR = I` gives
+  `‖Rv‖ = ‖v‖`: all three bullets keep speed 18.75 whatever the aim, with no extra test.
+- This is a true rotation only because the aim has length 1. Left un-normalised, the same formula
+  would also scale bullet speed by `‖aim‖`; the deadzone rule above is what guarantees it.
+
+**Rotating towards a target, with a turn limit.** The aim-response limit in `controls.mjs` clamps the
+angle difference per tick, computed as `atan2(sin(Δ), cos(Δ))` (the angle of `R(Δ)e_x`, which wraps
+into (−π, π]) and then re-derives `aim = (cos, sin)` of the limited angle. The homing missile in 07
+uses the same clamp. Angles live on a circle, and subtracting them is composing rotations.
+
+**Laser as a clamped projection.** For a rock at `d` from the beam origin with direction `u`,
+`along = d·u` and `across = d×u`. Ahead of the origin (`along ≥ 0`) the distance to the beam is
+`|across|`; behind it, `‖d‖`. That is the distance to the closest point of a *ray*,
+`u·max(0, d·u)`. Projections are developed in 08.
+
 ## Bullet motion and collisions
 
 - `bullets_update`: `previous = position; position += velocity`.
@@ -43,7 +84,7 @@ combat_primary_event()
   circle"), so an 18.75 px/tick bullet cannot tunnel through a 6 px rock.
 - Rocks: `find_bullet_hit` picks the **earliest** circle entry on the segment (entry time
   `t ∈ [0,1]`, shots that start inside a circle have `t = 0`).
-- Boss targets use the same maths (`bs_first_circle`, see 09).
+- Boss targets use the same maths (`bs_first_circle`, see 09, which derives the quadratic).
 - Off-screen cleanup: `bullets_check_asteroids` clears bullets with `x ≥ SCREEN_W` or `y` outside;
   `combat_update_playing` clears `x < 0`.
 - Hits call `combat_primary_hit` once per consumed bullet: `combat.hits++` then `combat_award`.

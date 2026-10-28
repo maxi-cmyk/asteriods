@@ -42,6 +42,23 @@ Radius is used for both ship collision (`radius + 7`) and the shootable circle (
 
 Every speed is below the ship's 3.66 so running always works (design rule).
 
+### Rotation matrices in the motion code
+
+- **`SF_CURVE`** does `v ← R(turn)·v` each tick. Since `R(θ)ⁿ = R(nθ)`, the heading turns uniformly
+  and the path is a circle of radius `speed/turn` (arc length per tick over angle per tick). Warden
+  CURVE: `2.0 / 0.012 ≈ 167 px`, about a third of the field width. Calm assist sets `turn = 0`,
+  i.e. `R = I`.
+- **Eigen-reading.** `R(θ)` has eigenvalues `e^{±iθ}`, `|λ| = 1`, and no real eigenvector for
+  `θ ≠ 0, π`: nothing keeps its direction, and speed neither grows nor decays. In `float32` each tick
+  adds relative rounding near `1e-7`, negligible over a shot's life of a few hundred ticks. Angle
+  error from a one-ulp difference in `cos/sin` grows only *linearly* in ticks (`n·δθ`), never
+  exponentially, because `|λ| = 1`; see `../../DESIGN-DECISIONS.md` card 3.
+- **`SF_SINE`** is a straight line plus a scalar times a rotated unit vector: the offset direction is
+  `J·v̂` with `J = R(90°) = [[0, −1], [1, 0]]`, i.e. `x = bx − (dy/‖v‖)·w`, `y = by + (dx/‖v‖)·w`.
+- **`SF_MISSILE`** clamps the heading change per tick to `turn` (the same rule as the player's
+  aim-response limit, 02) and rebuilds the velocity from `cos/sin` of the new heading, which re-pins
+  its speed to 1.4 every tick instead of trusting repeated multiplication.
+
 ## Per-tick update — `bs_shots_update`
 
 For each active shot (index order):
