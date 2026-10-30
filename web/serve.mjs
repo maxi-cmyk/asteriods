@@ -1,8 +1,29 @@
 import { createServer } from 'node:http';
 import { readFile } from 'node:fs/promises';
+import { existsSync } from 'node:fs';
 import { dirname, resolve, extname, sep } from 'node:path';
 import { fileURLToPath } from 'node:url';
-const directory = resolve(dirname(fileURLToPath(import.meta.url)), 'dist');
+import { assembleHtml } from './tools/assemble-html.mjs';
+const root = dirname(fileURLToPath(import.meta.url));
+const directory = resolve(root, 'dist');
+// Browser source is served straight from the working tree, so an edit shows on refresh. Only the
+// compiled WASM (and its generated files) still come from dist/, via `npm run build`.
+const LIVE_DIRS = ['src', 'styles', 'assets', 'dev'].map((name) => resolve(root, name) + sep);
+const LIVE_FILES = ['style.css', 'theme.css'].map((name) => resolve(root, name));
+const inside = (file, base) => file.startsWith(base);
+// Where a request is read from: the page is assembled on demand, the rest is a file on disk.
+function locate(path) {
+    if (path === '/' || path === '/index.html') return { page: true };
+    const live = resolve(root, '.' + path);
+    if (LIVE_DIRS.some((base) => inside(live, base)) || LIVE_FILES.includes(live))
+        return { file: live };
+    // The dev pages sit at the site root; their sources live in dev/.
+    const devPage = resolve(root, 'dev', '.' + path);
+    if (path.endsWith('.html') && inside(devPage, LIVE_DIRS[3]) && existsSync(devPage))
+        return { file: devPage };
+    const built = resolve(directory, '.' + path);
+    return inside(built, directory + sep) ? { file: built } : null;
+}
 const port = Number(process.env.PORT || 4173);
 const types = {
     '.html': 'text/html; charset=utf-8',
@@ -19,16 +40,17 @@ const types = {
 createServer(async (request, response) => {
     try {
         const path = decodeURIComponent(new URL(request.url, 'http://localhost').pathname);
-        const file = resolve(directory, '.' + (path === '/' ? '/index.html' : path));
+        const found = locate(path);
         if (
-            !file.startsWith(directory + sep) ||
-            file.endsWith('/test.wasm') ||
-            file.endsWith('/oled-test.wasm')
+            !found ||
+            found.file?.endsWith('/test.wasm') ||
+            found.file?.endsWith('/oled-test.wasm')
         ) {
             response.writeHead(404).end();
             return;
         }
-        const bytes = await readFile(file);
+        const file = found.page ? 'index.html' : found.file;
+        const bytes = found.page ? Buffer.from(assembleHtml()) : await readFile(file);
         const headers = {
             'Content-Type': types[extname(file)] || 'application/octet-stream',
             'Cache-Control': 'no-store',

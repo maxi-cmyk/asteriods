@@ -1,0 +1,150 @@
+/* ---- Wide windows ------------------------------------------------------------
+   Settings, Mode, Hangar, Records and Developer tools share one rule: type and
+   controls scale with the viewport, and the content sits in a centred column that
+   stops growing at --wide-w, so a big window shows neither tiny text nor an empty
+   right-hand side. (How to Play and the lobby do the same in guide.css.) */
+.utility-view:is(
+    [data-view='settings'],
+    [data-view='mode'],
+    [data-view='hangar'],
+    [data-view='records'],
+    [data-view='developer']
+) {
+    --wide-w: 1500px;
+    --size-label: clamp(18px, 1.3vw, 30px);
+    --size-body: clamp(17px, 1.25vw, 28px);
+    --size-small: clamp(15px, 1.1vw, 24px);
+    --size-menu: clamp(24px, 1.8vw, 40px);
+    padding-inline: max(clamp(18px, 5vw, 64px), calc((100% - var(--wide-w)) / 2));
+}
+.utility-view:is(
+        [data-view='settings'],
+        [data-view='mode'],
+        [data-view='hangar'],
+        [data-view='records'],
+        [data-view='developer']
+    )
+    > h1 {
+    font-size: clamp(32px, 3.4vw, 76px);
+}
+.utility-view[data-view='settings'] #settingsDialog {
+    width: 100%;
+    max-width: none;
+    grid-template-columns: clamp(170px, 18vw, 340px) minmax(0, 1fr);
+}
+
+/* Mode: the two flight cards grow to fill the height instead of floating mid-screen. */
+.utility-view[data-view='mode'] .mode-options {
+    align-content: stretch;
+    grid-auto-rows: minmax(0, 1fr);
+    max-height: clamp(380px, 32vw, 760px);
+    margin-block: auto;
+}
+.utility-view[data-view='mode'] .mode-card canvas {
+    flex: 1 1 0;
+    min-height: 0;
+    height: 0;
+    aspect-ratio: auto;
+    object-fit: cover;
+}
+
+/* Hangar: a bigger preview beside the ship's details. */
+.utility-view[data-view='hangar'] .hangar-stage {
+    grid-template-columns: minmax(0, 1.7fr) minmax(0, 1fr);
+}
+.utility-view[data-view='hangar'] .hangar-bay button canvas {
+    width: clamp(72px, 6vw, 130px);
+}
+
+/* Calibration scales with the window too. */
+#calibration .stick-plots svg {
+    width: min(100%, clamp(140px, 10vw, 230px));
+}
+
+/* ---- Developer tools on the violet theme --------------------------------------- */
+.utility-view[data-view='developer'] {
+    border: 0;
+    background:
+        linear-gradient(#0a0518d9, #0a0518f0),
+        url('../../assets/home-scene.png') center / cover;
+    image-rendering: pixelated;
+}
+.utility-view[data-view='developer']:not([hidden]) {
+    display: flex;
+    flex-direction: column;
+    gap: clamp(10px, 2vh, 20px);
+    overflow: auto;
+    padding-block: clamp(16px, 3.4vh, 36px);
+}
+.utility-view[data-view='developer'] > h1 {
+    margin: 0;
+    color: transparent;
+    background: linear-gradient(#fff4d6 0 40%, #ffbe6e 40% 72%, #e8608c 72%);
+    -webkit-background-clip: text;
+    background-clip: text;
+    -webkit-text-fill-color: transparent;
+    filter: drop-shadow(2px 2px 0 #340e4a);
+    width: max-content;
+    max-width: 100%;
+}
+.utility-view[data-view='developer'] .dev-lede {
+    margin: 0;
+    color: #8a76b0;
+    font-size: var(--size-small);
+}
+.utility-view[data-view='developer'] .dev-tools {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+    gap: clamp(12px, 2vw, 24px);
+    margin: auto 0;
+    padding: 0;
+    list-style: none;
+}
+.utility-view[data-view='developer'] .dev-tools a {
+    display: grid;
+    align-content: center;
+    gap: 8px;
+    min-height: clamp(120px, 14vw, 260px);
+    height: 100%;
+    box-sizing: border-box;
+    padding: clamp(14px, 2vw, 24px);
+    background: #0e0624d9;
+    border: 1px solid #3a2a64;
+    border-top: 3px solid #ffbe6e;
+    color: #cdb6f0;
+    text-decoration: none;
+    transition:
+        border-color 0.12s,
+        box-shadow 0.12s;
+}
+.utility-view[data-view='developer'] .dev-tools a:hover,
+.utility-view[data-view='developer'] .dev-tools a:focus-visible {
+    border-color: #ffbe6e;
+    box-shadow: 0 0 18px #ff785a40;
+    outline: none;
+}
+.utility-view[data-view='developer'] .dev-tools b {
+    color: #ffe9c4;
+    font-family: var(--font-display);
+    font-size: var(--size-menu);
+    font-weight: 400;
+    letter-spacing: 0.04em;
+}
+.utility-view[data-view='developer'] .dev-tools span {
+    color: #8a76b0;
+    font-size: var(--size-small);
+}
+.utility-view[data-view='developer'] #inputDiagnostics {
+    margin: 0;
+    padding: clamp(14px, 2vw, 24px);
+    background: #0e0624d9;
+    border: 1px solid #3a2a64;
+    color: #cdb6f0;
+    font-size: var(--size-small);
+}
+.utility-view[data-view='developer'] #inputDiagnostics strong {
+    color: #ffbe6e;
+    font-family: var(--font-display);
+    font-size: var(--size-label);
+    font-weight: 400;
+}

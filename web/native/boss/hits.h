@@ -39,6 +39,13 @@ static void bs_damage(unsigned owner, unsigned damage) {
     }
     bs_defeat(owner);
 }
+// Every boss leaves one health pickup behind, a mini-boss one time in two. The single pickup slot
+// keeps it to one on screen; practice fights lose no lives, so they drop nothing.
+static void bs_drop_health() {
+    if (boss.practice || (boss.mini && bs_rand(0, 100) >= 50)) return;
+    pickup = {constrain(boss.x, 140.0f, float(SCREEN_W - 24)),
+              constrain(boss.y, 70.0f, 200.0f), PICKUP_HEALTH, true};
+}
 static void bs_defeat(unsigned owner) {
     boss.active = false;
     boss.defeated = game_ms;
@@ -60,6 +67,7 @@ static void bs_defeat(unsigned owner) {
         if (!boss.life_lost) base = base * 3 / 2; // flawless: no life lost in the fight
         boss_award_hook(owner, base);
     }
+    bs_drop_health();
     particles_spawn(boss.x, boss.y);
     sound_play(SFX_ASTEROID_LARGE);
     display_shake(boss.mini ? 1 : 2);

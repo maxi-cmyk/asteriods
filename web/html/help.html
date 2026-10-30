@@ -6,24 +6,41 @@
                 aria-label="How to Play"
             >
                 <h1 tabindex="-1">How to Play</h1>
-                <p>Co-op: P1 is the cyan diamond, P2 the amber square. Three lives each, no revives.</p>
+                <p class="help-lede">Clear each wave, take down the bosses, and keep your lives. In co-op, P1 is the cyan diamond and P2 the amber square: three lives each, no revives.</p>
                 <div class="help-layout">
-                    <section>
+                    <section class="help-controls">
                         <h2>Your controls</h2>
                         <p id="helpDevice"></p>
                         <dl id="helpBindings" class="binding-list"></dl>
                     </section>
-                    <section>
-                        <h2>Flight essentials</h2>
-                        <p>Move, aim, survive each wave. One shot per press. 2× fire doubles your shots for six seconds.</p>
-                        <h2>Laser</h2>
-                        <p>Hold 1.5 s to fire; release early to cancel. 5 s cooldown.</p>
-                        <h2>Shield & precision</h2>
-                        <p>Tap Shield to arm a stored charge. Hold Precision to move slowly.</p>
-                        <button id="helpPractice" class="primary">
-                            Try in Practice
-                        </button>
-                        <p id="helpPaused" hidden>Finish or quit your run before Practice.</p>
-                    </section>
+                    <div class="help-guide">
+                        <section class="help-card" data-tone="flight">
+                            <h2>Flight</h2>
+                            <p>Move, aim, survive each wave. One shot per press.</p>
+                        </section>
+                        <section class="help-card" data-tone="laser">
+                            <h2>Laser</h2>
+                            <p>Hold 1.5 s to fire; release early to cancel. 5 s cooldown.</p>
+                        </section>
+                        <section class="help-card" data-tone="shield">
+                            <h2>Shield &amp; precision</h2>
+                            <p>Tap Shield to arm a stored charge. Hold Precision to move slowly.</p>
+                        </section>
+                        <section class="help-card help-pickups" data-tone="pickups">
+                            <h2>Pickups</h2>
+                            <ul>
+                                <li><i class="pickup-icon" data-pickup="multishot" aria-hidden="true"></i><b>Multishot</b> three-way volley for six seconds.</li>
+                                <li><i class="pickup-icon" data-pickup="shield" aria-hidden="true"></i><b>Shield</b> stores one charge that blocks a hit.</li>
+                                <li><i class="pickup-icon" data-pickup="double" aria-hidden="true"></i><b>2× fire</b> doubles your shots for six seconds.</li>
+                                <li><i class="pickup-icon" data-pickup="health" aria-hidden="true"></i><b>Health</b> a defeated boss leaves one: +1 life, up to five. Mini-bosses drop one half the time.</li>
+                            </ul>
+                        </section>
+                        <div class="help-actions">
+                            <button id="helpPractice" class="primary">
+                                Try in Practice
+                            </button>
+                            <p id="helpPaused" hidden>Finish or quit your run before Practice.</p>
+                        </div>
+                    </div>
                 </div>
             </section>

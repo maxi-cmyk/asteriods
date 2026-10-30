@@ -194,6 +194,7 @@ class Runtime {
     start(practice = false) {
         this.coop = null;
         this.api.web_start(+practice);
+        this.#clearHold();
         this.#beginRun(practice);
     }
     menu() {
@@ -202,6 +203,7 @@ class Runtime {
         if (practiceEnded) this.#finishRun();
         else this.recorder.discardRun();
         this.api.web_menu();
+        this.#clearHold();
         this.resultsVisible = practiceEnded;
         this.resultsReady = false;
     }
@@ -213,6 +215,7 @@ class Runtime {
         this.resultsReady = false;
         this.awaitResultsRelease = true;
         this.api.web_menu();
+        this.#clearHold();
     }
     continueResults() {
         if (this.coop) {
@@ -250,6 +253,19 @@ class Runtime {
     }
     multishot() {
         this.api.web_practice_multishot();
+    }
+    // Practice pickups that stay on until switched off; both can be on together.
+    practiceHold = { multishot: false, doubleFire: false };
+    togglePractice(kind) {
+        this.practiceHold[kind] = !this.practiceHold[kind];
+        this.#applyHold();
+    }
+    #applyHold() {
+        const { multishot, doubleFire } = this.practiceHold;
+        this.api.web_practice_hold(+multishot, +doubleFire);
+    }
+    #clearHold() {
+        this.practiceHold = { multishot: false, doubleFire: false };
     }
     // Boss practice: a practice run whose room holds one chosen fight (0-5 bosses, 6-11 minis).
     bossPractice(kind, tier = 0, phase = 1) {

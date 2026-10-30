@@ -1,0 +1,239 @@
+/* ---- Settings · Calibration on the violet theme ------------------------------
+   Sticks on the left, a live preview on the right; the same violet panels and amber
+   accents as the rest of Settings. Raw is a hollow lavender ring, adjusted a filled
+   amber dot, the deadzone a soft amber disc. */
+#calibration {
+    --cal-line: #3a2a64;
+    --cal-card: #120a2c;
+}
+#calibration .calibration-device {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin: -6px 0 clamp(12px, 2vh, 20px);
+    color: #be96e6;
+    font-size: var(--size-small);
+    overflow-wrap: anywhere;
+}
+#calibration .calibration-device::before {
+    content: '';
+    flex: none;
+    width: 8px;
+    height: 8px;
+    background: #4a3a78;
+}
+#calibration .calibration-device[data-connected='true']::before {
+    background: #ffbe6e;
+    box-shadow: 0 0 8px #ff785a99;
+}
+#calibration .calibration-grid {
+    display: grid;
+    grid-template-columns: minmax(0, 1.15fr) minmax(0, 1fr);
+    gap: clamp(14px, 2.4vw, 32px);
+    align-items: start;
+}
+#calibration .calibration-sticks,
+#calibration .calibration-preview {
+    min-width: 0;
+}
+#calibration h3 {
+    margin-top: 0;
+}
+
+/* Stick plots */
+#calibration .stick-plots {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: clamp(10px, 1.6vw, 18px);
+}
+#calibration .stick-plots figure {
+    margin: 0;
+    min-width: 0;
+    display: grid;
+    justify-items: center;
+    gap: 8px;
+    padding: 12px 10px 10px;
+    background: var(--cal-card);
+    border: 1px solid var(--cal-line);
+}
+#calibration .stick-plots svg {
+    width: min(100%, 150px);
+    height: auto;
+}
+#calibration .stick-plots figcaption {
+    width: 100%;
+    display: grid;
+    gap: 4px;
+    text-align: center;
+}
+#calibration .stick-plots figcaption b {
+    color: #ffe9c4;
+    font-family: var(--font-display);
+    font-size: var(--size-label);
+    font-weight: 400;
+    letter-spacing: 0.06em;
+}
+#calibration .stick-values {
+    display: grid;
+    justify-items: center;
+    color: #cdb6f0;
+    font-size: var(--size-small);
+    font-variant-numeric: tabular-nums;
+    white-space: nowrap;
+}
+#calibration .stick-values i {
+    margin-top: 4px;
+    color: #8a76b0;
+    font-size: calc(var(--size-small) - 2px);
+    font-style: normal;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+}
+#calibration .stick-values .adjusted-value {
+    color: #ffbe6e;
+}
+#calibration .stick-bound,
+#calibration .stick-axis {
+    fill: none;
+    stroke: var(--cal-line);
+}
+#calibration .stick-bound {
+    stroke-width: 1.5;
+}
+#calibration .deadzone {
+    fill: #ffbe6e;
+    fill-opacity: 0.16;
+    stroke: #ffbe6e;
+    stroke-opacity: 0.5;
+    stroke-width: 0.8;
+}
+#calibration .raw {
+    fill: none;
+    stroke: #cdb6f0;
+    stroke-width: 1.5;
+}
+#calibration .adjusted {
+    fill: #ffbe6e;
+}
+#calibration .plot-legend {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px 14px;
+    margin: 10px 0 0;
+    padding: 0;
+    list-style: none;
+    color: #8a76b0;
+    font-size: var(--size-small);
+}
+#calibration .plot-legend li {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+}
+#calibration .plot-legend li::before {
+    content: '';
+    width: 10px;
+    height: 10px;
+    box-sizing: border-box;
+}
+#calibration .plot-legend [data-key='raw']::before {
+    border: 2px solid #cdb6f0;
+    border-radius: 50%;
+}
+#calibration .plot-legend [data-key='adjusted']::before {
+    background: #ffbe6e;
+    border-radius: 50%;
+}
+#calibration .plot-legend [data-key='deadzone']::before {
+    background: #ffbe6e29;
+    border: 1px solid #ffbe6e80;
+}
+
+/* Drift sampling */
+#calibration .calibration-actions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 10px;
+    margin-top: clamp(12px, 2vh, 18px);
+}
+#calibration .calibration-actions button {
+    min-height: 38px;
+    padding: 4px 16px;
+    color: #cdb6f0;
+    background: transparent;
+    border: 1px solid #5a4a8a;
+    font-family: var(--font-display);
+    font-size: var(--size-label);
+    letter-spacing: 0.06em;
+}
+#calibration .calibration-actions button:hover:not(:disabled),
+#calibration .calibration-actions button:focus {
+    color: #fff4d6;
+    border-color: #ffbe6e;
+    background: #2a1450cc;
+    box-shadow: none;
+}
+#calibration .calibration-actions button:disabled {
+    color: #6d5a96;
+    border-color: #2a1c4c;
+}
+#calibration .calibration-actions button.primary:not(:disabled) {
+    color: #ffe9c4;
+    border-color: #ffbe6e;
+    background: #2a1450cc;
+}
+#calibration .sample-meter {
+    height: 4px;
+    margin-top: 12px;
+    background: #3a2466;
+}
+#calibration .sample-meter i {
+    display: block;
+    width: 0;
+    height: 100%;
+    background: #ffbe6e;
+    transition: width 0.1s linear;
+}
+#calibration #calibrationStatus {
+    margin: 10px 0 0;
+    min-height: 2.8em;
+}
+#calibration #calibrationStatus[data-tone='ok'] {
+    color: #ffbe6e;
+}
+#calibration #calibrationStatus[data-tone='error'] {
+    color: #ff8aa8;
+}
+
+/* Preview */
+#calibration #inputPreview {
+    display: block;
+    width: 100%;
+    height: auto;
+    background: var(--cal-card);
+    border: 1px solid var(--cal-line);
+    cursor: crosshair;
+    image-rendering: pixelated;
+}
+#calibration #inputPreview:focus-visible {
+    outline: none;
+    border-color: #ffbe6e;
+    box-shadow:
+        0 0 0 1px #ffbe6e,
+        0 0 12px #ff785a66;
+}
+#calibration .preview-ship {
+    fill: #e8dcfa;
+}
+#calibration .preview-aim {
+    stroke: #ffbe6e;
+    stroke-dasharray: 3 3;
+}
+#calibration #previewHelp {
+    margin: 8px 0 0;
+}
+@media (max-width: 760px) {
+    #calibration .calibration-grid {
+        grid-template-columns: 1fr;
+    }
+}

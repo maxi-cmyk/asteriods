@@ -45,6 +45,18 @@ void web_practice_targets() {
     }
 #endif
 }
+// Switches the practice pickups on or off; an "on" pickup never runs out.
+void web_practice_hold(int multishot, int double_fire) {
+#ifdef WEB_HD
+    practice_hold_multishot = multishot != 0;
+    practice_hold_double_fire = double_fire != 0;
+    if (!practice_hold_multishot) ship.effects.multishot_left_ms = 0;
+    if (!practice_hold_double_fire) ship.effects.double_fire_left_ms = 0;
+#else
+    (void)multishot;
+    (void)double_fire;
+#endif
+}
 void web_practice_double_fire() {
 #ifdef WEB_HD
     if (practice_mode) ship.effects.double_fire_left_ms = 6000;

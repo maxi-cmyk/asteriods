@@ -58,6 +58,7 @@ class CalibrationPanel {
         this.panel = document.querySelector('#calibration');
         this.preview = document.querySelector('#inputPreview');
         this.status = document.querySelector('#calibrationStatus');
+        this.meter = document.querySelector('#sampleFill');
         this.sampleButton = document.querySelector('#sampleDrift');
         this.applyButton = document.querySelector('#applyDeadzone');
         this.previewControls = new Controls(settings);
@@ -77,7 +78,17 @@ class CalibrationPanel {
         this.previewControls.clear();
         this.plotState.clear();
         this.applyButton.disabled = true;
-        this.status.textContent = 'Release both sticks, then sample.';
+        this.#say('Release both sticks, then sample.');
+        this.#progress(0);
+    }
+    // The status line, tinted by outcome: ok (amber) or error (pink).
+    #say(text, tone = '') {
+        this.status.textContent = text;
+        if (this.status.dataset.tone !== tone) this.status.dataset.tone = tone;
+    }
+    #progress(fraction) {
+        const width = `${Math.round(Math.min(1, Math.max(0, fraction)) * 100)}%`;
+        if (this.meter.style.width !== width) this.meter.style.width = width;
     }
     #wire() {
         const { preview, previewControls } = this;
@@ -112,14 +123,14 @@ class CalibrationPanel {
     #startSample() {
         const pad = this.findController();
         if (!pad) {
-            this.status.textContent =
-                'Connect a standard controller and press a button, then try again.';
+            this.#say('Connect a standard controller and press a button, then try again.', 'error');
             return;
         }
         this.sampling = new DriftSample(pad.index, performance.now());
         this.suggestion = null;
         this.applyButton.disabled = true;
-        this.status.textContent = 'Sampling for two seconds. Keep both sticks untouched…';
+        this.#say('Sampling for two seconds. Keep both sticks untouched…');
+        this.#progress(0);
     }
     #applySuggestion() {
         const { suggestion, settings } = this;
@@ -128,7 +139,10 @@ class CalibrationPanel {
         settings.aimDeadzone = suggestion[1];
         this.render();
         this.persist();
-        this.status.textContent = `Selected left ${Math.round(suggestion[0] * 100)}%, right ${Math.round(suggestion[1] * 100)}%. Press Apply to keep them.`;
+        this.#say(
+            `Selected left ${Math.round(suggestion[0] * 100)}%, right ${Math.round(suggestion[1] * 100)}%. Press Apply to keep them.`,
+            'ok',
+        );
         this.suggestion = null;
         this.applyButton.disabled = true;
     }
@@ -139,10 +153,13 @@ class CalibrationPanel {
         const pad = this.findController();
         const connected = !!pad;
         this.sampleButton.disabled = !connected || !!this.sampling;
+        const device = this.panel.querySelector('#calibrationController');
         setText(
-            this.panel.querySelector('#calibrationController'),
+            device,
             connected ? pad.id : 'No standard controller detected. Connect one and press a button.',
         );
+        if (device.dataset.connected !== String(connected))
+            device.dataset.connected = String(connected);
         this.#plotSticks(pad);
         this.#advanceSample(pad, now);
         this.#advancePreview(pad, now, delta);
@@ -162,22 +179,32 @@ class CalibrationPanel {
                 (i === 0 ? settings.deadzone : settings.aimDeadzone) * 44,
             );
             const values = panel.querySelector(i === 0 ? '#moveValues' : '#aimValues');
-            setText(
-                values,
-                `Raw ${stick.raw.map((v) => v.toFixed(2)).join(', ')} / adjusted ${stick.adjusted.map((v) => v.toFixed(2)).join(', ')}`,
-            );
+            for (const name of ['raw', 'adjusted'])
+                setText(
+                    values.querySelector(`.${name}-value`),
+                    stick[name].map((v) => v.toFixed(2)).join(', '),
+                );
         }
     }
     #advanceSample(pad, now) {
         if (!this.sampling) return;
         const result = this.sampling.update(pad, now);
-        if (result.pending) return;
+        if (result.pending) {
+            this.#progress((now - this.sampling.started) / 2000);
+            return;
+        }
         this.sampling = null;
-        if (result.error) this.status.textContent = result.error;
-        else {
+        if (result.error) {
+            this.#say(result.error, 'error');
+            this.#progress(0);
+        } else {
             this.suggestion = result.deadzones;
             this.applyButton.disabled = false;
-            this.status.textContent = `Suggested deadzones: left ${Math.round(this.suggestion[0] * 100)}%, right ${Math.round(this.suggestion[1] * 100)}%. Use these or keep your current settings.`;
+            this.#progress(1);
+            this.#say(
+                `Suggested deadzones: left ${Math.round(this.suggestion[0] * 100)}%, right ${Math.round(this.suggestion[1] * 100)}%. Use these or keep your current settings.`,
+                'ok',
+            );
         }
     }
     // Match the game's fixed 20 ms input ticks, without advancing gameplay.

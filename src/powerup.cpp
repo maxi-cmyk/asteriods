@@ -8,6 +8,7 @@ enum PickupKind {
     PICKUP_SHIELD,
 #ifdef WEB_HD
     PICKUP_DOUBLE_FIRE,
+    PICKUP_HEALTH,  // never random: only a defeated boss drops one
 #endif
 };
 
@@ -50,6 +51,8 @@ static void collect_pickup(Ship& ship) {
 #ifdef WEB_HD
     } else if (pickup.kind == PICKUP_DOUBLE_FIRE) {
         ship.effects.double_fire_left_ms = 6000;
+    } else if (pickup.kind == PICKUP_HEALTH) {
+        if (ship.lives < PICKUP_HEALTH_MAX_LIVES) ship.lives++;
 #endif
     } else {
         ship.effects.shield = true;

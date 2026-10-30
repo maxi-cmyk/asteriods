@@ -1,0 +1,415 @@
+/* ---- How to Play and the co-op lobby on the violet theme --------------------
+   Same backdrop, heading and quiet violet panels as Settings and Mode. Amber marks
+   what you can act on; pilot colours (cyan diamond, amber square) mark the crew. */
+.utility-view[data-view='help'],
+.utility-view[data-view='lobby'] {
+    padding: clamp(16px, 3.4vh, 36px) clamp(18px, 5vw, 64px) clamp(12px, 2vh, 24px);
+    border: 0;
+    background:
+        linear-gradient(#0a0518d9, #0a0518f0),
+        url('../../assets/home-scene.png') center / cover;
+    image-rendering: pixelated;
+    scrollbar-color: #5a3c98 #0e0624;
+}
+.utility-view[data-view='help']:not([hidden]),
+.utility-view[data-view='lobby']:not([hidden]) {
+    display: flex;
+    flex-direction: column;
+    gap: clamp(10px, 2vh, 20px);
+    overflow: auto;
+}
+.utility-view[data-view='help'] > h1,
+.utility-view[data-view='lobby'] > h1 {
+    margin: 0;
+    font-size: clamp(28px, 3.6vw, 46px);
+    color: transparent;
+    background: linear-gradient(#fff4d6 0 40%, #ffbe6e 40% 72%, #e8608c 72%);
+    -webkit-background-clip: text;
+    background-clip: text;
+    -webkit-text-fill-color: transparent;
+    filter: drop-shadow(2px 2px 0 #340e4a);
+    width: max-content;
+    max-width: 100%;
+}
+.utility-view[data-view='help'] .help-lede,
+.utility-view[data-view='lobby'] .lobby-lede {
+    margin: 0;
+    max-width: 68ch;
+    color: #8a76b0;
+    font-size: var(--size-small);
+    line-height: 1.4;
+}
+
+/* Both screens fill wide windows: type and controls scale with the viewport, and the content
+   sits centred in a column that stops growing at --guide-w. */
+.utility-view[data-view='help'],
+.utility-view[data-view='lobby'] {
+    --guide-w: 1500px;
+    --size-label: clamp(18px, 1.3vw, 30px);
+    --size-body: clamp(17px, 1.25vw, 28px);
+    --size-small: clamp(15px, 1.1vw, 24px);
+    --size-menu: clamp(24px, 1.8vw, 40px);
+}
+.utility-view[data-view='help']:not([hidden]) > :first-child,
+.utility-view[data-view='lobby']:not([hidden]) > :first-child {
+    margin-top: auto;
+}
+.utility-view[data-view='help']:not([hidden]) > :last-child,
+.utility-view[data-view='lobby']:not([hidden]) > :last-child {
+    margin-bottom: auto;
+}
+.utility-view[data-view='help'] > h1,
+.utility-view[data-view='lobby'] > h1 {
+    font-size: clamp(32px, 3.4vw, 76px);
+    align-self: center;
+}
+.utility-view[data-view='help'] > h1,
+.utility-view[data-view='lobby'] > h1,
+.utility-view[data-view='help'] .help-lede,
+.utility-view[data-view='lobby'] .lobby-lede {
+    text-align: center;
+}
+.utility-view[data-view='help'] .help-lede,
+.utility-view[data-view='lobby'] .lobby-lede {
+    align-self: center;
+    max-width: 72ch;
+}
+.utility-view[data-view='lobby'] .crew-slot select {
+    min-height: clamp(40px, 3vw, 64px);
+}
+.utility-view[data-view='help'] .primary,
+.utility-view[data-view='lobby'] .primary,
+.utility-view[data-view='lobby'] .crew-slot button {
+    min-height: clamp(40px, 3vw, 64px);
+}
+
+/* ---- How to Play ---------------------------------------------------------- */
+.utility-view[data-view='help'] .help-layout {
+    display: grid;
+    grid-template-columns: minmax(220px, 0.85fr) minmax(0, 1.25fr);
+    gap: clamp(14px, 2.4vw, 32px);
+    width: 100%;
+    max-width: var(--guide-w);
+    margin-inline: auto;
+    align-items: start;
+}
+.utility-view[data-view='help'] .help-controls {
+    padding: clamp(14px, 2.4vh, 24px) clamp(14px, 2vw, 24px);
+    background: #0e0624c7;
+    border: 1px solid #3a2a64;
+}
+.utility-view[data-view='help'] h2 {
+    margin: 0 0 8px;
+    padding: 0;
+    border: 0;
+    color: #ffe9c4;
+    font-family: var(--font-display);
+    font-size: var(--size-menu);
+    font-weight: 400;
+    letter-spacing: 0.04em;
+}
+.utility-view[data-view='help'] .help-controls #helpDevice {
+    margin: 0 0 12px;
+    padding-bottom: 8px;
+    border-bottom: 1px solid #3a2a64;
+    color: #be96e6;
+    font-size: var(--size-small);
+}
+.utility-view[data-view='help'] .binding-list {
+    grid-template-columns: minmax(90px, 0.8fr) minmax(0, 1.2fr);
+    column-gap: 14px;
+    row-gap: 0;
+    margin: 0;
+    line-height: 1.3;
+}
+.utility-view[data-view='help'] .binding-list dt,
+.utility-view[data-view='help'] .binding-list dd {
+    padding: 7px 0;
+    border-bottom: 1px solid #2a1c4c;
+}
+.utility-view[data-view='help'] .binding-list dt {
+    color: #aa8cd2;
+    font-family: var(--font-display);
+    font-size: var(--size-label);
+    letter-spacing: 0.04em;
+}
+.utility-view[data-view='help'] .binding-list dd {
+    color: #ffbe6e;
+    font-size: var(--size-body);
+}
+.utility-view[data-view='help'] .help-guide {
+    display: grid;
+    grid-template-columns: 1fr;
+    gap: 10px;
+}
+.utility-view[data-view='help'] .help-card {
+    --tone: #be96e6;
+    position: relative;
+    padding: 10px 14px 10px 46px;
+    background: #0e0624c7;
+    border: 1px solid #3a2a64;
+    border-left: 2px solid var(--tone);
+}
+.utility-view[data-view='help'] .help-card::before {
+    content: '';
+    position: absolute;
+    left: 14px;
+    top: 12px;
+    width: 21px;
+    height: 21px;
+    background: var(--glyph, none) center / contain no-repeat;
+    image-rendering: pixelated;
+}
+.utility-view[data-view='help'] .help-card[data-tone='flight'] {
+    --tone: #ffbe6e;
+    --glyph: url('../../assets/ui/chevron.png');
+}
+.utility-view[data-view='help'] .help-card[data-tone='laser'] {
+    --tone: #ffc86e;
+    --glyph: url('../../assets/ui/bolt.png');
+}
+.utility-view[data-view='help'] .help-card[data-tone='shield'] {
+    --tone: #78ebff;
+    --glyph: url('../../assets/ui/shield.png');
+}
+.utility-view[data-view='help'] .help-card h2 {
+    margin-bottom: 2px;
+    font-size: var(--size-label);
+    color: var(--tone);
+}
+.utility-view[data-view='help'] .help-card p {
+    margin: 0;
+    color: #cdb6f0;
+    font-size: var(--size-small);
+    line-height: 1.4;
+}
+/* Pickups: the sprite from the atlas at 3x, beside what it does. --ax/--ay mirror sprites.json. */
+.utility-view[data-view='help'] .help-pickups {
+    --tone: #ff82c8;
+    padding-left: 14px;
+}
+.utility-view[data-view='help'] .help-pickups::before {
+    display: none;
+}
+.utility-view[data-view='help'] .help-pickups ul {
+    display: grid;
+    gap: 8px;
+    margin: 6px 0 0;
+    padding: 0;
+    list-style: none;
+}
+.utility-view[data-view='help'] .help-pickups li {
+    display: grid;
+    grid-template-columns: 36px minmax(0, 1fr);
+    column-gap: 12px;
+    align-items: center;
+    color: #cdb6f0;
+    font-size: var(--size-small);
+    line-height: 1.35;
+}
+.utility-view[data-view='help'] .help-pickups li b {
+    grid-column: 2;
+    color: #ffe9c4;
+    font-family: var(--font-display);
+    font-size: var(--size-label);
+    font-weight: 400;
+    letter-spacing: 0.04em;
+}
+.utility-view[data-view='help'] .pickup-icon {
+    grid-row: 1 / span 2;
+    grid-column: 1;
+    width: 36px;
+    height: 36px;
+    background-image: url('../../assets/sprites.png');
+    background-size: 768px 1248px;
+    background-position: calc(var(--ax) * -3px) calc(var(--ay) * -3px);
+    image-rendering: pixelated;
+}
+.pickup-icon[data-pickup='multishot'] {
+    --ax: 32;
+    --ay: 352;
+}
+.pickup-icon[data-pickup='shield'] {
+    --ax: 64;
+    --ay: 352;
+}
+.pickup-icon[data-pickup='health'] {
+    --ax: 96;
+    --ay: 352;
+}
+.utility-view[data-view='help'] .pickup-icon[data-pickup='double'] {
+    background: url('../../assets/ui/x2.png') center / 28px 28px no-repeat;
+}
+.utility-view[data-view='help'] .help-actions {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    flex-wrap: wrap;
+}
+.utility-view[data-view='help'] .help-actions p {
+    margin: 0;
+    color: #8a76b0;
+    font-size: var(--size-small);
+}
+
+/* ---- Buttons on both screens: quiet violet, amber when it is the action ------ */
+.utility-view[data-view='help'] .primary,
+.utility-view[data-view='lobby'] .primary {
+    min-height: 40px;
+    padding: 6px 18px;
+    color: #ffe9c4;
+    background: #2a1450cc;
+    border: 1px solid #ffbe6e;
+    font-family: var(--font-display);
+    font-size: var(--size-menu);
+    letter-spacing: 0.06em;
+    box-shadow: none;
+}
+.utility-view[data-view='help'] .primary:hover:not(:disabled),
+.utility-view[data-view='lobby'] .primary:hover:not(:disabled),
+.utility-view[data-view='help'] .primary:focus,
+.utility-view[data-view='lobby'] .primary:focus {
+    color: #fff;
+    background: #3a1c70;
+    box-shadow: 0 0 14px #ff785a66;
+}
+.utility-view[data-view='lobby'] .primary:disabled {
+    color: #6d5a96;
+    background: transparent;
+    border-color: #3a2a64;
+}
+
+/* ---- Local co-op lobby ------------------------------------------------------ */
+.utility-view[data-view='lobby'] .crew-slots {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: clamp(14px, 2.6vw, 36px);
+    margin: 0;
+    width: 100%;
+    max-width: var(--guide-w);
+    margin-inline: auto;
+}
+.utility-view[data-view='lobby'] .crew-slot {
+    --pilot: #70d9ed;
+    min-width: 0;
+    margin: 0;
+    padding: 0 clamp(14px, 2vw, 22px) clamp(14px, 2vh, 20px);
+    background: #0e0624d9;
+    border: 1px solid #3a2a64;
+    border-top: 3px solid var(--pilot);
+    transition:
+        border-color 0.12s,
+        box-shadow 0.12s;
+}
+.utility-view[data-view='lobby'] .crew-slot[data-player='1'] {
+    --pilot: #efb963;
+}
+.utility-view[data-view='lobby'] .crew-slot legend {
+    float: left;
+    width: 100%;
+    margin: 0 0 12px;
+    padding: 12px 0 8px;
+    border-bottom: 1px solid #2a1c4c;
+    color: var(--pilot);
+    font-family: var(--font-display);
+    font-size: var(--size-menu);
+    letter-spacing: 0.08em;
+}
+.utility-view[data-view='lobby'] .crew-slot:has(button[aria-pressed='true']) {
+    border-color: var(--pilot);
+    box-shadow: 0 0 18px color-mix(in srgb, var(--pilot) 35%, transparent);
+}
+.utility-view[data-view='lobby'] .crew-slot legend + label {
+    clear: both;
+}
+.utility-view[data-view='lobby'] .crew-slot label {
+    display: grid;
+    gap: 6px;
+    margin: 0 0 12px;
+    color: #be96e6;
+    font-family: var(--font-display);
+    font-size: var(--size-label);
+    letter-spacing: 0.08em;
+}
+.utility-view[data-view='lobby'] .crew-slot select {
+    background: #120a2c;
+    border: 1px solid #3a2a64;
+    color: #e8dcfa;
+    font-family: var(--font-body);
+    font-size: var(--size-body);
+}
+.utility-view[data-view='lobby'] .crew-slot select:focus {
+    border-color: #ffbe6e;
+}
+.utility-view[data-view='lobby'] .crew-slot button {
+    min-height: 40px;
+    color: #cdb6f0;
+    background: transparent;
+    border: 1px solid #5a4a8a;
+    font-family: var(--font-display);
+    font-size: var(--size-label);
+    letter-spacing: 0.06em;
+    box-shadow: none;
+}
+.utility-view[data-view='lobby'] .crew-slot button:hover:not(:disabled),
+.utility-view[data-view='lobby'] .crew-slot button:focus {
+    color: #fff4d6;
+    border-color: #ffbe6e;
+    background: #2a1450cc;
+}
+.utility-view[data-view='lobby'] .crew-slot button:disabled {
+    color: #6d5a96;
+    border-color: #2a1c4c;
+}
+.utility-view[data-view='lobby'] .crew-slot button[aria-pressed='true'] {
+    color: var(--pilot);
+    border-color: var(--pilot);
+    background: color-mix(in srgb, var(--pilot) 14%, transparent);
+}
+.utility-view[data-view='lobby'] .lobby-footer {
+    display: grid;
+    grid-template-columns: auto minmax(0, 1fr) auto;
+    align-items: center;
+    gap: 8px clamp(14px, 2.4vw, 28px);
+    width: 100%;
+    max-width: var(--guide-w);
+    margin-inline: auto;
+    padding-top: clamp(10px, 1.6vh, 16px);
+    border-top: 1px solid #3a2a64;
+}
+.utility-view[data-view='lobby'] .friendly-option {
+    display: flex;
+    align-items: flex-start;
+    gap: 10px;
+    color: #e8dcfa;
+    font-family: var(--font-display);
+    font-size: var(--size-label);
+    letter-spacing: 0.06em;
+}
+.utility-view[data-view='lobby'] .friendly-option input {
+    margin-top: 3px;
+    accent-color: #ffbe6e;
+}
+.utility-view[data-view='lobby'] .friendly-option small {
+    display: block;
+    color: #8a76b0;
+    font-family: var(--font-body);
+    font-size: var(--size-small);
+    letter-spacing: 0.02em;
+}
+.utility-view[data-view='lobby'] #coopLobbyStatus {
+    margin: 0;
+    max-width: none;
+    color: #be96e6;
+    font-size: var(--size-small);
+    line-height: 1.35;
+}
+@media (max-width: 760px) {
+    .utility-view[data-view='help'] .help-layout,
+    .utility-view[data-view='lobby'] .crew-slots {
+        grid-template-columns: 1fr;
+    }
+    .utility-view[data-view='lobby'] .lobby-footer {
+        grid-template-columns: 1fr;
+    }
+}

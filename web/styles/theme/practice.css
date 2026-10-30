@@ -84,3 +84,32 @@ body[data-practice='true'] .pause-menu button {
 .pause-menu::-webkit-scrollbar {
     display: none;
 }
+
+/* ---- Practice pickups: HUD toggles --------------------------------------------
+   Multishot and 2× fire switch on and off from the lower HUD; both can run at once. */
+.combat-hud > .practice-toggles {
+    display: none;
+}
+body[data-practice='true']:is([data-screen='play'], [data-screen='pause']):not([data-coop='true'])
+    .practice-toggles {
+    display: inline-flex;
+    gap: 8px;
+    pointer-events: auto;
+}
+.practice-toggles button {
+    min-height: 0;
+    padding: 1px 10px 0;
+    border: 1px solid #5a4a8a;
+    background: #1a1236aa;
+    color: #cdb6f0;
+    font-family: var(--font-display);
+    font-size: var(--size-label);
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    cursor: pointer;
+}
+.practice-toggles button[aria-pressed='true'] {
+    border-color: #ffbe6e;
+    background: #ffbe6e26;
+    color: #ffbe6e;
+}

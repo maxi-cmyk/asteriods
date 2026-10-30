@@ -95,127 +95,84 @@
                             </section>
                         </div>
                     </section>
-                    <section data-settings-panel="calibration" hidden inert>
-                        <section
-                            id="calibration"
-                            aria-labelledby="calibrationTitle"
-                        >
-                            <h3 id="calibrationTitle">Test your controls</h3>
-                            <p id="calibrationController">
-                                Connect a controller and press a button.
-                            </p>
-                            <div class="stick-plots">
+                    <section
+                        id="calibration"
+                        data-settings-panel="calibration"
+                        aria-labelledby="calibrationTitle"
+                        hidden
+                        inert
+                    >
+                        <h2 id="calibrationTitle">Calibration</h2>
+                        <p id="calibrationController" class="calibration-device" data-connected="false">
+                            Connect a controller and press a button.
+                        </p>
+                        <div class="calibration-grid">
+                            <div class="calibration-sticks">
+                                <h3>Sticks</h3>
+                                <div class="stick-plots">
                                 <figure>
-                                    <svg
-                                        id="moveStick"
-                                        viewBox="0 0 100 100"
-                                        role="img"
-                                        aria-label="Left stick: raw and adjusted movement"
-                                    >
-                                        <circle
-                                            class="stick-bound"
-                                            cx="50"
-                                            cy="50"
-                                            r="44"
-                                        />
-                                        <path
-                                            class="stick-axis"
-                                            d="M6 50H94M50 6V94"
-                                        />
-                                        <circle
-                                            class="deadzone"
-                                            cx="50"
-                                            cy="50"
-                                            r="11"
-                                        />
-                                        <circle
-                                            class="raw"
-                                            cx="50"
-                                            cy="50"
-                                            r="5"
-                                        />
-                                        <circle
-                                            class="adjusted"
-                                            cx="50"
-                                            cy="50"
-                                            r="2.5"
-                                        />
+                                    <svg id="moveStick" viewBox="0 0 100 100" role="img" aria-label="Left stick: raw and adjusted movement">
+                                        <circle class="stick-bound" cx="50" cy="50" r="44" />
+                                        <path class="stick-axis" d="M6 50H94M50 6V94" />
+                                        <circle class="deadzone" cx="50" cy="50" r="11" />
+                                        <circle class="raw" cx="50" cy="50" r="5" />
+                                        <circle class="adjusted" cx="50" cy="50" r="2.5" />
                                     </svg>
                                     <figcaption>
-                                        Movement <span id="moveValues"></span>
+                                        <b>Movement</b>
+                                        <span id="moveValues" class="stick-values"><i>Raw</i><span class="raw-value">0.00, 0.00</span><i>Adjusted</i><span class="adjusted-value">0.00, 0.00</span></span>
                                     </figcaption>
                                 </figure>
                                 <figure>
-                                    <svg
-                                        id="aimStick"
-                                        viewBox="0 0 100 100"
-                                        role="img"
-                                        aria-label="Right stick: raw and adjusted aim"
-                                    >
-                                        <circle
-                                            class="stick-bound"
-                                            cx="50"
-                                            cy="50"
-                                            r="44"
-                                        />
-                                        <path
-                                            class="stick-axis"
-                                            d="M6 50H94M50 6V94"
-                                        />
-                                        <circle
-                                            class="deadzone"
-                                            cx="50"
-                                            cy="50"
-                                            r="11"
-                                        />
-                                        <circle
-                                            class="raw"
-                                            cx="50"
-                                            cy="50"
-                                            r="5"
-                                        />
-                                        <circle
-                                            class="adjusted"
-                                            cx="50"
-                                            cy="50"
-                                            r="2.5"
-                                        />
+                                    <svg id="aimStick" viewBox="0 0 100 100" role="img" aria-label="Right stick: raw and adjusted aim">
+                                        <circle class="stick-bound" cx="50" cy="50" r="44" />
+                                        <path class="stick-axis" d="M6 50H94M50 6V94" />
+                                        <circle class="deadzone" cx="50" cy="50" r="11" />
+                                        <circle class="raw" cx="50" cy="50" r="5" />
+                                        <circle class="adjusted" cx="50" cy="50" r="2.5" />
                                     </svg>
                                     <figcaption>
-                                        Aim <span id="aimValues"></span>
+                                        <b>Aim</b>
+                                        <span id="aimValues" class="stick-values"><i>Raw</i><span class="raw-value">0.00, 0.00</span><i>Adjusted</i><span class="adjusted-value">0.00, 0.00</span></span>
                                     </figcaption>
                                 </figure>
+                                </div>
+                                <ul class="plot-legend" aria-label="Plot key">
+                                    <li data-key="raw">Raw</li>
+                                    <li data-key="adjusted">Adjusted</li>
+                                    <li data-key="deadzone">Deadzone</li>
+                                </ul>
+                                <div class="calibration-actions">
+                                    <button id="sampleDrift" disabled>Sample drift</button
+                                    ><button id="applyDeadzone" class="primary" disabled>Use suggested</button>
+                                </div>
+                                <div class="sample-meter" aria-hidden="true"><i id="sampleFill"></i></div>
+                                <p id="calibrationStatus" role="status" data-tone="">Release both sticks, then sample.</p>
                             </div>
-                            <p>Outlined: raw · Filled: adjusted · Circle: deadzone</p>
-                            <div class="calibration-actions">
-                                <button id="sampleDrift" disabled>
-                                    Sample stick drift</button
-                                ><button id="applyDeadzone" disabled>
-                                    Use suggested deadzone
-                                </button>
-                            </div>
-                            <p id="calibrationStatus" role="status">Release both sticks, then sample.</p>
-                            <svg
-                                id="inputPreview"
-                                viewBox="0 0 320 130"
-                                tabindex="0"
-                                role="img"
-                                aria-label="Control preview. Focus to move with your movement keys or arrows; aim with mouse, aim keys, or right stick. No shots are fired."
-                                aria-describedby="previewHelp"
-                            >
-                                <g
-                                    id="previewShip"
-                                    transform="translate(160 65)"
+                            <div class="calibration-preview">
+                                <h3>Preview</h3>
+                                <svg
+                                    id="inputPreview"
+                                    viewBox="0 0 320 130"
+                                    tabindex="0"
+                                    role="img"
+                                    aria-label="Control preview. Focus to move with your movement keys or arrows; aim with mouse, aim keys, or right stick. No shots are fired."
+                                    aria-describedby="previewHelp"
                                 >
-                                    <path class="preview-aim" d="M12 0H48" />
-                                    <path
-                                        class="preview-ship"
-                                        d="M12 0L-9 -7L-5 0L-9 7Z"
-                                    />
-                                </g>
-                            </svg>
-                            <p id="previewHelp">Move and aim here to test. No shots are fired.</p>
-                        </section>
+                                    <defs>
+                                        <pattern id="previewGrid" width="20" height="20" patternUnits="userSpaceOnUse">
+                                            <path d="M20 0H0V20" fill="none" stroke="#2a1c4c" stroke-width="0.6" />
+                                        </pattern>
+                                    </defs>
+                                    <rect width="320" height="130" fill="url(#previewGrid)" />
+                                    <g id="previewShip" transform="translate(160 65)">
+                                        <path class="preview-aim" d="M12 0H48" />
+                                        <path class="preview-ship" d="M12 0L-9 -7L-5 0L-9 7Z" />
+                                    </g>
+                                </svg>
+                                <p id="previewHelp">Click it, then move and aim to test. No shots are fired.</p>
+                            </div>
+                        </div>
                     </section>
                     <section data-settings-panel="audio" hidden inert>
                         <h2>Audio</h2>

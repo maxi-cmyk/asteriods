@@ -6,6 +6,7 @@ import {
     RegionTimeline,
     envelope,
     CUE_MS,
+    PRACTICE_REGION,
 } from '../src/render/regions.mjs';
 import {
     LaunchSequence,
@@ -104,10 +105,11 @@ test('a new region reached mid-transition settles on the destination instead of 
     assert.equal(lines.transition, null);
 });
 
-test('practice keeps the opening region and never transitions', () => {
+test('practice rests in world 3 and never transitions', () => {
     const lines = new RegionTimeline();
     for (const wave of [1, 6, 11, 26]) run(lines, wave, wave * 100, { practice: true });
-    assert.equal(lines.index, 0);
+    assert.equal(lines.index, PRACTICE_REGION);
+    assert.equal(REGIONS[lines.index].id, 'ember');
     assert.equal(lines.transition, null);
     assert.equal(lines.cue(0), null);
 });

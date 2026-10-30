@@ -49,8 +49,6 @@
                         <button id="resume" class="primary">Resume</button>
                         <div id="practiceTools" class="practice-tools" hidden>
                             <button id="resetTargets">Reset targets</button>
-                            <button id="practiceMultishot">Try multishot</button>
-                            <button id="practiceDoubleFire">Try 2× fire</button>
                             <div class="boss-picker" role="group" aria-label="Boss practice">
                                 <label>Boss
                                     <select id="bossPick">
@@ -161,6 +159,10 @@
                         ><kbd>2×</kbd> FIRE <b id="doubleFireStatus">INACTIVE</b></span
                     >
                     <span id="precisionStatus">PRECISION</span>
+                    <span class="practice-toggles" role="group" aria-label="Practice pickups"
+                        ><button id="practiceMultishot" type="button" aria-pressed="false">Multishot</button
+                        ><button id="practiceDoubleFire" type="button" aria-pressed="false">2× fire</button></span
+                    >
                 </div>
                 <div class="live-stats" aria-label="Primary-fire statistics">
                     <span>CPS <b id="liveCps">0</b></span

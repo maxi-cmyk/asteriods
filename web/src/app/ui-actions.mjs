@@ -45,15 +45,14 @@ export function installActions(app) {
         else nav().pause();
         app.draw();
     });
-    for (const [id, action] of [
-        ['resetTargets', () => app.runtime.resetTargets()],
-        ['practiceDoubleFire', () => app.runtime.doubleFire()],
-        ['practiceMultishot', () => app.runtime.multishot()],
-    ])
+    for (const [id, action] of [['resetTargets', () => app.runtime.resetTargets()]])
         on(id, () => {
             action();
             nav().resume();
         });
+    // The HUD toggles keep the pause menu closed: switch a pickup on or off mid-flight.
+    on('practiceMultishot', () => app.runtime.togglePractice('multishot'));
+    on('practiceDoubleFire', () => app.runtime.togglePractice('doubleFire'));
     on('bossPracticeStart', () => {
         app.controls.clear();
         app.runtime.bossPractice(

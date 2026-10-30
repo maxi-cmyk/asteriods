@@ -18,6 +18,8 @@ PALETTE = {
     'hull0': '#536976', 'hull1': '#9cafb6', 'hull2': '#dae4e1',
     'white': '#f2f1df', 'cyan0': '#205d78', 'cyan': '#70d9ed',
     'amber0': '#9d502e', 'amber': '#efb963', 'hot': '#ed7659',
+    'red0': '#7a1f33', 'red': '#e0424f', 'red1': '#ff8a85',
+    'wood0': '#6b3a24', 'wood': '#a85d34', 'wood1': '#c98a4e',
 }
 
 def rgba(value):
@@ -102,20 +104,39 @@ for size,diameter in enumerate([32,20,12]):
                     s.put(x,y,f'rock{tone}')
             add(f'rock-{size}-{variant}-{frame}',s)
 
-for kind in ['multishot','shield']:
+for kind in ['multishot','shield','health']:
+    if kind=='shield':
+        # A round shield, drawn without the pickup frame so it reads as a disc rather than a heart:
+        # dark outline, riveted metal rim, wooden planks and a bright iron boss.
+        s=Sprite(12,12)
+        for y in range(12):
+            for x in range(12):
+                d=math.hypot(x-5.5,y-5.5)
+                if d>6: continue
+                if d>5: c='outline'
+                elif d>3.9: c='hull2' if (x+y)<9 else 'hull1' if (x+y)<13 else 'hull0'
+                else: c='wood1' if x in (3,4) and y<6 else 'wood0' if x in (5,6) and False else 'wood'
+                if d<=3.9 and x==5 and d>1.9: c='wood0'
+                if d<=1.9: c='white' if (x,y)==(5,5) else 'hull1' if x+y<11 else 'hull0'
+                s.put(x,y,c)
+        for x,y in [(5,1),(10,5),(1,5),(5,10)]: s.put(x,y,'hull0')
+        add(kind,s)
+        continue
     s=Sprite(12,12)
     s.rect(2,0,8,1,'outline');s.rect(2,11,8,1,'outline')
     s.rect(0,2,1,8,'outline');s.rect(11,2,1,8,'outline')
-    s.rect(1,1,10,10,'cyan0' if kind=='shield' else 'amber0')
+    s.rect(1,1,10,10,'red0' if kind=='health' else 'amber0')
     s.rect(2,2,8,8,'outline')
     if kind=='multishot':
         for y in [3,5,7]: s.rect(4,y,4,1,'amber')
         s.put(8,2,'amber');s.put(8,8,'amber');s.put(8,5,'white')
     else:
-        for y in range(3,8):
-            half=3 if y<6 else 8-y
-            for x in range(6-half,6+half): s.put(x,y,'cyan')
-        s.rect(4,3,2,3,'white')
+        # A red heart: the health pickup a defeated boss leaves behind.
+        rows=['.##..##.','########','########','########','.######.','..####..','...##...']
+        for y,row in enumerate(rows):
+            for x,c in enumerate(row):
+                if c=='#': s.put(2+x,3+y,'red')
+        s.put(3,4,'red1');s.put(4,4,'red1');s.put(3,5,'red1');s.put(6,4,'white')
     add(kind,s)
 
 for frame in range(8):

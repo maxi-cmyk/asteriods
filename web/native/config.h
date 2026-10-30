@@ -40,6 +40,8 @@
 #define MULTISHOT_DIAGONAL_SPEED 2.8125f
 #define PICKUP_RADIUS 6
 #define PICKUP_SPEED 1.125f
+// A health pickup restores one life, up to this many.
+#define PICKUP_HEALTH_MAX_LIVES 5
 #define ASTEROID_LARGE_R 16
 #define ASTEROID_MEDIUM_R 10
 #define ASTEROID_SMALL_R 6

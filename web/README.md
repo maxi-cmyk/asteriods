@@ -22,8 +22,9 @@ npm start
 
 Open http://127.0.0.1:4173. Use http://127.0.0.1:4173/assets.html to inspect
 the comparison scene and sprite atlas. The game has no runtime dependencies, so playing needs no install step (`npm install` adds the
-development tools: Prettier, ESLint, PostCSS). `PORT=8080 npm start` selects another port. Rebuild after editing
-firmware or browser source. Use localhost or HTTPS for controller support.
+development tools: Prettier, ESLint, PostCSS). `PORT=8080 npm start` selects another port. `npm start` serves browser source (`src/`, `styles/`,
+`html/`, `assets/`) live, so a refresh picks up edits; rebuild with `npm run build` only after editing
+firmware or the `native/` WASM sources. Use localhost or HTTPS for controller support.
 Set `CLANGXX` and `WASM_LD` to use another compatible toolchain.
 
 ## Development
@@ -487,8 +488,8 @@ Storage failures are shown; a partial write attempts to restore the prior data.
 Tests verify empty records after a new runtime/reload and rollback on failure.
 
 Refresh retains local storage by design. The preview server serves assets with
-`Cache-Control: no-store`; run `npm --prefix web run build` after source changes,
-then refresh to load the new `web/dist` output. Refresh is not a record reset.
+`Cache-Control: no-store` and reads browser source straight from `web/`; run
+`npm --prefix web run build` only after changing C/C++ sources, then refresh to load the new `web/dist/game.wasm`. Refresh is not a record reset.
 Task 5 implementation is complete. See [architecture](../docs/ARCHITECTURE.md)
 for module ownership, portable C boundaries, coding conventions and formatter
 commands, and [acceptance](../docs/ACCEPTANCE.md) for current evidence and the

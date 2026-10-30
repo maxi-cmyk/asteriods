@@ -59,6 +59,7 @@ const exports = [
     'web_boss_assist',
     'web_boss_body',
     'web_practice_multishot',
+    'web_practice_hold',
     'web_practice_double_fire',
     'web_stats',
     'web_coop_start',

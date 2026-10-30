@@ -1,5 +1,5 @@
 import { S } from '../runtime/scene-layout.mjs';
-import { element, setData } from '../app/dom.mjs';
+import { element, setAttr, setData } from '../app/dom.mjs';
 export function renderPractice({ scene, navigation, runtime, update, practiceButton, fitCanvas }) {
     const practice = !!scene[S.PRACTICE];
     const title =
@@ -38,5 +38,10 @@ export function renderPractice({ scene, navigation, runtime, update, practiceBut
         tools.hidden = !practice;
         fitCanvas();
     }
+    for (const [id, kind] of [
+        ['practiceMultishot', 'multishot'],
+        ['practiceDoubleFire', 'doubleFire'],
+    ])
+        setAttr(element(id), 'aria-pressed', String(runtime.practiceHold[kind]));
     if (practiceButton.disabled) practiceButton.disabled = false;
 }

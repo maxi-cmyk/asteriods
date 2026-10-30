@@ -45,6 +45,10 @@ export class SpawnWarningLayer {
     }
 }
 
+// Glow colour by pickup kind: multishot amber, shield cyan, 2× fire cyan, health red.
+const PICKUP_GLOW = ['239,185,99', '110,240,255', '110,240,255', '255,96,108'];
+const PICKUP_SPRITE = ['multishot', 'shield', null, 'health'];
+
 export class PickupLayer {
     draw({ ctx, px, scene, time }) {
         if (scene[S.PICKUP_ACTIVE]) {
@@ -53,7 +57,7 @@ export class PickupLayer {
                 scene[S.PICKUP_X],
                 scene[S.PICKUP_Y],
                 11,
-                scene[S.PICKUP_KIND] === 0 ? '239,185,99' : '110,240,255',
+                PICKUP_GLOW[scene[S.PICKUP_KIND]] ?? PICKUP_GLOW[1],
                 0.45 + 0.15 * Math.sin(time / 180),
             );
             if (scene[S.PICKUP_KIND] === 2) {
@@ -67,7 +71,7 @@ export class PickupLayer {
                 px.text('2X', scene[S.PICKUP_X], scene[S.PICKUP_Y] - 3, COLOUR.cyan, 1, 'center');
             } else
                 px.sprite(
-                    scene[S.PICKUP_KIND] === 0 ? 'multishot' : 'shield',
+                    PICKUP_SPRITE[scene[S.PICKUP_KIND]] ?? 'shield',
                     scene[S.PICKUP_X] - 6,
                     scene[S.PICKUP_Y] - 6,
                 );

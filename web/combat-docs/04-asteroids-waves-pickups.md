@@ -151,7 +151,12 @@ One `pickup` slot (no second one while one is on screen).
 - **Clearing:** `powerups_init()` on death/new run empties the slot.
 - **Boss pickups:** guaranteed drops at `(SCREEN_W − 24, random 70…200)`: shield when a boss
   enters phase 2, multishot at phase 3 (`bs_pickups`, one each per fight via `boss.drops` bits);
-  Ringwarden also drops a shield every 7 s. Mini-bosses drop nothing. See 06.
+  Ringwarden also drops a shield every 7 s. Mini-bosses get no mid-fight pickups. See 06.
+- **Health (`PICKUP_HEALTH`, web only, never random):** `bs_drop_health` runs in `bs_defeat`. Every
+  boss leaves one at its position (clamped to x 140…`SCREEN_W − 24`, y 70…200); a mini-boss does so
+  50% of the time (`bs_rand`); boss practice drops none. It takes the single pickup slot, so there is
+  never more than one. Collecting it gives +1 life up to `PICKUP_HEALTH_MAX_LIVES` (5); in co-op it
+  goes to the nearest living pilot through the same `collect_pickup`.
 
 ## Who owns the wave while a boss lives
 

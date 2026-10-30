@@ -263,6 +263,46 @@ test('a mini-boss shares its wave with half the rocks and holds the wave open', 
     assert.equal(bossState(game.scene()).defeated & (1 << 6), 1 << 6);
 });
 
+const HEALTH = 3; // PICKUP_HEALTH
+// Takes the boss down in one blow and returns the pickup it left, if any.
+function defeat(game) {
+    ticks(game, ENTRANCE);
+    set(game, 0, 0);
+    ticks(game, 2);
+    assert.equal(bossState(game.scene()).active, false);
+    const scene = game.scene();
+    return scene[S.PICKUP_ACTIVE]
+        ? { kind: scene[S.PICKUP_KIND], x: scene[S.PICKUP_X], y: scene[S.PICKUP_Y] }
+        : null;
+}
+
+test('every boss leaves exactly one health pickup, and flying through it restores a life', async () => {
+    const game = await waveGame(5);
+    const drop = defeat(game);
+    assert.equal(drop?.kind, HEALTH);
+    const lives = game.scene()[S.LIVES];
+    set(game, 3, drop.x);
+    set(game, 4, drop.y);
+    ticks(game, 3);
+    assert.equal(game.scene()[S.PICKUP_ACTIVE], 0);
+    assert.equal(game.scene()[S.LIVES], lives + 1);
+});
+
+test('a mini-boss leaves a health pickup about half the time', async () => {
+    let drops = 0;
+    const runs = 24;
+    for (let seed = 1; seed <= runs; seed++) {
+        const game = await waveGame(3, 1, 0, seed);
+        if (defeat(game)?.kind === HEALTH) drops++;
+    }
+    assert(drops > 3 && drops < runs - 3, `${drops} of ${runs} mini-bosses dropped health`);
+});
+
+test('boss practice drops no health', async () => {
+    const game = await practiceGame(0);
+    assert.equal(defeat(game), null);
+});
+
 test('practice and a fresh retry do not inherit a previous boss', async () => {
     const game = await waveGame(5);
     game.start(true);

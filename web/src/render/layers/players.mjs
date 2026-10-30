@@ -97,14 +97,22 @@ export class PlayersLayer {
         // Ability state lives in the HUD strip; only a brief flash marks the laser coming back.
         if (!players && observer.readyUntil > scene[S.VISUAL_MS])
             px.text('LASER READY', WIDTH / 2, 28, colour, 1, 'center');
-        // A small pixel reticle shows the last deliberate aim direction.
-        const targetX = Math.round(x + dx * 38),
-            targetY = Math.round(y + dy * 38);
-        ctx.fillStyle = scene[S.PRECISION] ? colour : COLOUR.muted;
-        ctx.fillRect(targetX - 3, targetY, 2, 1);
-        ctx.fillRect(targetX + 2, targetY, 2, 1);
-        ctx.fillRect(targetX, targetY - 3, 1, 2);
-        ctx.fillRect(targetX, targetY + 2, 1, 2);
+        // The reticle sits well clear of the hull, joined to it by a dotted line, so the aim
+        // direction reads at a glance. It keeps the pilot's colour and brightens in precision.
+        const REACH = 66,
+            targetX = Math.max(8, Math.min(WIDTH - 8, Math.round(x + dx * REACH))),
+            targetY = Math.max(8, Math.min(HEIGHT - 8, Math.round(y + dy * REACH)));
+        const tone = scene[S.PRECISION] ? COLOUR.ink : colour;
+        ctx.fillStyle = tone;
+        ctx.globalAlpha = 0.8;
+        for (let along = 24; along < REACH - 8; along += 6)
+            ctx.fillRect(Math.round(x + dx * along), Math.round(y + dy * along), 1, 1);
+        ctx.globalAlpha = 1;
+        ctx.fillRect(targetX - 7, targetY, 4, 1);
+        ctx.fillRect(targetX + 4, targetY, 4, 1);
+        ctx.fillRect(targetX, targetY - 7, 1, 4);
+        ctx.fillRect(targetX, targetY + 4, 1, 4);
+        ctx.fillRect(targetX, targetY, 1, 1);
     }
     markers({ px, ctx }, players) {
         const [a, b] = players;

@@ -44,6 +44,9 @@ struct CombatState {
 static CombatInput combat_input = {};
 static CombatState combat = {};
 static bool practice_mode = false;
+// Practice pickups the player has switched on: held at full time until switched off.
+static bool practice_hold_multishot = false;
+static bool practice_hold_double_fire = false;
 static unsigned long practice_empty_since = 0;
 static unsigned practice_goals = 0;
 
@@ -83,6 +86,10 @@ static void combat_move_ship(const InputState& input) {
 static void combat_collect_and_arm_shield() {
     bool active_before = ship.effects.shield;
     powerups_update(ship);
+    if (practice_mode) {
+        if (practice_hold_multishot) ship.effects.multishot_left_ms = MULTISHOT_DURATION_MS;
+        if (practice_hold_double_fire) ship.effects.double_fire_left_ms = 6000;
+    }
     if (!active_before && ship.effects.shield) {
         combat.shield_stored = true;
         ship.effects.shield = false;

@@ -240,84 +240,9 @@ select:focus-visible {
     padding: 8px;
     min-height: 36px;
 }
-#calibration {
-    border-top: 1px solid var(--edge);
-    margin-top: 20px;
-}
-.stick-plots {
-    display: grid;
-    grid-template-columns: 1fr 1fr;
-    gap: 20px;
-}
-.stick-plots figure {
-    margin: 0;
-    min-width: 0;
-    display: flex;
-    align-items: center;
-    gap: 12px;
-}
-.stick-plots svg {
-    width: 100px;
-    flex-shrink: 0;
-}
-.stick-plots figcaption {
-    font-size: 12px;
-    line-height: 1.7;
-}
-.stick-plots figcaption span {
-    display: block;
-    font-size: 11px;
-    color: var(--muted);
-    font-variant-numeric: tabular-nums;
-}
-.stick-bound,
-.stick-axis {
-    fill: none;
-    stroke: var(--edge);
-}
-.deadzone {
-    fill: #284557;
-}
-.raw {
-    fill: none;
-    stroke: var(--ink);
-    stroke-width: 1.5;
-}
-.adjusted {
-    fill: var(--accent);
-}
-.calibration-actions {
-    display: flex;
-    flex-wrap: wrap;
-    gap: 10px;
-}
-#inputPreview {
-    display: block;
-    width: 100%;
-    height: auto;
-    background: var(--background);
-    border: 1px solid var(--edge);
-    cursor: crosshair;
-}
-#inputPreview:focus-visible {
-    outline: 2px solid var(--accent);
-    outline-offset: 3px;
-}
-.preview-ship {
-    fill: var(--accent);
-}
-.preview-aim {
-    stroke: var(--muted);
-    stroke-dasharray: 3 3;
-}
 @media (max-width: 600px) {
     .settings-sliders {
         grid-template-columns: 1fr;
-    }
-    .stick-plots figure {
-        flex-direction: column;
-        align-items: flex-start;
-        gap: 6px;
     }
 }
 

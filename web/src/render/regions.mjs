@@ -3,6 +3,8 @@
 export const WAVES_PER_REGION = 5;
 export const CUE_MS = 2200;
 export const REDUCED_MS = 200;
+// Practice has no waves of its own, so it sits in the third world (Ember orbit).
+export const PRACTICE_REGION = 2;
 
 // `gesture` is the planned destination transition from nextSteps 4C.1; a
 // gesture whose `ready` flag is false uses the shared crossfade at the same
@@ -87,10 +89,11 @@ export class RegionTimeline {
         this.cueUntil = -1;
         this.seen = false;
     }
-    // Menu, results, and practice show the calm opening scene.
+    // Menu and results show the calm opening scene; practice rests in its own world.
     observe({ wave, time, run, practice = false }) {
         if (!run || practice) {
             this.reset();
+            if (run && practice) this.index = PRACTICE_REGION;
             return;
         }
         const target = regionIndexForWave(wave);

@@ -136,7 +136,11 @@ export class Presenter {
         const stats = runtime.stats();
         update(
             element('doubleFireStatus'),
-            stats.doubleFireMs ? `${(stats.doubleFireMs / 1000).toFixed(1)}s` : 'INACTIVE',
+            runtime.practiceHold.doubleFire
+                ? 'ON'
+                : stats.doubleFireMs
+                  ? `${(stats.doubleFireMs / 1000).toFixed(1)}s`
+                  : 'INACTIVE',
         );
         this.doubleFireCard ??= element('doubleFireStatus').closest('.ability');
         if (this.doubleFireCard)

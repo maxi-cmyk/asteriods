@@ -79,6 +79,7 @@ void web_start(int practice) {
     coop_active = false;
     boss_bind_solo();
     practice_mode = practice != 0;
+    practice_hold_multishot = practice_hold_double_fire = false;
     practice_goals = 0;
     begin_game();
     combat_reset();
@@ -111,6 +112,7 @@ void web_menu() {
 #ifdef WEB_HD
     coop_active = false;
     practice_mode = false;
+    practice_hold_multishot = practice_hold_double_fire = false;
     ship.effects.double_fire_left_ms = 0;
     combat_reset();
     boss = {};
